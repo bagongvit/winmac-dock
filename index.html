@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WinMac Desktop OS Suite Pro</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="theme-mica-dark">
+
+  <!-- =========================================================
+       0A. BUILT-IN 4K AESTHETIC WALLPAPER & PARTICLE ENGINE
+       ========================================================= -->
+  <div id="desktop-wallpaper-layer" class="wp-sonoma">
+    <div class="wp-art wp-art-sonoma">
+      <div class="sonoma-glow-1"></div>
+      <div class="sonoma-glow-2"></div>
+      <svg class="sonoma-waves" viewBox="0 0 1440 800" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="m1" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#0284c7" stop-opacity="0.88" />
+            <stop offset="50%" stop-color="#4f46e5" stop-opacity="0.92" />
+            <stop offset="100%" stop-color="#0f172a" stop-opacity="0.98" />
+          </linearGradient>
+          <linearGradient id="m2" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#ec4899" stop-opacity="0.72" />
+            <stop offset="50%" stop-color="#6366f1" stop-opacity="0.88" />
+            <stop offset="100%" stop-color="#090d16" stop-opacity="0.98" />
+          </linearGradient>
+          <linearGradient id="m3" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1e1b4b" stop-opacity="0.95" />
+            <stop offset="100%" stop-color="#050811" stop-opacity="1" />
+          </linearGradient>
+        </defs>
+        <path d="M0,320 C320,180 620,440 960,260 C1200,140 1350,240 1440,200 L1440,800 L0,800 Z" fill="url(#m1)" />
+        <path d="M0,450 C280,340 580,520 920,370 C1180,260 1320,390 1440,340 L1440,800 L0,800 Z" fill="url(#m2)" />
+        <path d="M0,580 C380,470 740,640 1120,510 C1290,450 1380,520 1440,490 L1440,800 L0,800 Z" fill="url(#m3)" />
+      </svg>
+    </div>
+
+    <div class="wp-art wp-art-cyber">
+      <div class="cyber-sun"></div>
+      <div class="cyber-grid"></div>
+    </div>
+
+    <div class="wp-art wp-art-fuji">
+      <div class="fuji-sun"></div>
+      <svg class="fuji-mountain" viewBox="0 0 1440 600" preserveAspectRatio="none">
+        <path d="M0,600 L350,600 L640,210 L800,210 L1090,600 L1440,600 Z" fill="#0f172a" />
+        <path d="M640,210 L800,210 L845,270 L775,255 L740,290 L700,250 L665,280 L595,270 Z" fill="#f8fafc" opacity="0.9" />
+      </svg>
+    </div>
+  </div>
+
+  <!-- Lapisan Partikel Animasi Ringan (Fireflies, Starfield, Snow, Matrix) -->
+  <canvas id="particle-canvas"></canvas>
+
+  <!-- Garis Bantu Magnetis Saat Drag Widget (Magnetic Alignment Guides) -->
+  <div id="snap-guide-x" class="snap-guide-line hidden"></div>
+  <div id="snap-guide-y" class="snap-guide-line hidden"></div>
+
+  <!-- Layar Peredup Kecerahan (Hardware/Software Brightness Filter) -->
+  <div id="screen-dimmer"></div>
+
+  <!-- =========================================================
+       0. RAINMETER DESKTOP SKINS ENGINE (On-Wallpaper Floating Skins)
+       Dilengkapi tombol Collapse (—) & Hide (✕) langsung di tiap widget!
+       ========================================================= -->
+  <div id="rainmeter-layer">
+    <!-- SKIN 1: MOND / CHRONO AESTHETIC DESKTOP CLOCK & WEATHER -->
+    <div
+      id="rm-skin-clock"
+      class="rm-skin interactive-widget"
+      data-draggable="true"
+      data-skin-id="clock"
+    >
+      <div class="rm-skin-top-actions">
+        <span class="rm-mini-label">🕒 CHRONO CLOCK</span>
+        <div class="rm-ctrl-group">
+          <button class="rm-ctrl-btn" data-rm-collapse="clock" title="Lipat / Perluas Widget">—</button>
+          <button class="rm-ctrl-btn rm-hide-btn" data-rm-hide="clock" title="Sembunyikan Widget">✕</button>
+        </div>
+      </div>
+      <div class="rm-skin-body">
+        <div class="rm-clock-weekday" id="rm-clock-day">JUMAT</div>
+        <div class="rm-clock-subrow">
+          <span class="rm-clock-hm" id="rm-clock-hm">14:20</span>
+          <span class="rm-clock-sec" id="rm-clock-sec">:00</span>
+          <span class="rm-clock-sep">|</span>
+          <span class="rm-clock-date" id="rm-clock-date">06 NOVEMBER 2026</span>
+        </div>
+        <div class="rm-clock-weather-pill" id="rm-clock-weather">
+          ⛅ 29°C • Cerah Berawan • Kelembaban 68%
+        </div>
+        <div class="rm-clock-quote" id="rm-clock-quote">
+          "Simplicity is the ultimate sophistication." — Rainmeter × WinMac OS
+        </div>
+      </div>
+    </div>
+
+    <!-- SKIN 2: SYSMONITOR PRO (CPU SPARKLINE, RAM, DISK C/D, NETWORK SPEED) -->
+    <div
+      id="rm-skin-sysmon"
+      class="rm-skin acrylic-surface interactive-widget"
+      data-draggable="true"
+      data-skin-id="sysmon"
+    >
+      <div class="rm-skin-header">
+        <span class="rm-skin-title">⚡ SYSMONITOR PRO</span>
+        <div class="rm-header-right">
+          <span class="rm-skin-tag" id="rm-cpu-ghz">3.20 GHz</span>
+          <button class="rm-ctrl-btn" data-rm-collapse="sysmon" title="Lipat / Perluas Widget">—</button>
+          <button class="rm-ctrl-btn rm-hide-btn" data-rm-hide="sysmon" title="Sembunyikan Widget">✕</button>
+        </div>
+      </div>
+
+      <div class="rm-skin-body">
+        <!-- CPU Load + Live Sparkline Graph -->
+        <div class="rm-meter-block">
+          <div class="rm-meter-top">
+            <span>CPU LOAD</span>
+            <strong id="rm-sys-cpu">18%</strong>
+          </div>
+          <svg class="rm-sparkline" viewBox="0 0 200 38" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.45" />
+                <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0" />
+              </linearGradient>
+            </defs>
+            <polygon id="rm-cpu-area" points="0,38 0,30 200,30 200,38" fill="url(#sparkGrad)" />
+            <polyline id="rm-cpu-line" points="0,30 200,30" fill="none" stroke="#38bdf8" stroke-width="2" />
+          </svg>
+        </div>
+
+        <!-- RAM Usage -->
+        <div class="rm-meter-block">
+          <div class="rm-meter-top">
+            <span>RAM MEMORY</span>
+            <strong id="rm-sys-ram">7.8 / 16 GB (48%)</strong>
+          </div>
+          <div class="rm-progress-track">
+            <div class="rm-progress-fill ram-fill" id="rm-ram-bar" style="width: 48%"></div>
+          </div>
+        </div>
+
+        <!-- Disk C: Usage -->
+        <div class="rm-meter-block">
+          <div class="rm-meter-top">
+            <span>SYSTEM DRIVE (C:)</span>
+            <strong id="rm-sys-diskc">120 / 256 GB</strong>
+          </div>
+          <div class="rm-progress-track">
+            <div class="rm-progress-fill disk-fill" id="rm-diskc-bar" style="width: 52%"></div>
+          </div>
+        </div>
+
+        <!-- Disk D: Usage (Shown dynamically if D: exists) -->
+        <div class="rm-meter-block" id="rm-diskd-block">
+          <div class="rm-meter-top">
+            <span>DATA DRIVE (D:)</span>
+            <strong id="rm-sys-diskd">210 / 512 GB</strong>
+          </div>
+          <div class="rm-progress-track">
+            <div class="rm-progress-fill diskd-fill" id="rm-diskd-bar" style="width: 41%"></div>
+          </div>
+        </div>
+
+        <!-- Live Network Telemetry -->
+        <div class="rm-net-row">
+          <div class="rm-net-pill">
+            <span class="net-arr down">↓</span>
+            <div>
+              <div class="net-lbl">DOWNLOAD</div>
+              <div class="net-val" id="rm-net-down">428 KB/s</div>
+            </div>
+          </div>
+          <div class="rm-net-pill">
+            <span class="net-arr up">↑</span>
+            <div>
+              <div class="net-lbl">UPLOAD</div>
+              <div class="net-val" id="rm-net-up">94 KB/s</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SKIN 3: MONSTERCAT / FOUNTAIN OF COLORS AUDIO VISUALIZER -->
+    <div
+      id="rm-skin-visualizer"
+      class="rm-skin acrylic-surface interactive-widget"
+      data-draggable="true"
+      data-skin-id="visualizer"
+    >
+      <div class="rm-skin-header">
+        <span class="rm-skin-title">🎵 AUDIO VISUALIZER</span>
+        <div class="rm-header-right">
+          <span class="rm-vis-badge" id="rm-vis-badge">LIVE FFT</span>
+          <button class="rm-ctrl-btn" data-rm-collapse="visualizer" title="Lipat / Perluas Widget">—</button>
+          <button class="rm-ctrl-btn rm-hide-btn" data-rm-hide="visualizer" title="Sembunyikan Widget">✕</button>
+        </div>
+      </div>
+
+      <div class="rm-skin-body">
+        <div class="rm-vis-bars" id="rm-vis-bars"></div>
+      </div>
+
+      <div class="rm-vis-footer">
+        <div class="rm-vis-track">
+          <div class="rm-vis-meta">
+            <span class="rm-vis-title" id="rm-vis-title">Midnight Cyber Lofi</span>
+            <span class="rm-vis-artist" id="rm-vis-artist">WinMac WebAudio Synth</span>
+          </div>
+        </div>
+        <div class="rm-vis-controls">
+          <button class="rm-vis-btn" id="rm-vis-sound-btn" title="Aktifkan/Matikan Suara Synth Ambient">🔈</button>
+          <button class="rm-vis-btn" id="rm-vis-play-btn" title="Play / Pause Visualizer">⏸</button>
+          <button class="rm-vis-btn" id="rm-vis-next-btn" title="Ganti Track">⏭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SKIN 4: INTERACTIVE POMODORO FOCUS TIMER & STREAK WIDGET -->
+    <div
+      id="rm-skin-pomodoro"
+      class="rm-skin acrylic-surface interactive-widget"
+      data-draggable="true"
+      data-skin-id="pomodoro"
+    >
+      <div class="rm-skin-header">
+        <span class="rm-skin-title">🍅 POMODORO FOCUS</span>
+        <div class="rm-header-right">
+          <span class="rm-skin-tag" id="pomo-streak-badge">🔥 0 Sesi</span>
+          <button class="rm-ctrl-btn" data-rm-collapse="pomodoro" title="Lipat / Perluas Widget">—</button>
+          <button class="rm-ctrl-btn rm-hide-btn" data-rm-hide="pomodoro" title="Sembunyikan Widget">✕</button>
+        </div>
+      </div>
+
+      <div class="rm-skin-body">
+        <div class="pomo-main-row">
+          <div class="pomo-ring-wrap">
+            <svg class="ring-svg" viewBox="0 0 36 36">
+              <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path class="ring-meter pomo-ring" id="pomo-ring" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="ring-text">
+              <span class="pomo-time-val" id="pomo-time">25:00</span>
+              <span class="ring-lbl" id="pomo-mode-lbl">FOKUS</span>
+            </div>
+          </div>
+
+          <div class="pomo-right-col">
+            <div class="pomo-mode-pills">
+              <button class="pomo-pill active" data-pomo-min="25" data-pomo-lbl="FOKUS">25m Fokus</button>
+              <button class="pomo-pill" data-pomo-min="5" data-pomo-lbl="REHAT">5m Rehat</button>
+            </div>
+            <div class="pomo-btn-row">
+              <button class="addr-go-btn" id="pomo-start-btn">▶ Mulai</button>
+              <button class="pill-action-btn" id="pomo-reset-btn">↺ Reset</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SKIN 5: SMART CLIPBOARD HISTORY MANAGER WIDGET -->
+    <div
+      id="rm-skin-clipboard"
+      class="rm-skin acrylic-surface interactive-widget"
+      data-draggable="true"
+      data-skin-id="clipboard"
+    >
+      <div class="rm-skin-header">
+        <span class="rm-skin-title">📋 CLIPBOARD HISTORY</span>
+        <div class="rm-header-right">
+          <button class="rm-ctrl-btn" id="rm-clip-clear-btn" title="Bersihkan Riwayat">🗑️</button>
+          <button class="rm-ctrl-btn" data-rm-collapse="clipboard" title="Lipat / Perluas Widget">—</button>
+          <button class="rm-ctrl-btn rm-hide-btn" data-rm-hide="clipboard" title="Sembunyikan Widget">✕</button>
+        </div>
+      </div>
+
+      <div class="rm-skin-body">
+        <div class="rm-clip-hint">Klik item untuk Copy ulang otomatis:</div>
+        <div class="rm-clip-list" id="rm-clip-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       0B. SPOTLIGHT / RAYCAST COMMAND PALETTE (Alt + K)
+       ========================================================= -->
+  <div id="win-spotlight" class="acrylic-surface interactive-widget custom-os-window hidden">
+    <div class="spotlight-bar">
+      <span class="spotlight-ic">⚡</span>
+      <input
+        type="text"
+        id="spotlight-input"
+        placeholder="Ketik matematika (250*14%), perintah (wallpaper, hide, lock), atau g <cari google>..."
+        autocomplete="off"
+      />
+      <span class="kbd-hint">Alt+K</span>
+    </div>
+    <div id="spotlight-math-res" class="spotlight-math-res hidden"></div>
+    <div id="spotlight-results" class="spotlight-results"></div>
+  </div>
+
+  <!-- =========================================================
+       0C. STUDIO PENGATURAN CEPAT WIDGET, PROFIL & BACKGROUND (#win-rm-drawer)
+       ========================================================= -->
+  <div id="win-rm-drawer" class="acrylic-surface interactive-widget custom-os-window hidden" data-draggable="true">
+    <div class="rm-drawer-header">
+      <span>🧩 Studio Widget, Profil & Background</span>
+      <button class="tl-btn tl-close" data-close-win="win-rm-drawer" title="Tutup"></button>
+    </div>
+
+    <!-- 1-Click Workspace Profiles -->
+    <div class="drawer-sub-lbl">⚡ Profil Tata Letak Instan (1-Klik)</div>
+    <div class="rm-profile-grid">
+      <button class="pill-action-btn" data-rm-profile="all">🚀 Semua Aktif</button>
+      <button class="pill-action-btn" data-rm-profile="minimal">🧘 Minimalis</button>
+      <button class="pill-action-btn" data-rm-profile="dev">💻 Developer</button>
+      <button class="pill-action-btn" data-rm-profile="focus">🎯 Mode Fokus</button>
+    </div>
+
+    <div class="rm-drawer-quick-btns">
+      <button class="pill-action-btn" id="rm-show-all-btn">👁️ Tampilkan Semua</button>
+      <button class="pill-action-btn" id="rm-hide-all-btn">🙈 Sembunyikan Semua</button>
+    </div>
+
+    <!-- Pilihan Background / Wallpaper Keren -->
+    <div class="drawer-sub-lbl">🖼️ Pilih Background / Wallpaper Desktop</div>
+    <div class="wp-preset-grid">
+      <button class="wp-chip active" data-wp="wp-sonoma">🌄 Sonoma Horizon</button>
+      <button class="wp-chip" data-wp="wp-win12-bloom">💠 Win 12 Bloom</button>
+      <button class="wp-chip" data-wp="wp-cyber-night">🌆 Cyber Synth</button>
+      <button class="wp-chip" data-wp="wp-fuji-sunset">🗻 Fuji Sunset</button>
+      <button class="wp-chip" id="pick-custom-wp-btn">📂 Gambar PC...</button>
+      <button class="wp-chip" data-wp="wp-transparent">🪟 Transparan Asli</button>
+    </div>
+
+    <!-- Efek Partikel Live (Ala Wallpaper Engine) -->
+    <div class="drawer-sub-lbl">✨ Efek Partikel Animasi Live</div>
+    <div class="particle-preset-row">
+      <button class="wp-chip active" data-particle="fireflies">✨ Kunang2</button>
+      <button class="wp-chip" data-particle="starfield">🌌 Bintang</button>
+      <button class="wp-chip" data-particle="snow">❄️ Salju</button>
+      <button class="wp-chip" data-particle="matrix">💻 Matrix</button>
+      <button class="wp-chip" data-particle="off">🚫 Mati</button>
+    </div>
+
+    <!-- Live Color & Font Studio (Tanpa Edit .ini) -->
+    <div class="rm-studio-row">
+      <span>🎨 Warna Aksen & Font:</span>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <input type="color" id="custom-accent-picker" value="#38bdf8" title="Pilih Warna Aksen Neon" />
+        <select id="custom-font-select" class="rm-font-select">
+          <option value="sans">Modern Sans</option>
+          <option value="mono">Cyber Code Mono</option>
+          <option value="serif">Elegant Serif</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Daftar Sakelar Show / Hide 5 Widget -->
+    <div class="rm-drawer-list">
+      <label class="rm-drawer-item">
+        <div>
+          <div class="rm-d-title">🕒 Jam Desktop (Chrono Clock)</div>
+          <div class="rm-d-sub">Hari, jam detik, cuaca & kutipan</div>
+        </div>
+        <input type="checkbox" class="win-switch" data-rm-switch="clock" checked />
+      </label>
+
+      <label class="rm-drawer-item">
+        <div>
+          <div class="rm-d-title">⚡ SysMonitor Pro</div>
+          <div class="rm-d-sub">Grafik CPU, RAM, Disk C:/D: & Internet</div>
+        </div>
+        <input type="checkbox" class="win-switch" data-rm-switch="sysmon" checked />
+      </label>
+
+      <label class="rm-drawer-item">
+        <div>
+          <div class="rm-d-title">🎵 Audio Spectrum Visualizer</div>
+          <div class="rm-d-sub">24-bar grafik frekuensi & Lofi Synth</div>
+        </div>
+        <input type="checkbox" class="win-switch" data-rm-switch="visualizer" checked />
+      </label>
+
+      <label class="rm-drawer-item">
+        <div>
+          <div class="rm-d-title">🍅 Pomodoro Focus Timer</div>
+          <div class="rm-d-sub">Timer fokus 25m / 5m + target sesi</div>
+        </div>
+        <input type="checkbox" class="win-switch" data-rm-switch="pomodoro" checked />
+      </label>
+
+      <label class="rm-drawer-item">
+        <div>
+          <div class="rm-d-title">📋 Smart Clipboard History</div>
+          <div class="rm-d-sub">Rekam otomatis teks Ctrl+C terakhir</div>
+        </div>
+        <input type="checkbox" class="win-switch" data-rm-switch="clipboard" checked />
+      </label>
+
+      <label class="rm-drawer-item">
+        <div>
+          <div class="rm-d-title">🔒 Kunci Posisi (Click-Through)</div>
+          <div class="rm-d-sub">Widget menyatu dengan wallpaper</div>
+        </div>
+        <input type="checkbox" class="win-switch" id="rm-drawer-lock-switch" />
+      </label>
+    </div>
+  </div>
+
+  <!-- Context Menu Klik Kanan Khusus Rainmeter Skin -->
+  <div id="rm-context-menu" class="acrylic-surface interactive-widget exp-context-menu hidden">
+    <div class="rm-ctx-header" id="rm-ctx-title">🎨 Pengaturan Skin Rainmeter</div>
+    <div class="rm-ctx-slider-row">
+      <span>Transparansi</span>
+      <input type="range" id="rm-opacity-slider" min="30" max="100" value="95" />
+    </div>
+    <div class="rm-ctx-slider-row">
+      <span>Ukuran (Scale)</span>
+      <input type="range" id="rm-scale-slider" min="75" max="135" value="100" />
+    </div>
+    <div class="ctx-sep"></div>
+    <button data-rm-act="collapse">➖ Lipat / Perluas Widget Ini</button>
+    <button data-rm-act="lock" id="rm-ctx-lock-btn">🔒 Kunci Posisi (Click-Through)</button>
+    <button data-rm-act="drawer">🧩 Studio Widget & Background</button>
+    <button data-rm-act="hide" class="danger-text">🙈 Sembunyikan Widget Ini</button>
+  </div>
+
+  <!-- =========================================================
+       1. FLOATING TOP DYNAMIC ISLAND (Win 12 + macOS Dynamic Island)
+       ========================================================= -->
+  <div id="top-island" class="acrylic-surface interactive-widget" data-draggable="true">
+    <div class="ambient-glow"></div>
+
+    <!-- Compact Mode -->
+    <div class="island-compact">
+      <div class="island-left">
+        <div class="win12-pulse-badge" id="island-start-trigger" title="Klik: Start Menu (Alt+Space) • Geser: Pindah Posisi">
+          <svg viewBox="0 0 24 24" class="win-mini-logo">
+            <rect x="2" y="2" width="9" height="9" rx="2" fill="#38bdf8" />
+            <rect x="13" y="2" width="9" height="9" rx="2" fill="#60a5fa" />
+            <rect x="2" y="13" width="9" height="9" rx="2" fill="#818cf8" />
+            <rect x="13" y="13" width="9" height="9" rx="2" fill="#38bdf8" />
+          </svg>
+        </div>
+
+        <div class="mini-stat-pills">
+          <span class="mini-chip">
+            <span class="chip-dot cpu-dot"></span>
+            <span id="compact-cpu">14%</span>
+          </span>
+          <span class="mini-chip">
+            <span class="chip-dot ram-dot"></span>
+            <span id="compact-ram">48%</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Klik Jam & Tanggal untuk membuka Widget Kalender & Cuaca -->
+      <div class="island-center" id="calendar-trigger" title="Klik untuk membuka Kalender & Cuaca Live">
+        <span class="weather-mini" id="weather-mini-badge">⛅ 29°C</span>
+        <span class="divider-dot">•</span>
+        <span id="clock-time" class="clock-time">09:20</span>
+        <span class="divider-dot">•</span>
+        <span id="clock-date" class="clock-date">Jum, 6 Nov</span>
+      </div>
+
+      <div class="island-right">
+        <div class="audio-pill" id="audio-pill" title="Volume & Equalizer">
+          <div class="sound-wave" id="sound-wave">
+            <span></span><span></span><span></span><span></span>
+          </div>
+          <span id="vol-badge" class="vol-badge">75%</span>
+        </div>
+
+        <!-- Tombol Spotlight Command Bar (Alt+K) -->
+        <button class="theme-cycle-btn" id="spotlight-trigger-btn" title="Spotlight Command & Kalkulator Kilat (Alt+K)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="20" y1="20" x2="16" y2="16"></line>
+          </svg>
+        </button>
+
+        <!-- Tombol Cepat Studio Widget & Background -->
+        <button class="theme-cycle-btn" id="rm-drawer-btn" title="Studio Widget, Profil & Background">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+            <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+            <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+            <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+          </svg>
+        </button>
+
+        <button class="theme-cycle-btn" id="theme-toggle-btn" title="Ganti Tema Kaca (Tersimpan Otomatis)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Expanded Mode -->
+    <div class="island-expanded">
+      <div class="expanded-top-row">
+        <div class="media-card">
+          <div class="album-art" id="album-art">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18V5l12-2v13"></path>
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+          </div>
+          <div class="media-info">
+            <span class="media-title" id="media-title">Chill Synthwave Mix</span>
+            <span class="media-sub" id="media-sub">WinMac Spatial Audio</span>
+          </div>
+          <div class="media-controls">
+            <button class="media-btn" id="play-pause-btn" type="button" title="Play / Pause Visualizer">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="gauges-card">
+          <div class="ring-item" title="Klik untuk membuka Task Manager" id="open-taskmgr">
+            <svg class="ring-svg" viewBox="0 0 36 36">
+              <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path class="ring-meter cpu-ring" id="cpu-ring" stroke-dasharray="18, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="ring-text">
+              <span class="ring-val" id="cpu-val">18%</span>
+              <span class="ring-lbl">CPU</span>
+            </div>
+          </div>
+
+          <div class="ring-item">
+            <svg class="ring-svg" viewBox="0 0 36 36">
+              <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path class="ring-meter ram-ring" id="ram-ring" stroke-dasharray="48, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="ring-text">
+              <span class="ring-val" id="ram-val">48%</span>
+              <span class="ring-lbl" id="ram-gb-lbl">RAM</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="quick-grid-4">
+        <button class="quick-pill-btn active" id="wifi-toggle" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+            <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+            <line x1="12" y1="20" x2="12.01" y2="20"></line>
+          </svg>
+          <span id="wifi-status">Wi-Fi 5G</span>
+        </button>
+
+        <button class="quick-pill-btn active" id="bt-toggle" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline>
+          </svg>
+          <span id="bt-status">Bluetooth</span>
+        </button>
+
+        <button class="quick-pill-btn" id="island-notes-btn" type="button" title="Buka Catatan & To-Do List">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+          </svg>
+          <span>Notes</span>
+        </button>
+
+        <button class="quick-pill-btn" id="snip-btn" type="button" title="Tangkap Layar (Snipping Tool)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="6" cy="6" r="3"></circle>
+            <circle cx="6" cy="18" r="3"></circle>
+            <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+            <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+            <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+          </svg>
+          <span>Snipping</span>
+        </button>
+      </div>
+
+      <div class="sliders-box">
+        <div class="modern-slider-row">
+          <svg class="slider-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <input type="range" id="volume-slider" min="0" max="100" value="75" />
+          <span class="slider-pct" id="volume-value">75%</span>
+        </div>
+
+        <div class="modern-slider-row">
+          <svg class="slider-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+          </svg>
+          <input type="range" id="brightness-slider" min="25" max="100" value="100" />
+          <span class="slider-pct" id="brightness-value">100%</span>
+        </div>
+      </div>
+
+      <div class="island-footer">
+        <span id="sys-user-label">⚡ Windows 12 Pro</span>
+        <span id="sys-uptime-label">Uptime: 2j 15m</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       2. POP-UP KALENDER BULANAN & CUACA LIVE (#win-calendar)
+       ========================================================= -->
+  <div id="win-calendar" class="acrylic-surface interactive-widget custom-os-window hidden" data-draggable="true">
+    <div class="cal-weather-banner">
+      <div>
+        <div class="weather-big" id="cal-weather-big">⛅ 29°C • Cerah Berawan</div>
+        <div class="weather-loc" id="cal-weather-loc">Indonesia • Kelembaban 68% • Angin 12 km/j</div>
+      </div>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <button class="nav-icon-btn" id="refresh-weather-btn" title="Perbarui Cuaca Real-Time">⟳</button>
+        <button class="tl-btn tl-close" data-close-win="win-calendar" title="Tutup"></button>
+      </div>
+    </div>
+
+    <div class="cal-header">
+      <button class="nav-icon-btn" id="cal-prev-btn">◀</button>
+      <span class="cal-month-title" id="cal-month-title">November 2026</span>
+      <button class="nav-icon-btn" id="cal-next-btn">▶</button>
+    </div>
+
+    <div class="cal-weekdays">
+      <span>Min</span><span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span>
+    </div>
+    <div class="cal-days-grid" id="cal-days-grid"></div>
+  </div>
+
+  <!-- =========================================================
+       3. CUSTOM WINDOWS 12 START MENU (Glassmorphism Redesign)
+       ========================================================= -->
+  <div id="win12-start-menu" class="acrylic-surface interactive-widget custom-os-window hidden" data-draggable="true">
+    <div class="start-ambient-orb orb-1"></div>
+    <div class="start-ambient-orb orb-2"></div>
+
+    <div class="start-search-wrap">
+      <svg class="search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input type="text" id="start-search-input" placeholder="Cari aplikasi, dokumen, pengaturan (Alt+Space)..." autocomplete="off" />
+      <span class="kbd-hint">Alt+Space</span>
+    </div>
+
+    <div class="start-section-header">
+      <span class="section-title">Disematkan (Pinned)</span>
+      <div class="category-pills">
+        <button class="cat-pill active" data-filter="all">Semua</button>
+        <button class="cat-pill" data-filter="custom">UI Kustom</button>
+        <button class="cat-pill" data-filter="office">Produktivitas</button>
+      </div>
+    </div>
+
+    <div class="start-apps-grid" id="start-apps-grid">
+      <button class="start-app-card" data-custom-win="win-explorer" data-cat="custom" data-name="file explorer finder folder">
+        <div class="start-app-icon explorer-grad">📁</div>
+        <span class="start-app-name">File Explorer</span>
+        <span class="start-app-tag">Custom UI</span>
+      </button>
+
+      <button class="start-app-card" data-custom-win="win-notes" data-cat="custom" data-name="notes sticky todo catatan tugas">
+        <div class="start-app-icon notepad-grad">📌</div>
+        <span class="start-app-name">Notes & To-Do</span>
+        <span class="start-app-tag">Custom UI</span>
+      </button>
+
+      <button class="start-app-card" data-custom-win="win-terminal" data-cat="custom" data-name="terminal powershell cmd">
+        <div class="start-app-icon terminal-grad">🐚</div>
+        <span class="start-app-name">Terminal Pro</span>
+        <span class="start-app-tag">Custom UI</span>
+      </button>
+
+      <button class="start-app-card" data-custom-win="win-calculator" data-cat="custom" data-name="calculator kalkulator hitung">
+        <div class="start-app-icon calc-grad">🧮</div>
+        <span class="start-app-name">Calculator</span>
+        <span class="start-app-tag">Custom UI</span>
+      </button>
+
+      <button class="start-app-card" data-custom-win="win-settings" data-cat="custom" data-name="settings pengaturan tema">
+        <div class="start-app-icon settings-grad">⚙️</div>
+        <span class="start-app-name">Settings Hub</span>
+        <span class="start-app-tag">Custom UI</span>
+      </button>
+
+      <button class="start-app-card" data-custom-win="win-calendar" data-cat="custom" data-name="calendar kalender cuaca weather">
+        <div class="start-app-icon chrome-grad">📅</div>
+        <span class="start-app-name">Kalender</span>
+        <span class="start-app-tag">Custom UI</span>
+      </button>
+
+      <button class="start-app-card" data-native-app="chrome" data-cat="office" data-name="google chrome browser web">
+        <div class="start-app-icon chrome-grad">🌐</div>
+        <span class="start-app-name">Google Chrome</span>
+        <span class="start-app-tag">Web</span>
+      </button>
+
+      <button class="start-app-card" data-native-app="vscode" data-cat="office" data-name="visual studio code vscode coding">
+        <div class="start-app-icon vscode-grad">💻</div>
+        <span class="start-app-name">VS Code</span>
+        <span class="start-app-tag">IDE</span>
+      </button>
+
+      <button class="start-app-card" data-native-app="excel" data-cat="office" data-name="excel spreadsheet office">
+        <div class="start-app-icon excel-grad">📊</div>
+        <span class="start-app-name">Excel</span>
+        <span class="start-app-tag">Office</span>
+      </button>
+
+      <button class="start-app-card" data-native-app="word" data-cat="office" data-name="word dokumen office">
+        <div class="start-app-icon word-grad">📘</div>
+        <span class="start-app-name">Word</span>
+        <span class="start-app-tag">Office</span>
+      </button>
+
+      <button class="start-app-card" data-native-app="powerpoint" data-cat="office" data-name="powerpoint presentasi slide">
+        <div class="start-app-icon ppt-grad">📙</div>
+        <span class="start-app-name">PowerPoint</span>
+        <span class="start-app-tag">Office</span>
+      </button>
+
+      <button class="start-app-card" data-native-app="postman" data-cat="office" data-name="postman api rest">
+        <div class="start-app-icon postman-grad">🚀</div>
+        <span class="start-app-name">Postman</span>
+        <span class="start-app-tag">API Tool</span>
+      </button>
+    </div>
+
+    <div class="start-section-header">
+      <span class="section-title">Akses Cepat Folder (Recent)</span>
+      <button class="link-btn" id="start-open-explorer-btn">Buka Explorer ➔</button>
+    </div>
+
+    <div class="start-recent-grid">
+      <div class="recent-card" data-open-folder="workspace">
+        <div class="recent-ic">⚡</div>
+        <div class="recent-meta">
+          <span class="recent-title">Proyek WinMac Desktop OS</span>
+          <span class="recent-sub">d:\Belajar\xampp\htdocs\winmac-dock</span>
+        </div>
+      </div>
+
+      <div class="recent-card" data-open-folder="downloads">
+        <div class="recent-ic">📥</div>
+        <div class="recent-meta">
+          <span class="recent-title">Folder Downloads</span>
+          <span class="recent-sub">Akses cepat unduhan terbaru</span>
+        </div>
+      </div>
+
+      <div class="recent-card" data-open-folder="documents">
+        <div class="recent-ic">📂</div>
+        <div class="recent-meta">
+          <span class="recent-title">Dokumen & Administrasi</span>
+          <span class="recent-sub">Folder Documents pengguna</span>
+        </div>
+      </div>
+
+      <div class="recent-card" data-open-folder="desktop">
+        <div class="recent-ic">🖥️</div>
+        <div class="recent-meta">
+          <span class="recent-title">Shortcut Desktop</span>
+          <span class="recent-sub">Lihat semua file di Desktop</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="start-footer">
+      <div class="user-profile-pill">
+        <div class="user-avatar">👤</div>
+        <div class="user-details">
+          <span class="user-name" id="start-username">petruk punokawan</span>
+          <span class="user-role">Windows 12 × macOS Pro Suite</span>
+        </div>
+      </div>
+
+      <div class="power-actions">
+        <button class="power-btn" id="reset-pos-start-btn" title="Reset Posisi Semua Bar">🔄</button>
+        <button class="power-btn" id="lock-pc-btn" title="Kunci Layar Windows (Lock)">🔒</button>
+        <button class="power-btn danger" id="close-start-btn" title="Tutup Start Menu">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       4. CUSTOM FILE EXPLORER × macOS FINDER (Quick Look + Context Menu)
+       ========================================================= -->
+  <div id="win-explorer" class="acrylic-surface interactive-widget custom-os-window app-window hidden" data-draggable="true">
+    <div class="win-titlebar">
+      <div class="traffic-lights">
+        <button class="tl-btn tl-close" data-close-win="win-explorer" title="Tutup (Close)"></button>
+        <button class="tl-btn tl-min" data-min-win="win-explorer" title="Minimize ke Dock"></button>
+        <button class="tl-btn tl-max" id="exp-maximize-btn" title="Perbesar / Normal"></button>
+      </div>
+
+      <div class="win-tabs">
+        <div class="win-tab active">
+          <span>📁</span>
+          <span id="exp-tab-title">File Explorer</span>
+        </div>
+      </div>
+
+      <div class="win-actions-right">
+        <button class="snap-btn" data-snap-win="win-explorer" data-snap-dir="left" title="Aero Snap Kiri (50%)">⫷</button>
+        <button class="snap-btn" data-snap-win="win-explorer" data-snap-dir="right" title="Aero Snap Kanan (50%)">⫸</button>
+        <button class="pill-action-btn" id="exp-new-folder-btn" title="Buat Folder Baru">+ Folder Baru</button>
+        <button class="pill-action-btn" id="exp-open-native" title="Buka di Windows Explorer asli">↗ Native</button>
+      </div>
+    </div>
+
+    <!-- Toolbar Navigasi Lengkap (Back, Forward, Up, Refresh, Address Bar, Search) -->
+    <div class="exp-toolbar">
+      <div class="nav-btns">
+        <button class="nav-icon-btn" id="exp-back-btn" title="Kembali (Back)">⬅</button>
+        <button class="nav-icon-btn" id="exp-fwd-btn" title="Maju (Forward)">➡</button>
+        <button class="nav-icon-btn" id="exp-up-btn" title="Naik 1 Folder">⬆</button>
+        <button class="nav-icon-btn" id="exp-refresh-btn" title="Muat Ulang">⟳</button>
+      </div>
+
+      <div class="exp-address-bar">
+        <span class="addr-icon">📂</span>
+        <input type="text" id="exp-path-input" value="C:\" spellcheck="false" />
+        <button class="addr-go-btn" id="exp-go-btn">Buka</button>
+      </div>
+
+      <div class="exp-search-box">
+        <input type="text" id="exp-filter-input" placeholder="Cari di folder..." />
+      </div>
+    </div>
+
+    <!-- Inline Input Bar untuk Buat Folder Baru / Rename -->
+    <div id="exp-inline-prompt" class="exp-inline-prompt hidden">
+      <span id="exp-prompt-label">Nama Folder Baru:</span>
+      <input type="text" id="exp-prompt-input" autocomplete="off" />
+      <button class="addr-go-btn" id="exp-prompt-ok">Simpan</button>
+      <button class="pill-action-btn" id="exp-prompt-cancel">Batal</button>
+    </div>
+
+    <!-- Body: Sidebar + Main Files Grid + Quick Look Preview Pane -->
+    <div class="exp-body" id="exp-body-layout">
+      <aside class="exp-sidebar" id="exp-bookmarks"></aside>
+
+      <main class="exp-main">
+        <div class="exp-files-grid" id="exp-files-grid"></div>
+      </main>
+
+      <!-- Panel Preview Quick Look (macOS Finder Style) -->
+      <aside class="exp-preview-pane hidden" id="exp-preview-pane">
+        <div class="preview-header">
+          <span class="preview-title" id="preview-title">Quick Look</span>
+          <button class="tl-btn tl-close" id="close-preview-btn" title="Tutup Preview"></button>
+        </div>
+        <div class="preview-body" id="preview-body"></div>
+        <div class="preview-meta" id="preview-meta"></div>
+      </aside>
+    </div>
+
+    <!-- Status Bar Bawah -->
+    <div class="exp-statusbar">
+      <span id="exp-item-count">0 item</span>
+      <span id="exp-status-hint">Klik 1x pilih + tekan Spasi untuk Quick Look • Klik kanan untuk opsi • Tarik pojok untuk Resize</span>
+    </div>
+
+    <!-- Context Menu Klik Kanan di Explorer -->
+    <div id="exp-context-menu" class="acrylic-surface exp-context-menu hidden">
+      <button data-ctx="preview">👁️ Quick Look Preview (Spasi)</button>
+      <button data-ctx="open">📂 Buka File / Folder</button>
+      <button data-ctx="rename">✏️ Ganti Nama (Rename)</button>
+      <button data-ctx="copypath">📋 Salin Path Lengkap</button>
+      <div class="ctx-sep"></div>
+      <button data-ctx="newfolder">➕ Buat Folder Baru</button>
+      <button data-ctx="trash" class="danger-text">🗑️ Hapus ke Recycle Bin</button>
+    </div>
+
+    <div class="win-resize-handle" data-resize-win="win-explorer" title="Tarik untuk mengubah ukuran jendela"></div>
+  </div>
+
+  <!-- =========================================================
+       5. WIDGET STICKY NOTES & TO-DO LIST (#win-notes)
+       ========================================================= -->
+  <div id="win-notes" class="acrylic-surface interactive-widget custom-os-window app-window hidden" data-draggable="true">
+    <div class="win-titlebar">
+      <div class="traffic-lights">
+        <button class="tl-btn tl-close" data-close-win="win-notes" title="Tutup"></button>
+        <button class="tl-btn tl-min" data-min-win="win-notes" title="Minimize ke Dock"></button>
+        <button class="tl-btn tl-max" data-max-win="win-notes" title="Perbesar / Normal"></button>
+      </div>
+      <div class="win-tabs">
+        <div class="win-tab active">📌 Glass Notes & To-Do Productivity</div>
+      </div>
+      <div class="win-actions-right">
+        <button class="snap-btn" data-snap-win="win-notes" data-snap-dir="left" title="Aero Snap Kiri">⫷</button>
+        <button class="snap-btn" data-snap-win="win-notes" data-snap-dir="right" title="Aero Snap Kanan">⫸</button>
+        <span class="saved-badge" id="notes-saved-badge">✓ Tersimpan</span>
+      </div>
+    </div>
+
+    <div class="notes-layout">
+      <!-- Kolom Kiri: Sticky Notes Bebas -->
+      <div class="sticky-pane">
+        <div class="pane-label">📝 Catatan Cepat (Auto-Save)</div>
+        <textarea id="sticky-textarea" placeholder="Tulis ide, catatan rapat, atau snippet kode di sini..."></textarea>
+      </div>
+
+      <!-- Kolom Kanan: To-Do List -->
+      <div class="todo-pane">
+        <div class="pane-label">✅ Daftar Tugas Hari Ini</div>
+        <div class="todo-input-row">
+          <input type="text" id="todo-input" placeholder="Tambah tugas baru..." autocomplete="off" />
+          <button class="addr-go-btn" id="todo-add-btn">+ Tambah</button>
+        </div>
+        <div class="todo-list" id="todo-list"></div>
+      </div>
+    </div>
+
+    <div class="win-resize-handle" data-resize-win="win-notes" title="Tarik untuk mengubah ukuran jendela"></div>
+  </div>
+
+  <!-- =========================================================
+       6. CUSTOM WINDOWS 12 GLASS TERMINAL PRO
+       ========================================================= -->
+  <div id="win-terminal" class="acrylic-surface interactive-widget custom-os-window app-window hidden" data-draggable="true">
+    <div class="win-titlebar">
+      <div class="traffic-lights">
+        <button class="tl-btn tl-close" data-close-win="win-terminal" title="Tutup"></button>
+        <button class="tl-btn tl-min" data-min-win="win-terminal" title="Minimize ke Dock"></button>
+        <button class="tl-btn tl-max" data-max-win="win-terminal" title="Perbesar / Normal"></button>
+      </div>
+
+      <div class="win-tabs">
+        <div class="win-tab active">
+          <span>🐚</span>
+          <span>PowerShell / CMD Glass</span>
+        </div>
+      </div>
+
+      <div class="win-actions-right">
+        <button class="snap-btn" data-snap-win="win-terminal" data-snap-dir="left" title="Aero Snap Kiri">⫷</button>
+        <button class="snap-btn" data-snap-win="win-terminal" data-snap-dir="right" title="Aero Snap Kanan">⫸</button>
+        <button class="pill-action-btn" id="term-open-native">↗ Native Terminal</button>
+      </div>
+    </div>
+
+    <div class="term-quick-bar">
+      <span class="quick-lbl">Perintah Cepat:</span>
+      <button class="term-chip" data-cmd="dir">dir</button>
+      <button class="term-chip" data-cmd="ipconfig">ipconfig</button>
+      <button class="term-chip" data-cmd="node -v">node -v</button>
+      <button class="term-chip" data-cmd="whoami">whoami</button>
+      <button class="term-chip" data-cmd="cls">clear</button>
+    </div>
+
+    <div class="term-output" id="term-output">
+      <div class="term-line accent">WinMac OS Glass Terminal [Version 12.0.2026]</div>
+      <div class="term-line muted">Ketik perintah Windows (misal: dir, ipconfig, node -v) lalu tekan Enter.</div>
+    </div>
+
+    <div class="term-input-row">
+      <span class="term-prompt">PS WinMac&gt;</span>
+      <input type="text" id="term-input" placeholder="Ketik perintah..." autocomplete="off" />
+      <button class="addr-go-btn" id="term-send-btn">Run</button>
+    </div>
+
+    <div class="win-resize-handle" data-resize-win="win-terminal" title="Tarik untuk mengubah ukuran jendela"></div>
+  </div>
+
+  <!-- =========================================================
+       7. CUSTOM WINDOWS 12 GLASS CALCULATOR
+       ========================================================= -->
+  <div id="win-calculator" class="acrylic-surface interactive-widget custom-os-window hidden" data-draggable="true">
+    <div class="win-titlebar">
+      <div class="traffic-lights">
+        <button class="tl-btn tl-close" data-close-win="win-calculator" title="Tutup"></button>
+        <button class="tl-btn tl-min" data-min-win="win-calculator" title="Minimize ke Dock"></button>
+      </div>
+      <span class="calc-header-title">🧮 Glass Calculator</span>
+      <button class="pill-action-btn" data-native-app="calculator">↗ Native</button>
+    </div>
+
+    <div class="calc-screen">
+      <div class="calc-expr" id="calc-expr">0</div>
+      <div class="calc-result" id="calc-result">0</div>
+    </div>
+
+    <div class="calc-pad">
+      <button class="calc-key fn" data-key="C">AC</button>
+      <button class="calc-key fn" data-key="DEL">⌫</button>
+      <button class="calc-key fn" data-key="%">%</button>
+      <button class="calc-key op" data-key="/">÷</button>
+
+      <button class="calc-key" data-key="7">7</button>
+      <button class="calc-key" data-key="8">8</button>
+      <button class="calc-key" data-key="9">9</button>
+      <button class="calc-key op" data-key="*">×</button>
+
+      <button class="calc-key" data-key="4">4</button>
+      <button class="calc-key" data-key="5">5</button>
+      <button class="calc-key" data-key="6">6</button>
+      <button class="calc-key op" data-key="-">−</button>
+
+      <button class="calc-key" data-key="1">1</button>
+      <button class="calc-key" data-key="2">2</button>
+      <button class="calc-key" data-key="3">3</button>
+      <button class="calc-key op" data-key="+">+</button>
+
+      <button class="calc-key zero" data-key="0">0</button>
+      <button class="calc-key" data-key=".">.</button>
+      <button class="calc-key eq" data-key="=">=</button>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       8. CUSTOM WINDOWS 12 SETTINGS & RAINMETER SKIN HUB
+       ========================================================= -->
+  <div id="win-settings" class="acrylic-surface interactive-widget custom-os-window app-window hidden" data-draggable="true">
+    <div class="win-titlebar">
+      <div class="traffic-lights">
+        <button class="tl-btn tl-close" data-close-win="win-settings" title="Tutup"></button>
+        <button class="tl-btn tl-min" data-min-win="win-settings" title="Minimize ke Dock"></button>
+        <button class="tl-btn tl-max" data-max-win="win-settings" title="Perbesar / Normal"></button>
+      </div>
+      <div class="win-tabs">
+        <div class="win-tab active">⚙️ Windows 12 × macOS × Rainmeter Hub</div>
+      </div>
+      <div class="win-actions-right">
+        <button class="snap-btn" data-snap-win="win-settings" data-snap-dir="left" title="Aero Snap Kiri">⫷</button>
+        <button class="snap-btn" data-snap-win="win-settings" data-snap-dir="right" title="Aero Snap Kanan">⫸</button>
+        <button class="pill-action-btn" id="reset-all-positions-btn">🔄 Reset Posisi</button>
+        <button class="pill-action-btn" data-native-app="settings">↗ Native Settings</button>
+      </div>
+    </div>
+
+    <div class="settings-body">
+      <div class="settings-section">
+        <h4>🎨 Pilih Tema Glassmorphism (Tersimpan Permanen)</h4>
+        <div class="theme-cards-grid">
+          <button class="theme-card-btn active" data-set-theme="theme-mica-dark">
+            <span class="swatch swatch-dark"></span>
+            <span>Dark Acrylic</span>
+          </button>
+          <button class="theme-card-btn" data-set-theme="theme-aurora">
+            <span class="swatch swatch-aurora"></span>
+            <span>Cyber Aurora</span>
+          </button>
+          <button class="theme-card-btn" data-set-theme="theme-mica-light">
+            <span class="swatch swatch-light"></span>
+            <span>Light Mica</span>
+          </button>
+          <button class="theme-card-btn" data-set-theme="theme-sonoma">
+            <span class="swatch swatch-sonoma"></span>
+            <span>macOS Sonoma</span>
+          </button>
+          <button class="theme-card-btn" data-set-theme="theme-sunset">
+            <span class="swatch swatch-sunset"></span>
+            <span>Sunset Gold</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Rainmeter Desktop Skins Manager -->
+      <div class="settings-section">
+        <h4>🌦️ Rainmeter Desktop Skins Manager (Klik Kanan Skin untuk Opacity/Scale)</h4>
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">Chrono / Mond Aesthetic Desktop Clock</div>
+            <div class="setting-sub">Jam tipografi besar di wallpaper dengan cuaca live & kutipan harian</div>
+          </div>
+          <input type="checkbox" id="rm-toggle-clock" class="win-switch" checked />
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">SysMonitor Pro (CPU Sparkline, RAM, Disk C/D & Network)</div>
+            <div class="setting-sub">Grafik beban CPU real-time, kapasitas harddisk C:/D:, dan kecepatan internet</div>
+          </div>
+          <input type="checkbox" id="rm-toggle-sysmon" class="win-switch" checked />
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">Monstercat / Fountain of Colors Audio Visualizer</div>
+            <div class="setting-sub">24-bar spektrum frekuensi audio real-time + WebAudio Lofi Synth</div>
+          </div>
+          <input type="checkbox" id="rm-toggle-visualizer" class="win-switch" checked />
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">🔒 Kunci Semua Skin Rainmeter (Mode Click-Through)</div>
+            <div class="setting-sub">Jika aktif, skin menyatu dengan wallpaper dan tidak tergeser saat diklik</div>
+          </div>
+          <input type="checkbox" id="rm-lock-all-toggle" class="win-switch" />
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h4>🛸 Kustomisasi Dock, Auto-Hide & Sistem</h4>
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">Kekuatan Efek Perbesaran Dock (Magnification)</div>
+            <div class="setting-sub">Atur skala maksimum saat kursor melewati ikon dock</div>
+          </div>
+          <input type="range" id="dock-scale-slider" min="115" max="185" value="158" />
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">Auto-Hide Dock (Sembunyi Otomatis)</div>
+            <div class="setting-sub">Dock turun sembunyi dan muncul saat kursor menyentuh tepi bawah layar</div>
+          </div>
+          <input type="checkbox" id="autohide-dock-toggle" class="win-switch" />
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">Always On Top (Selalu di Atas Aplikasi Lain)</div>
+            <div class="setting-sub">Bisa diatur juga dari ikon System Tray di pojok kanan bawah Windows</div>
+          </div>
+          <input type="checkbox" id="always-on-top-toggle" class="win-switch" />
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">🚀 Jalankan Otomatis Saat Windows Menyala (Auto-Start on Boot)</div>
+            <div class="setting-sub">Daftarkan WinMac OS Suite ke Windows Startup Login Items</div>
+          </div>
+          <input type="checkbox" id="autostart-toggle" class="win-switch" />
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h4>⌨️ Pintasan Keyboard Global & Spesifikasi</h4>
+        <div class="specs-card" id="specs-card">
+          Memuat informasi perangkat keras...
+        </div>
+      </div>
+    </div>
+
+    <div class="win-resize-handle" data-resize-win="win-settings" title="Tarik untuk mengubah ukuran jendela"></div>
+  </div>
+
+  <!-- =========================================================
+       9. FLOATING DOCK + SMART AUTO-HIDE SENSOR + CUSTOM SHORTCUTS
+       ========================================================= -->
+  <div id="dock-hover-zone" class="interactive-widget"></div>
+
+  <div id="bottom-dock-wrapper" class="interactive-widget" data-draggable="true">
+    <div id="dock" class="acrylic-surface dock-container">
+      <div class="dock-drag-handle" title="Geser Posisi Dock">
+        <span></span><span></span><span></span>
+      </div>
+
+      <!-- 1. Windows 12 Start Menu Button -->
+      <button class="dock-item" id="launcher-btn" data-label="Start Menu (Alt+Space)">
+        <div class="dock-icon icon-win12">
+          <svg viewBox="0 0 48 48" fill="none">
+            <defs>
+              <linearGradient id="w1" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#7dd3fc" />
+                <stop offset="100%" stop-color="#0284c7" />
+              </linearGradient>
+              <linearGradient id="w2" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#38bdf8" />
+                <stop offset="100%" stop-color="#2563eb" />
+              </linearGradient>
+            </defs>
+            <rect x="6" y="6" width="16" height="16" rx="4" fill="url(#w1)" />
+            <rect x="26" y="6" width="16" height="16" rx="4" fill="url(#w2)" />
+            <rect x="6" y="26" width="16" height="16" rx="4" fill="url(#w2)" />
+            <rect x="26" y="26" width="16" height="16" rx="4" fill="#1d4ed8" />
+          </svg>
+        </div>
+        <span class="dock-dot active"></span>
+      </button>
+
+      <div class="dock-separator"></div>
+
+      <!-- 2. Custom File Explorer -->
+      <button class="dock-item" data-custom-win="win-explorer" data-label="File Explorer (Alt+E)">
+        <div class="dock-icon icon-explorer">
+          <svg viewBox="0 0 48 48" fill="none">
+            <defs>
+              <linearGradient id="expBack" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#f59e0b" />
+                <stop offset="100%" stop-color="#b45309" />
+              </linearGradient>
+              <linearGradient id="expFront" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#fde047" />
+                <stop offset="100%" stop-color="#f59e0b" />
+              </linearGradient>
+            </defs>
+            <path d="M6 12C6 9.79 7.79 8 10 8H19L23 12H38C40.21 12 42 13.79 42 16V36C42 38.21 40.21 40 38 40H10C7.79 40 6 38.21 6 36V12Z" fill="url(#expBack)" />
+            <rect x="10" y="14" width="28" height="10" rx="2" fill="#ffffff" fill-opacity="0.85" />
+            <path d="M6 19C6 17.34 7.34 16 9 16H39C40.66 16 42 17.34 42 19V36C42 38.21 40.21 40 38 40H10C7.79 40 6 38.21 6 36V19Z" fill="url(#expFront)" />
+            <rect x="16" y="25" width="16" height="4" rx="2" fill="#0284c7" />
+          </svg>
+        </div>
+        <span class="dock-dot active"></span>
+      </button>
+
+      <!-- 3. Google Chrome -->
+      <button class="dock-item" data-native-app="chrome" data-label="Google Chrome">
+        <div class="dock-icon icon-chrome">
+          <svg viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="24" r="20" fill="#ffffff" />
+            <path d="M24 4C16.3 4 9.6 8.3 6.2 14.7L15.4 30.6L24 24V4Z" fill="#ea4335" />
+            <path d="M6.2 14.7C4.8 17.5 4 20.6 4 24C4 35 13 44 24 44L33.2 28.1L24 24L6.2 14.7Z" fill="#34a853" />
+            <path d="M24 4V24L33.2 28.1L24 44C35 44 44 35 44 24C44 13 35 4 24 4Z" fill="#fbbc05" />
+            <circle cx="24" cy="24" r="9.5" fill="#ffffff" />
+            <circle cx="24" cy="24" r="7.5" fill="#4285f4" />
+          </svg>
+        </div>
+        <span class="dock-dot active"></span>
+      </button>
+
+      <!-- 4. VS Code -->
+      <button class="dock-item" data-native-app="vscode" data-label="Visual Studio Code">
+        <div class="dock-icon icon-vscode">
+          <svg viewBox="0 0 48 48" fill="none">
+            <path d="M35.5 6.5L18.2 23.2L9.5 16.2L6 18.2V29.8L9.5 31.8L18.2 24.8L35.5 41.5L42 38.2V9.8L35.5 6.5Z" fill="#38bdf8" />
+            <path d="M35.5 6.5L18.2 23.2L24 28.5L35.5 18V6.5Z" fill="#7dd3fc" />
+            <path d="M35.5 6.5V41.5L42 38.2V9.8L35.5 6.5Z" fill="#0284c7" />
+          </svg>
+        </div>
+        <span class="dock-dot active"></span>
+      </button>
+
+      <!-- 5. Custom Glass Terminal -->
+      <button class="dock-item" data-custom-win="win-terminal" data-label="Terminal Pro">
+        <div class="dock-icon icon-terminal">
+          <svg viewBox="0 0 48 48" fill="none">
+            <rect x="4" y="7" width="40" height="34" rx="6" fill="#0f172a" stroke="#475569" stroke-width="1.5" />
+            <path d="M4 13C4 9.69 6.69 7 10 7H38C41.31 7 44 9.69 44 13V15H4V13Z" fill="#334155" />
+            <circle cx="10" cy="11" r="1.8" fill="#f87171" />
+            <circle cx="15" cy="11" r="1.8" fill="#facc15" />
+            <circle cx="20" cy="11" r="1.8" fill="#4ade80" />
+            <path d="M13 22L19 27L13 32" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+            <line x1="23" y1="32" x2="33" y2="32" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" />
+          </svg>
+        </div>
+        <span class="dock-dot active"></span>
+      </button>
+
+      <!-- 6. Sticky Notes & To-Do Widget -->
+      <button class="dock-item" data-custom-win="win-notes" data-label="Sticky Notes & To-Do">
+        <div class="dock-icon icon-notes">
+          <svg viewBox="0 0 48 48" fill="none">
+            <rect x="8" y="6" width="32" height="36" rx="6" fill="#fde047" />
+            <path d="M8 12C8 8.69 10.69 6 14 6H34C37.31 6 40 8.69 40 12V15H8V12Z" fill="#f59e0b" />
+            <line x1="14" y1="22" x2="34" y2="22" stroke="#78350f" stroke-width="2.5" stroke-linecap="round" />
+            <line x1="14" y1="29" x2="30" y2="29" stroke="#78350f" stroke-width="2.5" stroke-linecap="round" />
+            <line x1="14" y1="36" x2="24" y2="36" stroke="#78350f" stroke-width="2.5" stroke-linecap="round" />
+          </svg>
+        </div>
+        <span class="dock-dot"></span>
+      </button>
+
+      <!-- 7. Custom Glass Calculator -->
+      <button class="dock-item" data-custom-win="win-calculator" data-label="Calculator">
+        <div class="dock-icon icon-calc">
+          <svg viewBox="0 0 48 48" fill="none">
+            <rect x="8" y="5" width="32" height="38" rx="6" fill="#334155" />
+            <rect x="12" y="9" width="24" height="9" rx="3" fill="#bae6fd" />
+            <circle cx="15.5" cy="24" r="2.3" fill="#e2e8f0" />
+            <circle cx="24" cy="24" r="2.3" fill="#e2e8f0" />
+            <circle cx="32.5" cy="24" r="2.3" fill="#38bdf8" />
+            <circle cx="15.5" cy="31" r="2.3" fill="#e2e8f0" />
+            <circle cx="24" cy="31" r="2.3" fill="#e2e8f0" />
+            <rect x="30.2" y="28.7" width="4.6" height="10" rx="2.3" fill="#f59e0b" />
+            <circle cx="15.5" cy="37" r="2.3" fill="#e2e8f0" />
+            <circle cx="24" cy="37" r="2.3" fill="#e2e8f0" />
+          </svg>
+        </div>
+        <span class="dock-dot"></span>
+      </button>
+
+      <!-- 8. Custom Settings Hub -->
+      <button class="dock-item" data-custom-win="win-settings" data-label="Settings & Themes">
+        <div class="dock-icon icon-settings">
+          <svg viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="24" r="16" stroke="#cbd5e1" stroke-width="5" stroke-dasharray="6 4" />
+            <circle cx="24" cy="24" r="12" fill="#475569" />
+            <circle cx="24" cy="24" r="6" fill="#38bdf8" />
+          </svg>
+        </div>
+        <span class="dock-dot"></span>
+      </button>
+
+      <!-- Container Shortcut Aplikasi Tambahan User -->
+      <div id="custom-dock-items" class="custom-dock-items"></div>
+
+      <!-- Tombol Tambah Shortcut Aplikasi (+) -->
+      <button class="dock-item" id="add-dock-app-btn" data-label="Tambah Shortcut Aplikasi (+)">
+        <div class="dock-icon icon-add">
+          <svg viewBox="0 0 48 48" fill="none">
+            <line x1="24" y1="12" x2="24" y2="36" stroke="#38bdf8" stroke-width="4" stroke-linecap="round" />
+            <line x1="12" y1="24" x2="36" y2="24" stroke="#38bdf8" stroke-width="4" stroke-linecap="round" />
+          </svg>
+        </div>
+        <span class="dock-dot"></span>
+      </button>
+
+      <div class="dock-separator"></div>
+
+      <!-- Recycle Bin -->
+      <button class="dock-item" data-native-app="recyclebin" data-label="Recycle Bin">
+        <div class="dock-icon icon-recycle">
+          <svg viewBox="0 0 48 48" fill="none">
+            <path d="M12 14H36L33.5 39C33.3 40.7 31.9 42 30.2 42H17.8C16.1 42 14.7 40.7 14.5 39L12 14Z" fill="#cbd5e1" fill-opacity="0.85" />
+            <rect x="9" y="9" width="30" height="5" rx="2.5" fill="#94a3b8" />
+            <rect x="19" y="6" width="10" height="4" rx="2" fill="#64748b" />
+            <line x1="19" y1="20" x2="20" y2="35" stroke="#475569" stroke-width="2.5" stroke-linecap="round" />
+            <line x1="24" y1="20" x2="24" y2="35" stroke="#475569" stroke-width="2.5" stroke-linecap="round" />
+            <line x1="29" y1="20" x2="28" y2="35" stroke="#475569" stroke-width="2.5" stroke-linecap="round" />
+          </svg>
+        </div>
+        <span class="dock-dot"></span>
+      </button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

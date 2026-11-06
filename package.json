@@ -1,0 +1,34 @@
+{
+  "name": "winmac-dock",
+  "version": "2.0.0",
+  "description": "Windows 12 meets macOS + Rainmeter Desktop OS Suite (Dynamic Island, Floating Dock, Custom Explorer & Desktop Skins)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win portable nsis"
+  },
+  "keywords": [
+    "electron",
+    "windows12",
+    "macos",
+    "rainmeter",
+    "dock",
+    "dynamic-island",
+    "glassmorphism"
+  ],
+  "author": "WinMac OS Suite",
+  "license": "MIT",
+  "build": {
+    "appId": "com.winmac.desktopsuite",
+    "productName": "WinMac Desktop OS Suite",
+    "win": {
+      "target": [
+        "portable"
+      ]
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}
