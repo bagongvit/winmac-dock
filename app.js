@@ -8,7 +8,8 @@ const STORAGE_KEY = 'winmac_os_config_v2';
 const defaultConfig = {
   theme: 'theme-mica-dark',
   dockScale: 158,
-  alwaysOnTop: false,
+  alwaysOnTop: true,
+  fullScreenFixed: true,
   autoHideDock: false,
   autoStart: false,
   rainmeterLockAll: false,
@@ -2541,9 +2542,15 @@ initParticles(appConfig.particleEffect || 'fireflies');
 applyCustomStudioStyle();
 applyRainmeterSkinConfig();
 restoreSavedPositions();
-if (appConfig.alwaysOnTop) {
-  ipcRenderer.send('set-always-on-top', true);
+if (!appConfig.fullScreenFixed) {
+  appConfig.alwaysOnTop = true;
+  appConfig.fullScreenFixed = true;
+  saveConfig();
 }
+if (alwaysOnTopToggle) {
+  alwaysOnTopToggle.checked = Boolean(appConfig.alwaysOnTop);
+}
+ipcRenderer.send('set-always-on-top', Boolean(appConfig.alwaysOnTop));
 if (appConfig.autoHideDock) {
   scheduleAutoHideDock();
 }

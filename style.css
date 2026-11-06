@@ -68,10 +68,30 @@ html,
 body {
   width: 100vw;
   height: 100vh;
+  min-height: 100vh;
   overflow: hidden;
   background: transparent;
   font-family: 'Segoe UI Variable Display', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--text-primary);
+}
+
+/* Custom Scrollbar Glass Ramping (macOS Style) */
+*::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.32);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
 }
 
 body.font-mono {
@@ -2306,7 +2326,12 @@ body.font-serif {
    ========================================================= */
 #desktop-wallpaper-layer {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
   z-index: 1;
   pointer-events: none;
   overflow: hidden;
@@ -2353,10 +2378,10 @@ body.font-serif {
 }
 .sonoma-waves {
   position: absolute;
-  bottom: 0;
+  bottom: -2px;
   left: 0;
   width: 100%;
-  height: 76%;
+  height: 78%;
 }
 
 /* Preset 2: Windows 12 Fluent Midnight Bloom */
@@ -2446,6 +2471,9 @@ body.font-serif {
   z-index: 2200;
   background: var(--accent-primary);
   box-shadow: 0 0 10px var(--accent-primary);
+}
+.snap-guide-line.hidden {
+  display: none !important;
 }
 #snap-guide-x {
   top: 0;

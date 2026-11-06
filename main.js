@@ -18,7 +18,7 @@ const path = require('path');
 
 let mainWindow;
 let tray = null;
-let isAlwaysOnTop = false;
+let isAlwaysOnTop = true;
 let isOverlayVisible = true;
 
 // Optimasi Ringan untuk Laptop (Hemat RAM & GPU V8)
@@ -176,12 +176,17 @@ function updateTrayMenu() {
     },
     { type: 'separator' },
     {
-      label: '📌 Always On Top',
+      label: '📌 Always On Top (Tutup Taskbar Bawah)',
       type: 'checkbox',
       checked: isAlwaysOnTop,
       click: (menuItem) => {
         isAlwaysOnTop = menuItem.checked;
-        mainWindow?.setAlwaysOnTop(isAlwaysOnTop);
+        if (isAlwaysOnTop) {
+          mainWindow?.setAlwaysOnTop(true, 'screen-saver');
+          ensureFullScreenBounds();
+        } else {
+          mainWindow?.setAlwaysOnTop(false);
+        }
         mainWindow?.webContents.send('sync-always-on-top', isAlwaysOnTop);
       }
     },
@@ -199,30 +204,56 @@ function updateTrayMenu() {
   tray.setContextMenu(contextMenu);
 }
 
+function ensureFullScreenBounds() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { x, y, width, height } = primaryDisplay.bounds;
+
+  if (isAlwaysOnTop) {
+    // Level 'screen-saver' memastikan overlay menutup 100% layar penuh termasuk Taskbar bawah Windows
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  }
+  mainWindow.setResizable(true);
+  mainWindow.setMinimumSize(width, height);
+  mainWindow.setBounds({ x, y, width, height });
+  mainWindow.setResizable(false);
+}
+
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.workAreaSize;
+  const { x, y, width, height } = primaryDisplay.bounds;
 
   mainWindow = new BrowserWindow({
+    x,
+    y,
     width,
     height,
-    x: 0,
-    y: 0,
+    enableLargerThanScreen: true,
     transparent: true,
     frame: false,
     resizable: false,
     movable: false,
     hasShadow: false,
     skipTaskbar: true,
-    alwaysOnTop: false,
+    alwaysOnTop: true,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
     }
   });
 
+  ensureFullScreenBounds();
+
   mainWindow.loadFile('index.html');
   mainWindow.setIgnoreMouseEvents(true, { forward: true });
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    ensureFullScreenBounds();
+  });
+
+  screen.on('display-metrics-changed', () => {
+    ensureFullScreenBounds();
+  });
 }
 
 // =========================================================
@@ -236,7 +267,12 @@ ipcMain.on('set-ignore-mouse-events', (event, ignore, options) => {
 ipcMain.on('set-always-on-top', (event, flag) => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   isAlwaysOnTop = Boolean(flag);
-  mainWindow.setAlwaysOnTop(isAlwaysOnTop);
+  if (isAlwaysOnTop) {
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    ensureFullScreenBounds();
+  } else {
+    mainWindow.setAlwaysOnTop(false);
+  }
   updateTrayMenu();
 });
 
