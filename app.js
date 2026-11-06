@@ -1796,14 +1796,26 @@ function renderParticleTick() {
       p.x += p.vx;
       p.y += p.vy;
       p.alpha += (Math.random() - 0.5) * 0.04;
-      p.alpha = Math.max(0.18, Math.min(0.85, p.alpha));
+      p.alpha = Math.max(0.22, Math.min(0.9, p.alpha));
+      // Layer 1: Soft Halo Aura (tampilan glow mewah tanpa beban GPU shadowBlur)
       pCtx.beginPath();
-      pCtx.arc(p.x, p.y, p.r * 1.4, 0, Math.PI * 2);
+      pCtx.arc(p.x, p.y, p.r * 3.2, 0, Math.PI * 2);
       pCtx.fillStyle = accent;
+      pCtx.globalAlpha = p.alpha * 0.22;
+      pCtx.fill();
+      // Layer 2: Inti Cahaya Terang
+      pCtx.beginPath();
+      pCtx.arc(p.x, p.y, p.r * 1.2, 0, Math.PI * 2);
+      pCtx.fillStyle = '#ffffff';
       pCtx.globalAlpha = p.alpha;
       pCtx.fill();
     } else if (mode === 'starfield') {
-      p.alpha = 0.3 + Math.abs(Math.sin(Date.now() * 0.002 + p.x)) * 0.6;
+      p.alpha = 0.3 + Math.abs(Math.sin(Date.now() * 0.002 + p.x)) * 0.65;
+      pCtx.beginPath();
+      pCtx.arc(p.x, p.y, p.r * 2.4, 0, Math.PI * 2);
+      pCtx.fillStyle = accent;
+      pCtx.globalAlpha = p.alpha * 0.2;
+      pCtx.fill();
       pCtx.beginPath();
       pCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       pCtx.fillStyle = '#ffffff';
