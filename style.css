@@ -95,8 +95,8 @@ body.font-serif {
 
 .acrylic-surface {
   background: var(--surface-bg);
-  backdrop-filter: blur(28px) saturate(190%);
-  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
   border: 1px solid var(--border-outer);
   box-shadow:
     var(--shadow-elevation),
@@ -2189,12 +2189,13 @@ body.font-serif {
 
 .rm-vis-bar {
   flex: 1;
-  height: 18%;
-  min-height: 4px;
+  height: 100%;
   border-radius: 3px 3px 1px 1px;
   background: linear-gradient(180deg, var(--accent-primary), var(--accent-secondary));
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.35);
-  transition: height 0.08s ease;
+  transform-origin: bottom center;
+  transform: scaleY(0.18);
+  will-change: transform;
+  transition: transform 0.1s ease;
 }
 
 .rm-vis-footer {
@@ -2332,23 +2333,21 @@ body.font-serif {
 }
 .sonoma-glow-1 {
   position: absolute;
-  top: 6%;
-  left: 15%;
-  width: 560px;
-  height: 360px;
+  top: 4%;
+  left: 12%;
+  width: 640px;
+  height: 420px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.42), rgba(99, 102, 241, 0.18), transparent 70%);
-  filter: blur(55px);
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.35), rgba(99, 102, 241, 0.14), transparent 70%);
 }
 .sonoma-glow-2 {
   position: absolute;
-  top: 14%;
-  right: 12%;
-  width: 520px;
-  height: 340px;
+  top: 10%;
+  right: 10%;
+  width: 600px;
+  height: 400px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(244, 114, 182, 0.36), rgba(251, 146, 60, 0.2), transparent 70%);
-  filter: blur(60px);
+  background: radial-gradient(circle, rgba(244, 114, 182, 0.28), rgba(251, 146, 60, 0.14), transparent 70%);
 }
 .sonoma-waves {
   position: absolute;

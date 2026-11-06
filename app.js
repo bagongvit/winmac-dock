@@ -470,7 +470,7 @@ updateClock();
 updateSystemStats();
 fetchLiveWeather();
 setInterval(updateClock, 1000);
-setInterval(updateSystemStats, 2000);
+setInterval(updateSystemStats, 3000);
 setInterval(fetchLiveWeather, 600000);
 
 // Kalender Bulanan Interaktif
@@ -1765,10 +1765,11 @@ fontSelect?.addEventListener('change', (e) => {
   saveConfig();
 });
 
-// Particle Engine (Fireflies, Starfield, Snow, Matrix) dengan Smart CPU Auto-Pause
+// Particle Engine (Fireflies, Starfield, Snow, Matrix) — Ultra-Light Tanpa ShadowBlur
 const particleCanvas = document.getElementById('particle-canvas');
 const pCtx = particleCanvas ? particleCanvas.getContext('2d') : null;
 let particles = [];
+let particleTimerId = null;
 
 function resizeParticleCanvas() {
   if (!particleCanvas) return;
@@ -1778,44 +1779,15 @@ function resizeParticleCanvas() {
 window.addEventListener('resize', resizeParticleCanvas);
 resizeParticleCanvas();
 
-function initParticles(mode) {
-  appConfig.particleEffect = mode;
-  document.querySelectorAll('[data-particle]').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.particle === mode);
-  });
-  particles = [];
-  if (mode === 'off' || !particleCanvas) return;
-
-  const count = mode === 'matrix' ? 42 : 55;
-  for (let i = 0; i < count; i++) {
-    particles.push({
-      x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight,
-      r: Math.random() * 2.4 + 1,
-      vx: (Math.random() - 0.5) * 0.65,
-      vy: mode === 'snow' ? Math.random() * 1.1 + 0.5 : (Math.random() - 0.5) * 0.55,
-      alpha: Math.random() * 0.75 + 0.2,
-      char: String.fromCharCode(0x30a0 + Math.floor(Math.random() * 96))
-    });
-  }
-}
-
-document.querySelectorAll('[data-particle]').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    initParticles(btn.dataset.particle);
-    saveConfig();
-  });
-});
-
-setInterval(() => {
+function renderParticleTick() {
   if (!pCtx || !particleCanvas) return;
   const mode = appConfig.particleEffect || 'fireflies';
   pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
   if (mode === 'off') return;
 
-  // Smart Gaming Pause: jika CPU > 80%, hemat resource
+  // Smart Gaming / Battery Pause: jika CPU > 70%, jeda partikel otomatis
   const latestCpu = cpuHistory[cpuHistory.length - 1] || 15;
-  if (latestCpu > 80) return;
+  if (latestCpu > 70) return;
 
   const accent = appConfig.customAccent || '#38bdf8';
 
@@ -1823,40 +1795,33 @@ setInterval(() => {
     if (mode === 'fireflies') {
       p.x += p.vx;
       p.y += p.vy;
-      p.alpha += (Math.random() - 0.5) * 0.05;
-      p.alpha = Math.max(0.15, Math.min(0.9, p.alpha));
+      p.alpha += (Math.random() - 0.5) * 0.04;
+      p.alpha = Math.max(0.18, Math.min(0.85, p.alpha));
       pCtx.beginPath();
-      pCtx.arc(p.x, p.y, p.r * 1.3, 0, Math.PI * 2);
+      pCtx.arc(p.x, p.y, p.r * 1.4, 0, Math.PI * 2);
       pCtx.fillStyle = accent;
       pCtx.globalAlpha = p.alpha;
-      pCtx.shadowBlur = 12;
-      pCtx.shadowColor = accent;
       pCtx.fill();
     } else if (mode === 'starfield') {
-      p.alpha = 0.3 + Math.abs(Math.sin(Date.now() * 0.002 + p.x)) * 0.65;
+      p.alpha = 0.3 + Math.abs(Math.sin(Date.now() * 0.002 + p.x)) * 0.6;
       pCtx.beginPath();
-      pCtx.arc(p.x, p.y, p.r * 0.9, 0, Math.PI * 2);
+      pCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       pCtx.fillStyle = '#ffffff';
       pCtx.globalAlpha = p.alpha;
-      pCtx.shadowBlur = 6;
-      pCtx.shadowColor = '#ffffff';
       pCtx.fill();
     } else if (mode === 'snow') {
       p.y += p.vy;
-      p.x += Math.sin(p.y * 0.02) * 0.4;
+      p.x += Math.sin(p.y * 0.02) * 0.35;
       pCtx.beginPath();
       pCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       pCtx.fillStyle = '#f8fafc';
-      pCtx.globalAlpha = 0.75;
-      pCtx.shadowBlur = 0;
+      pCtx.globalAlpha = 0.72;
       pCtx.fill();
     } else if (mode === 'matrix') {
       p.y += 4.2;
       pCtx.font = '12px Consolas, monospace';
       pCtx.fillStyle = accent;
-      pCtx.globalAlpha = 0.55;
-      pCtx.shadowBlur = 4;
-      pCtx.shadowColor = accent;
+      pCtx.globalAlpha = 0.5;
       pCtx.fillText(p.char, p.x, p.y);
     }
 
@@ -1866,8 +1831,47 @@ setInterval(() => {
     if (p.y > particleCanvas.height) p.y = 0;
   });
   pCtx.globalAlpha = 1;
-  pCtx.shadowBlur = 0;
-}, 45);
+}
+
+function initParticles(mode) {
+  appConfig.particleEffect = mode;
+  document.querySelectorAll('[data-particle]').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.particle === mode);
+  });
+
+  if (particleTimerId) {
+    clearInterval(particleTimerId);
+    particleTimerId = null;
+  }
+
+  particles = [];
+  if (pCtx && particleCanvas) {
+    pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+  }
+  if (mode === 'off' || !particleCanvas) return;
+
+  const count = 30; // Jumlah optimal agar sangat ringan di GPU laptop
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      r: Math.random() * 2.2 + 1,
+      vx: (Math.random() - 0.5) * 0.55,
+      vy: mode === 'snow' ? Math.random() * 1.0 + 0.45 : (Math.random() - 0.5) * 0.45,
+      alpha: Math.random() * 0.7 + 0.2,
+      char: String.fromCharCode(0x30a0 + Math.floor(Math.random() * 96))
+    });
+  }
+
+  particleTimerId = setInterval(renderParticleTick, 65);
+}
+
+document.querySelectorAll('[data-particle]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    initParticles(btn.dataset.particle);
+    saveConfig();
+  });
+});
 
 // =========================================================
 // 11C. SKIN 4 (POMODORO FOCUS TIMER) & SKIN 5 (CLIPBOARD HISTORY)
@@ -2003,6 +2007,10 @@ function renderClipboardHistory() {
 renderClipboardHistory();
 
 setInterval(async () => {
+  // Hemat CPU: lewati polling clipboard jika widget clipboard disembunyikan atau di-collapse
+  if (!appConfig.rainmeterSkins?.clipboard?.visible || appConfig.rainmeterSkins?.clipboard?.collapsed) {
+    return;
+  }
   try {
     const txt = (await ipcRenderer.invoke('get-clipboard-text')).trim();
     if (txt && txt !== lastClipText && txt.length <= 300) {
@@ -2016,7 +2024,7 @@ setInterval(async () => {
       renderClipboardHistory();
     }
   } catch (_) {}
-}, 1800);
+}, 3000);
 
 document.getElementById('rm-clip-clear-btn')?.addEventListener('click', (e) => {
   e.stopPropagation();
@@ -2250,13 +2258,16 @@ rmVisSoundBtn?.addEventListener('click', (e) => {
   startOrUpdateWebAudioSynth();
 });
 
-// Animasi Real-Time 24-Bar Visualizer
+// Animasi Real-Time 24-Bar Visualizer (GPU-Accelerated transform: scaleY & Auto-Pause saat Hidden)
 let visPhase = 0;
 setInterval(() => {
   if (!visBarElements.length) return;
+  if (!appConfig.rainmeterSkins?.visualizer?.visible || appConfig.rainmeterSkins?.visualizer?.collapsed) {
+    return;
+  }
   if (!isVisualizerPlaying) {
     visBarElements.forEach((b) => {
-      b.style.height = '8%';
+      b.style.transform = 'scaleY(0.08)';
     });
     return;
   }
@@ -2270,9 +2281,9 @@ setInterval(() => {
     const jitter = Math.random() * 22;
     const rawPct = (42 + wave1 + wave2 + jitter) * volFactor;
     const clamped = Math.max(10, Math.min(98, Math.round(rawPct)));
-    bar.style.height = `${clamped}%`;
+    bar.style.transform = `scaleY(${(clamped / 100).toFixed(2)})`;
   });
-}, 85);
+}, 110);
 
 // =========================================================
 // 12. MAGNETIC GRID DRAG-AND-DROP + RESIZE SUDUT JENDELA

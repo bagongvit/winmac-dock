@@ -21,10 +21,28 @@ let tray = null;
 let isAlwaysOnTop = false;
 let isOverlayVisible = true;
 
+// Optimasi Ringan untuk Laptop (Hemat RAM & GPU V8)
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=128');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+
 // =========================================================
-// 1. STATISTIK CPU & RAM REAL-TIME
+// 1. STATISTIK CPU & RAM REAL-TIME (CACHED & HEMAT BATERAI)
 // =========================================================
 let prevCpuInfo = os.cpus();
+const staticCpuModel = prevCpuInfo[0]?.model || 'x64 Processor';
+const staticCpuCores = prevCpuInfo.length;
+const staticCpuGhz = ((prevCpuInfo[0]?.speed || 3200) / 1000).toFixed(2);
+const staticHostname = os.userInfo().username || 'User';
+const staticPlatform = `${os.type()} ${os.release()}`;
+const totalMemBytes = os.totalmem();
+const totalMemGb = (totalMemBytes / 1024 ** 3).toFixed(0);
+const hasDriveD = fs.existsSync('D:\\');
+
+let cachedDiskC = null;
+let cachedDiskD = null;
+let lastDiskCheck = 0;
+
 function getCpuUsagePercent() {
   const currentCpus = os.cpus();
   let idleDiff = 0;
@@ -33,8 +51,8 @@ function getCpuUsagePercent() {
   for (let i = 0; i < currentCpus.length; i++) {
     const prev = prevCpuInfo[i].times;
     const curr = currentCpus[i].times;
-    const prevTotal = Object.values(prev).reduce((a, b) => a + b, 0);
-    const currTotal = Object.values(curr).reduce((a, b) => a + b, 0);
+    const prevTotal = prev.user + prev.nice + prev.sys + prev.idle + prev.irq;
+    const currTotal = curr.user + curr.nice + curr.sys + curr.idle + curr.irq;
 
     idleDiff += curr.idle - prev.idle;
     totalDiff += currTotal - prevTotal;
@@ -47,7 +65,7 @@ function getCpuUsagePercent() {
 
 function getDiskStats(driveLetter = 'C:\\') {
   try {
-    if (typeof fs.statfsSync === 'function' && fs.existsSync(driveLetter)) {
+    if (typeof fs.statfsSync === 'function') {
       const st = fs.statfsSync(driveLetter);
       const total = st.blocks * st.bsize;
       const free = st.bfree * st.bsize;
@@ -67,31 +85,35 @@ function getDiskStats(driveLetter = 'C:\\') {
 }
 
 function getSystemStats() {
-  const totalMem = os.totalmem();
   const freeMem = os.freemem();
-  const usedMem = totalMem - freeMem;
-  const ramPercent = Math.round((usedMem / totalMem) * 100);
+  const usedMem = totalMemBytes - freeMem;
+  const ramPercent = Math.round((usedMem / totalMemBytes) * 100);
   const cpuPercent = getCpuUsagePercent();
   const uptimeSeconds = os.uptime();
   const hours = Math.floor(uptimeSeconds / 3600);
   const mins = Math.floor((uptimeSeconds % 3600) / 60);
-  const diskC = getDiskStats('C:\\');
-  const diskD = fs.existsSync('D:\\') ? getDiskStats('D:\\') : null;
-  const cpuSpeedMhz = os.cpus()[0]?.speed || 3200;
+
+  // Cache pembacaan Disk selama 30 detik agar bebas I/O di laptop
+  const now = Date.now();
+  if (!cachedDiskC || now - lastDiskCheck > 30000) {
+    cachedDiskC = getDiskStats('C:\\');
+    cachedDiskD = hasDriveD ? getDiskStats('D:\\') : null;
+    lastDiskCheck = now;
+  }
 
   return {
     cpu: cpuPercent,
     ram: ramPercent,
     usedGb: (usedMem / 1024 ** 3).toFixed(1),
-    totalGb: (totalMem / 1024 ** 3).toFixed(0),
+    totalGb: totalMemGb,
     uptime: `${hours}j ${mins}m`,
-    hostname: os.userInfo().username || 'User',
-    platform: `${os.type()} ${os.release()}`,
-    cpuModel: os.cpus()[0]?.model || 'x64 Processor',
-    cores: os.cpus().length,
-    cpuGhz: (cpuSpeedMhz / 1000).toFixed(2),
-    diskC,
-    diskD
+    hostname: staticHostname,
+    platform: staticPlatform,
+    cpuModel: staticCpuModel,
+    cores: staticCpuCores,
+    cpuGhz: staticCpuGhz,
+    diskC: cachedDiskC,
+    diskD: cachedDiskD
   };
 }
 

@@ -22,6 +22,19 @@
   "build": {
     "appId": "com.winmac.desktopsuite",
     "productName": "WinMac Desktop OS Suite",
+    "asar": true,
+    "compression": "maximum",
+    "electronLanguages": [
+      "en-US",
+      "id"
+    ],
+    "files": [
+      "main.js",
+      "index.html",
+      "style.css",
+      "app.js",
+      "package.json"
+    ],
     "win": {
       "target": [
         "portable"
