@@ -593,7 +593,11 @@
 
         <!-- Menu Bar Khas Apple macOS (Tampil saat mode macOS aktif) -->
         <div class="macos-menubar-menus">
-          <span class="apple-logo" data-mac-menu="start" title="Apple Menu / Start Menu"></span>
+          <span class="apple-logo" data-mac-menu="start" title="Apple Menu / Start Menu">
+            <svg viewBox="0 0 170 170" width="14" height="14" fill="currentColor">
+              <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.13-1.9-14.34-6.08-3.69-3.03-7.61-7.82-11.77-14.37-5.93-9.28-10.72-19.9-14.38-31.87-3.66-11.97-5.49-22.92-5.49-32.86 0-12.73 3.19-23.16 9.56-31.29 6.37-8.13 14.31-12.31 23.82-12.53 4.69 0 9.89 1.39 15.6 4.18 5.7 2.79 9.39 4.24 11.07 4.35 1.23 0 5.37-1.67 12.41-5.02 6.6-3.13 12.19-4.42 16.77-3.86 12.41 1.01 21.75 5.87 28.01 14.59-11.18 6.78-16.66 16.27-16.44 28.46.22 9.5 3.74 17.41 10.56 23.71 4.69 4.36 10.23 7.21 16.6 8.55-1.34 4.14-2.83 8.23-4.48 12.27zM119.22 31.01c0 7.46-2.73 14.41-8.18 20.85-6.58 7.69-14.54 12.12-23.15 11.45-.11-.9-.17-1.85-.17-2.86 0-7.16 3.12-14.81 8.65-21.08 2.76-3.17 6.27-5.8 10.53-7.89 4.25-2.08 8.28-3.24 12.09-3.43.15 1.01.23 2.01.23 2.96z"/>
+            </svg>
+          </span>
           <strong class="mac-menu-item" data-mac-menu="finder" title="Buka Finder / File Explorer">Finder</strong>
           <span class="mac-menu-item" data-mac-menu="file" title="Buka File Explorer">File</span>
           <span class="mac-menu-item" data-mac-menu="edit" title="Buka Catatan & Clipboard">Edit</span>
@@ -682,6 +686,21 @@
             <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
           </svg>
         </button>
+
+        <!-- Tombol Control Center & Jam Ujung Kanan Khas macOS Sonoma -->
+        <button class="macos-cc-btn" id="macos-cc-trigger" title="Buka / Tutup macOS Control Center">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="4" width="20" height="6" rx="3"></rect>
+            <circle cx="17" cy="7" r="2" fill="currentColor"></circle>
+            <rect x="2" y="14" width="20" height="6" rx="3"></rect>
+            <circle cx="7" cy="17" r="2" fill="currentColor"></circle>
+          </svg>
+        </button>
+        <div class="macos-menubar-clock" id="macos-clock-trigger" title="Klik untuk membuka Kalender & Cuaca">
+          <span id="macos-weather-lbl">⛅ 30°C</span>
+          <span id="macos-date-lbl">Sen 9 Nov</span>
+          <strong id="macos-time-lbl">14:53</strong>
+        </div>
       </div>
     </div>
 
@@ -1435,10 +1454,10 @@
         <span></span><span></span><span></span>
       </div>
 
-      <!-- 1. Windows 12 Start Menu Button -->
-      <button class="dock-item" id="launcher-btn" data-label="Start Menu (Alt+Space)">
+      <!-- 1. Windows 12 Start Menu / macOS Finder Launchpad Button -->
+      <button class="dock-item" id="launcher-btn" data-label="Start Menu / Finder Launchpad (Alt+Space)">
         <div class="dock-icon icon-win12">
-          <svg viewBox="0 0 48 48" fill="none">
+          <svg class="dock-svg-win12" viewBox="0 0 48 48" fill="none">
             <defs>
               <linearGradient id="w1" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stop-color="#7dd3fc" />
@@ -1454,8 +1473,26 @@
             <rect x="6" y="26" width="16" height="16" rx="4" fill="url(#w2)" />
             <rect x="26" y="26" width="16" height="16" rx="4" fill="#1d4ed8" />
           </svg>
+          <!-- Ikon Finder Wajah Senyum Khas macOS (Tampil otomatis saat Mode macOS aktif) -->
+          <svg class="dock-svg-macos-finder" viewBox="0 0 48 48" fill="none">
+            <rect x="4" y="4" width="40" height="40" rx="10" fill="#e0f2fe" />
+            <path d="M4 14C4 8.48 8.48 4 14 4H25C23 16 22.5 28 25 44H14C8.48 44 4 39.52 4 34V14Z" fill="#0284c7" />
+            <line x1="16" y1="15" x2="16" y2="21" stroke="#0f172a" stroke-width="2.8" stroke-linecap="round" />
+            <line x1="32" y1="15" x2="32" y2="21" stroke="#0f172a" stroke-width="2.8" stroke-linecap="round" />
+            <path d="M24 14L21.5 26H26.5" stroke="#0f172a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M14 31C18.5 36.5 29.5 36.5 34 31" stroke="#0f172a" stroke-width="2.8" stroke-linecap="round" />
+          </svg>
         </div>
         <span class="dock-dot active"></span>
+      </button>
+
+      <!-- Search Pill Khas Windows 12 di dalam Taskbar (Tampil saat Mode Windows 12 aktif) -->
+      <button class="win12-taskbar-search" id="win12-taskbar-search-btn" title="Klik untuk membuka Pencarian / Spotlight (Alt+K)">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4">
+          <circle cx="11" cy="11" r="7"></circle>
+          <line x1="20" y1="20" x2="16" y2="16"></line>
+        </svg>
+        <span>Cari...</span>
       </button>
 
       <!-- 1B. Tombol Cepat Tampilkan Desktop / Mode Layar Aplikasi (Alt+D) -->
@@ -1659,6 +1696,19 @@
         </div>
         <span class="dock-dot"></span>
       </button>
+
+      <!-- System Tray Kanan Khas Windows 12 di dalam Taskbar (Tampil saat Mode Windows 12 aktif) -->
+      <div class="win12-taskbar-tray" id="win12-taskbar-tray" title="Klik untuk membuka Kalender, Cuaca & Control Center">
+        <div class="win12-tray-icons">
+          <span>📶</span>
+          <span>🔊</span>
+          <span id="win12-tray-bat">🔋</span>
+        </div>
+        <div class="win12-tray-clock">
+          <strong id="win12-tray-time">14:53</strong>
+          <span id="win12-tray-date">09/11/2026</span>
+        </div>
+      </div>
     </div>
   </div>
 

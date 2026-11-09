@@ -429,7 +429,24 @@ function updateClock() {
     day: 'numeric',
     month: 'short'
   });
-  clockDateEl.textContent = dateFormatter.format(now);
+  const formattedShortDate = dateFormatter.format(now);
+  clockDateEl.textContent = formattedShortDate;
+
+  // Update Jam & Tanggal Menu Bar macOS & Taskbar Tray Windows 12
+  const macosTimeLbl = document.getElementById('macos-time-lbl');
+  const macosDateLbl = document.getElementById('macos-date-lbl');
+  if (macosTimeLbl) macosTimeLbl.textContent = `${hours}:${minutes}`;
+  if (macosDateLbl) macosDateLbl.textContent = formattedShortDate.replace(',', '');
+
+  const win12TrayTime = document.getElementById('win12-tray-time');
+  const win12TrayDate = document.getElementById('win12-tray-date');
+  if (win12TrayTime) win12TrayTime.textContent = `${hours}:${minutes}`;
+  if (win12TrayDate) {
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    win12TrayDate.textContent = `${dd}/${mm}/${yyyy}`;
+  }
 
   // Update Rainmeter Skin 1 (Mond / Chrono Clock)
   if (rmClockDayEl) {
@@ -571,6 +588,8 @@ async function fetchLiveWeather() {
     if (weatherMiniBadge) weatherMiniBadge.textContent = `${wmo.icon} ${temp}°C`;
     const tbWeatherMini = document.getElementById('tb-weather-mini');
     if (tbWeatherMini) tbWeatherMini.textContent = `${wmo.icon} ${temp}°C`;
+    const macosWeatherLbl = document.getElementById('macos-weather-lbl');
+    if (macosWeatherLbl) macosWeatherLbl.textContent = `${wmo.icon} ${temp}°C`;
     if (calWeatherBig) calWeatherBig.textContent = `${wmo.icon} ${temp}°C • ${wmo.desc}`;
     if (calWeatherLoc) {
       calWeatherLoc.textContent = `${tzCity} (Live) • Kelembaban ${hum}% • Angin ${wind} km/j`;
@@ -717,6 +736,9 @@ function applyOsMode(modeName, persist = true) {
   osModes.forEach((m) => document.body.classList.remove(m));
   document.body.classList.add(validMode);
 
+  // Pastikan Menu Bar tidak terkunci terbuka saat pindah mode
+  document.getElementById('top-island')?.classList.remove('pinned');
+
   document.querySelectorAll('[data-os-mode]').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.osMode === validMode);
   });
@@ -733,6 +755,28 @@ document.querySelectorAll('[data-os-mode]').forEach((btn) => {
     e.stopPropagation();
     applyOsMode(btn.dataset.osMode, true);
   });
+});
+
+// Interaksi Tombol Control Center & Jam Ujung Kanan di Mode macOS + Search & Tray di Mode Windows 12
+document.getElementById('macos-cc-trigger')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('top-island')?.classList.toggle('pinned');
+});
+
+document.getElementById('macos-clock-trigger')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleCustomWindow('win-calendar');
+});
+
+document.getElementById('win12-taskbar-search-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleCustomWindow('win-spotlight');
+  setTimeout(() => document.getElementById('spotlight-input')?.focus(), 60);
+});
+
+document.getElementById('win12-taskbar-tray')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleCustomWindow('win-calendar');
 });
 
 // Klik item pada Menu Bar Apple macOS ( Finder File Edit View Go Window Help)
