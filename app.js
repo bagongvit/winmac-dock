@@ -2749,6 +2749,10 @@ let resizeStartH = 0;
 
 function restoreSavedPositions() {
   const posMap = appConfig.positions || {};
+  // Pastikan Top Island & Bottom Dock selalu tetap di tengah layar (tidak miring/bergeser ke kiri)
+  delete posMap['top-island'];
+  delete posMap['bottom-dock-wrapper'];
+
   Object.keys(posMap).forEach((id) => {
     const el = document.getElementById(id);
     const pos = posMap[id];
@@ -2847,6 +2851,13 @@ document.querySelectorAll('.interactive-widget').forEach((widget) => {
 
     if (widget.classList.contains('maximized') || widget.classList.contains('rm-locked')) return;
     if (e.button === 2) return;
+    // Jangan geser posisi Top Island atau Bottom Dock kecuali diklik pada handle geser
+    if (
+      (widget.id === 'bottom-dock-wrapper' && !e.target.closest('.dock-drag-handle')) ||
+      widget.id === 'top-island'
+    ) {
+      return;
+    }
 
     widget.classList.remove('snap-left', 'snap-right');
 
@@ -3083,11 +3094,21 @@ function setAppPassthroughMode(enable, activeLabel = '') {
   }
 
   if (isAppPassthroughMode) {
-    // Tutup popup overlay internal agar aplikasi seperti MS Word / Chrome / VS Code terlihat 100% jelas
-    closeCustomWindow('win12-start-menu');
-    closeCustomWindow('win-task-switcher');
-    closeCustomWindow('win-rm-drawer');
-    closeCustomWindow('win-spotlight');
+    // Tutup semua popup overlay internal agar aplikasi seperti VS Code / MS Word / Chrome terlihat 100% jelas tanpa terhalang
+    [
+      'win12-start-menu',
+      'win-task-switcher',
+      'win-rm-drawer',
+      'win-spotlight',
+      'win-notifications',
+      'dock-stack-popover',
+      'win-calendar',
+      'win-explorer',
+      'win-notes',
+      'win-terminal',
+      'win-calculator',
+      'win-settings'
+    ].forEach((id) => closeCustomWindow(id));
     ipcRenderer.send('set-ignore-mouse-events', true, { forward: true });
   } else if (prevMode !== isAppPassthroughMode) {
     triggerLaunchHud('🖥️', 'Kembali ke Desktop Pro', '4K Wallpaper & Rainmeter Suite Aktif');
@@ -3098,12 +3119,7 @@ function setAppPassthroughMode(enable, activeLabel = '') {
 
 async function focusRunningAppItem(appItem) {
   if (!appItem) return;
-  triggerLaunchHud(
-    appItem.badge || '🪟',
-    `Menampilkan ${appItem.label}`,
-    appItem.title || 'Jendela Aktif',
-    appItem.color
-  );
+  appLaunchHud?.classList.add('hidden');
   setAppPassthroughMode(true, `Aktif: ${appItem.label}`);
   await ipcRenderer.invoke('focus-running-app', {
     pid: appItem.pid,
@@ -3118,18 +3134,8 @@ async function focusOrLaunchNativeApp(appKey) {
     return;
   }
 
-  // Cek apakah aplikasi (misal word, excel, powerpoint, chrome, vscode) sudah terbuka
+  appLaunchHud?.classList.add('hidden');
   const existing = liveRunningApps.find((a) => a.appKey === appKey);
-  if (existing) {
-    triggerLaunchHud(
-      existing.badge || '🪟',
-      `Menampilkan ${existing.label}`,
-      existing.title || 'Jendela Sedang Berjalan',
-      existing.color
-    );
-  } else {
-    triggerLaunchHud('🚀', `Membuka ${appKey.toUpperCase()}...`, 'Menjalankan aplikasi Windows');
-  }
   setAppPassthroughMode(true, existing ? `Aktif: ${existing.label}` : `Membuka: ${appKey.toUpperCase()}`);
 
   if (existing) {
@@ -3365,7 +3371,7 @@ tbPinWidgetsBtn?.addEventListener('click', (e) => {
   e.stopPropagation();
   const pinned = document.body.classList.toggle('pin-widgets-over-app');
   tbPinWidgetsBtn.classList.toggle('active-pin', pinned);
-  tbPinWidgetsBtn.textContent = pinned ? '📌 Sembunyikan Widget' : '📌 Tampilkan Widget';
+  tbPinWidgetsBtn.textContent = pinned ? '📌 Tutup Widget' : '📌 Widget';
 });
 
 document.getElementById('tb-spotlight-btn')?.addEventListener('click', (e) => {

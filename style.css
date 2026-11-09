@@ -3257,37 +3257,51 @@ body.app-passthrough-mode.pin-widgets-over-app .rm-skin {
   pointer-events: auto !important;
 }
 
-/* Di Mode Aplikasi: Top Island merapat rapi ke tepi atas agar tidak menghalangi menu/tab aplikasi, dan membesar saat di-hover */
-body.app-passthrough-mode #top-island:not(:hover):not(.pinned) {
-  top: 2px;
-  transform: translateX(-50%) scale(0.86);
-  opacity: 0.9;
+/* Di Mode Aplikasi: Sembunyikan Top Island & Launch HUD agar 100% TIDAK ada pop-up yang menghalangi bagian atas VS Code, Chrome, atau MS Office */
+body.app-passthrough-mode #top-island,
+body.app-passthrough-mode #app-launch-hud {
+  left: 50% !important;
+  top: -120px !important;
+  transform: translateX(-50%) translateY(-140%) scale(0.9) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
-/* Di Mode Aplikasi: Dock bawah otomatis tampil ringkas (pas di area 48px Taskbar) agar tidak menutupi status bar VS Code/Word */
+/* Di Mode Aplikasi: Dock bawah menyatu rata (flush) tepat di tengah Taskbar tanpa kotak pop-up bertumpuk & tidak bertabrakan dengan tombol kiri/kanan */
 body.app-passthrough-mode #bottom-dock-wrapper {
+  left: 50% !important;
+  top: auto !important;
+  right: auto !important;
   bottom: 2px !important;
-  padding-top: 4px !important;
+  transform: translateX(-50%) !important;
+  padding-top: 2px !important;
 }
 
 body.app-passthrough-mode #dock {
-  height: 44px !important;
-  padding: 4px 12px 5px !important;
-  border-radius: 15px !important;
-  gap: 7px !important;
+  height: 42px !important;
+  padding: 3px 6px 4px !important;
+  border-radius: 12px !important;
+  gap: 4px !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
-body.app-passthrough-mode .dock-drag-handle {
-  height: 28px !important;
+body.app-passthrough-mode .dock-drag-handle,
+body.app-passthrough-mode #add-dock-app-btn,
+body.app-passthrough-mode .dock-item[data-native-app="recyclebin"] {
+  display: none !important;
 }
 
 body.app-passthrough-mode .dock-item {
-  width: calc(33px * var(--scale));
-  height: calc(33px * var(--scale));
+  width: calc(28px * var(--scale));
+  height: calc(28px * var(--scale));
 }
 
 body.app-passthrough-mode .dock-separator {
-  height: 22px;
+  height: 18px;
   margin: 0 2px 2px;
 }
 
@@ -3330,22 +3344,30 @@ body.app-passthrough-mode #taskbar-cover-strip {
 .tb-wing-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .tb-pill-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 5px;
+  padding: 5px 10px;
   border-radius: 999px;
   border: 1px solid var(--border-inner);
   background: var(--card-bg);
   color: var(--text-primary);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.15s ease;
+}
+
+#tb-active-app-label {
+  max-width: 115px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tb-pill-btn.primary {
