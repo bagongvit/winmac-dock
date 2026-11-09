@@ -4734,3 +4734,369 @@ body.os-mode-macos .dock-dot.running-live {
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.95) !important;
 }
 
+/* =========================================================
+   19. TASK VIEW & MULTITASKING SWITCHER (#win-task-switcher)
+       + MODE LAYAR APLIKASI SESUAI MASING-MASING TEMA
+   ========================================================= */
+.taskview-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Default (Mode Hybrid / Tema Sekarang): Sembunyikan elemen khusus Win12/macOS */
+.taskview-mac-lights,
+.taskview-spaces-bar,
+.ra-window-preview {
+  display: none;
+}
+
+/* Elemen Virtual Desktops / Spaces Bar (Aktif di Windows 12 & macOS) */
+.taskview-spaces-bar {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.space-desktop-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border-inner);
+  background: rgba(15, 23, 42, 0.55);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.space-desktop-card:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+}
+
+.space-desktop-card.active {
+  border-color: var(--accent-primary);
+  background: rgba(56, 189, 248, 0.18);
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.22);
+}
+
+.space-preview-box {
+  position: relative;
+  width: 100%;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.space-prev-1 {
+  background: linear-gradient(135deg, #0284c7, #6366f1, #ec4899);
+}
+.space-prev-2 {
+  background: linear-gradient(135deg, #0f172a, #1e293b, #0ea5e9);
+}
+.space-prev-3 {
+  background: linear-gradient(135deg, #064e3b, #047857, #34d399);
+}
+
+.space-mini-win {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  width: 42%;
+  height: 24px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.space-mini-win.w2 {
+  top: 14px;
+  left: 44%;
+  background: rgba(226, 232, 240, 0.9);
+}
+
+.space-lbl {
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+/* Thumbnail Preview Jendela di dalam Kartu Aplikasi */
+.ra-window-preview {
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.ra-win-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  background: rgba(15, 23, 42, 0.88);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ra-win-dots {
+  display: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.ra-win-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.ra-win-dots .d-r { background: #ef4444; }
+.ra-win-dots .d-y { background: #f59e0b; }
+.ra-win-dots .d-g { background: #22c55e; }
+
+.ra-win-bar-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.ra-win-close-x {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.ra-win-close-x:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.ra-win-canvas {
+  position: relative;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+}
+
+.ra-win-mock-lines {
+  width: 75%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  opacity: 0.35;
+}
+
+.ra-win-mock-lines span {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: #ffffff;
+  width: 100%;
+}
+
+.ra-win-mock-lines span.short {
+  width: 62%;
+}
+
+.ra-expose-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 900;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------------------------------------------------------
+   A. TAMPILAN TASK VIEW DI MODE WINDOWS 12 (Win + Tab Grid)
+   --------------------------------------------------------- */
+body.os-mode-win12 #win-task-switcher {
+  width: 680px;
+  max-width: 94vw;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.7),
+    0 0 30px rgba(56, 189, 248, 0.16);
+}
+
+body.os-mode-win12 .taskview-spaces-bar {
+  display: grid;
+}
+
+body.os-mode-win12 .ra-window-preview {
+  display: block;
+}
+
+body.os-mode-win12 #running-apps-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+body.os-mode-win12 #running-apps-list .running-empty {
+  grid-column: 1 / -1;
+}
+
+body.os-mode-win12 .running-app-card {
+  flex-direction: column;
+  align-items: stretch;
+  border-radius: 11px;
+  padding: 8px;
+  background: rgba(30, 41, 59, 0.78);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+body.os-mode-win12 .running-app-card:hover {
+  border-color: #38bdf8;
+  box-shadow: 0 8px 22px rgba(56, 189, 248, 0.22);
+}
+
+/* Mode Aplikasi Saat Tema Windows 12 Aktif */
+body.os-mode-win12.app-passthrough-mode #taskbar-cover-strip {
+  background: rgba(15, 23, 42, 0.94) !important;
+  border-top: 1px solid rgba(56, 189, 248, 0.5) !important;
+}
+
+body.os-mode-win12.app-passthrough-mode .win12-taskbar-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------
+   B. TAMPILAN TASK VIEW DI MODE macOS (Mission Control & Spaces)
+   --------------------------------------------------------- */
+body.os-mode-macos #win-task-switcher {
+  width: 720px;
+  max-width: 95vw;
+  border-radius: 26px;
+  padding: 18px 20px;
+  background: linear-gradient(
+    180deg,
+    rgba(30, 41, 59, 0.82) 0%,
+    rgba(15, 23, 42, 0.88) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  box-shadow:
+    0 28px 65px rgba(0, 0, 0, 0.72),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.45);
+}
+
+body.os-mode-macos .taskview-mac-lights {
+  display: inline-flex;
+}
+
+body.os-mode-macos .taskview-win-close {
+  display: none;
+}
+
+body.os-mode-macos .taskview-spaces-bar {
+  display: grid;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 8px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+body.os-mode-macos .space-desktop-card {
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+body.os-mode-macos .space-desktop-card.active {
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+body.os-mode-macos .ra-window-preview {
+  display: block;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
+
+body.os-mode-macos .ra-win-dots {
+  display: inline-flex;
+}
+
+body.os-mode-macos .ra-win-close-x {
+  display: none;
+}
+
+body.os-mode-macos .ra-expose-badge {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 6px;
+  border-radius: 24%;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+body.os-mode-macos #running-apps-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+body.os-mode-macos #running-apps-list .running-empty {
+  grid-column: 1 / -1;
+}
+
+body.os-mode-macos .running-app-card {
+  flex-direction: column;
+  align-items: stretch;
+  border-radius: 18px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+}
+
+body.os-mode-macos .running-app-card:hover {
+  transform: translateY(-3px) scale(1.01);
+  border-color: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Mode Aplikasi Saat Tema macOS Aktif: Dock bawah memiliki rak kaca 3D khas macOS Sonoma */
+body.os-mode-macos.app-passthrough-mode #dock {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(15, 23, 42, 0.65) 100%
+  ) !important;
+  border: 1px solid rgba(255, 255, 255, 0.38) !important;
+  border-radius: 16px !important;
+  padding: 3px 12px 5px !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.45) !important;
+}
+
+

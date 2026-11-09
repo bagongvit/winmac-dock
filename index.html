@@ -1731,13 +1731,41 @@
        10. PUSAT APLIKASI SEDANG TERBUKA / TASK SWITCHER (#win-task-switcher)
        ========================================================= -->
   <div id="win-task-switcher" class="acrylic-surface interactive-widget custom-os-window hidden" data-draggable="true">
-    <div class="rm-drawer-header">
-      <span>🪟 Aplikasi Sedang Terbuka (Live Switcher)</span>
+    <div class="rm-drawer-header taskview-header">
+      <div class="taskview-header-left">
+        <div class="traffic-lights taskview-mac-lights">
+          <button class="tl-btn tl-close" data-close-win="win-task-switcher" title="Tutup Mission Control"></button>
+          <button class="tl-btn tl-min" id="taskview-mac-desktop-btn" title="Tampilkan Desktop"></button>
+          <button class="tl-btn tl-max" id="taskview-mac-refresh-btn" title="Segarkan Jendela"></button>
+        </div>
+        <span id="task-switcher-title">🪟 Aplikasi Sedang Terbuka (Live Switcher)</span>
+      </div>
       <div class="rm-ctrl-group">
         <button class="pill-action-btn" id="switcher-show-desktop-btn" title="Tampilkan Desktop Wallpaper (Alt+D)">🖥️ Desktop</button>
         <button class="pill-action-btn" id="refresh-running-apps-btn" title="Segarkan Daftar Aplikasi">🔄 Segarkan</button>
-        <button class="tl-btn tl-close" data-close-win="win-task-switcher" title="Tutup"></button>
+        <button class="tl-btn tl-close taskview-win-close" data-close-win="win-task-switcher" title="Tutup"></button>
       </div>
+    </div>
+
+    <!-- Bar Virtual Desktops (Windows 12 Task View) / Spaces Strip (macOS Mission Control) -->
+    <div class="taskview-spaces-bar" id="taskview-spaces-bar">
+      <button class="space-desktop-card active" data-space-profile="all" title="Tampilkan Semua Widget & Ruang Utama">
+        <div class="space-preview-box space-prev-1">
+          <span class="space-mini-win"></span>
+          <span class="space-mini-win w2"></span>
+        </div>
+        <span class="space-lbl" id="space-lbl-1">🖥️ Desktop 1 (Utama)</span>
+      </button>
+      <button class="space-desktop-card" data-space-profile="dev" title="Beralih ke Ruang Kerja Developer / Coding">
+        <div class="space-preview-box space-prev-2">
+          <span class="space-mini-win"></span>
+        </div>
+        <span class="space-lbl" id="space-lbl-2">💻 Desktop 2 (Kerja)</span>
+      </button>
+      <button class="space-desktop-card" data-space-profile="minimal" title="Beralih ke Ruang Fokus Minimalis">
+        <div class="space-preview-box space-prev-3"></div>
+        <span class="space-lbl" id="space-lbl-3">🧘 Desktop 3 (Fokus)</span>
+      </button>
     </div>
 
     <!-- Baris Pintasan Cepat MS Office, Browser & Aplikasi Kerja -->

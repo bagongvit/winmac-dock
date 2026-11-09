@@ -739,6 +739,28 @@ function applyOsMode(modeName, persist = true) {
   // Pastikan Menu Bar tidak terkunci terbuka saat pindah mode
   document.getElementById('top-island')?.classList.remove('pinned');
 
+  // Sesuaikan Judul & Label Spaces di Jendela Task View (#win-task-switcher) sesuai tema
+  const tvTitle = document.getElementById('task-switcher-title');
+  const sp1 = document.getElementById('space-lbl-1');
+  const sp2 = document.getElementById('space-lbl-2');
+  const sp3 = document.getElementById('space-lbl-3');
+  if (validMode === 'os-mode-win12') {
+    if (tvTitle) tvTitle.textContent = '🪟 Windows 12 Task View & Virtual Desktops';
+    if (sp1) sp1.textContent = '🖥️ Desktop 1 (Utama)';
+    if (sp2) sp2.textContent = '💻 Desktop 2 (Kerja)';
+    if (sp3) sp3.textContent = '🎯 Desktop 3 (Fokus)';
+  } else if (validMode === 'os-mode-macos') {
+    if (tvTitle) tvTitle.textContent = '🍎 macOS Mission Control & Spaces';
+    if (sp1) sp1.textContent = 'Desktop 1';
+    if (sp2) sp2.textContent = 'Desktop 2';
+    if (sp3) sp3.textContent = 'Stage Manager';
+  } else {
+    if (tvTitle) tvTitle.textContent = '🌌 WinMac Hybrid Multitasking Switcher';
+    if (sp1) sp1.textContent = '🖥️ Ruang 1 (Semua)';
+    if (sp2) sp2.textContent = '💻 Ruang 2 (Developer)';
+    if (sp3) sp3.textContent = '🧘 Ruang 3 (Minimalis)';
+  }
+
   document.querySelectorAll('[data-os-mode]').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.osMode === validMode);
   });
@@ -3367,6 +3389,21 @@ function renderRunningAppsUI() {
       const row = document.createElement('div');
       row.className = 'running-app-card';
       row.innerHTML = `
+        <div class="ra-window-preview" title="Klik untuk menampilkan ${appItem.label} ke depan layar">
+          <div class="ra-win-bar">
+            <div class="ra-win-dots">
+              <span class="d-r"></span><span class="d-y"></span><span class="d-g"></span>
+            </div>
+            <span class="ra-win-bar-title">${appItem.label}</span>
+            <button class="ra-win-close-x" data-act="close-x" title="Tutup Jendela">✕</button>
+          </div>
+          <div class="ra-win-canvas" style="background: radial-gradient(circle at 30% 25%, ${appItem.color || '#3b82f6'}44, rgba(15, 23, 42, 0.92))">
+            <div class="ra-win-mock-lines">
+              <span></span><span class="short"></span><span></span>
+            </div>
+            <div class="ra-expose-badge" style="background: ${appItem.color || '#3b82f6'}">${appItem.badge || '🪟'}</div>
+          </div>
+        </div>
         <div class="ra-left" title="Klik untuk menampilkan ${appItem.label} ke depan layar">
           <div class="ra-icon" style="background: ${appItem.color || '#3b82f6'}">${appItem.badge || '🪟'}</div>
           <div class="ra-meta">
@@ -3381,6 +3418,14 @@ function renderRunningAppsUI() {
         </div>
       `;
 
+      row.querySelector('.ra-window-preview')?.addEventListener('click', () => {
+        focusRunningAppItem(appItem);
+      });
+      row.querySelector('[data-act="close-x"]')?.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await ipcRenderer.invoke('close-running-app', { pid: appItem.pid });
+        setTimeout(() => refreshRunningApps(true), 600);
+      });
       row.querySelector('.ra-left')?.addEventListener('click', () => {
         focusRunningAppItem(appItem);
       });
@@ -3445,6 +3490,28 @@ document.getElementById('switcher-show-desktop-btn')?.addEventListener('click', 
 document.getElementById('refresh-running-apps-btn')?.addEventListener('click', (e) => {
   e.stopPropagation();
   refreshRunningApps(true);
+});
+
+document.getElementById('taskview-mac-desktop-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  setAppPassthroughMode(false);
+  closeCustomWindow('win-task-switcher');
+});
+
+document.getElementById('taskview-mac-refresh-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  refreshRunningApps(true);
+});
+
+document.querySelectorAll('.space-desktop-card[data-space-profile]').forEach((card) => {
+  card.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.space-desktop-card').forEach((c) => c.classList.remove('active'));
+    card.classList.add('active');
+    if (typeof applyWorkspaceProfile === 'function') {
+      applyWorkspaceProfile(card.dataset.spaceProfile);
+    }
+  });
 });
 
 document.querySelectorAll('[data-quick-switch]').forEach((btn) => {
