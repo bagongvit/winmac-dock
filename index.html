@@ -50,6 +50,9 @@
         <path d="M640,210 L800,210 L845,270 L775,255 L740,290 L700,250 L665,280 L595,270 Z" fill="#f8fafc" opacity="0.9" />
       </svg>
     </div>
+
+    <!-- Pemutar Video Live Wallpaper (.mp4 / .webm ala Wallpaper Engine) -->
+    <video id="wp-video-player" class="wp-video-player hidden" muted loop playsinline></video>
   </div>
 
   <!-- Lapisan Partikel Animasi Ringan (Fireflies, Starfield, Snow, Matrix) -->
@@ -61,6 +64,18 @@
 
   <!-- Layar Peredup Kecerahan (Hardware/Software Brightness Filter) -->
   <div id="screen-dimmer"></div>
+
+  <!-- HUD Animasi Transisi Membuka / Menutup Aplikasi & Mode Desktop (VisionOS / macOS Stage Manager Style) -->
+  <div id="app-launch-hud" class="acrylic-surface app-launch-hud hidden">
+    <div class="hud-icon-wrap">
+      <div class="hud-ripple-ring"></div>
+      <div class="hud-app-badge" id="hud-app-badge">🚀</div>
+    </div>
+    <div class="hud-text-col">
+      <span class="hud-title" id="hud-app-title">Membuka Aplikasi...</span>
+      <span class="hud-sub" id="hud-app-sub">WinMac OS Spring Engine</span>
+    </div>
+  </div>
 
   <!-- =========================================================
        0. RAINMETER DESKTOP SKINS ENGINE (On-Wallpaper Floating Skins)
@@ -336,6 +351,7 @@
       <button class="wp-chip" data-wp="wp-cyber-night">🌆 Cyber Synth</button>
       <button class="wp-chip" data-wp="wp-fuji-sunset">🗻 Fuji Sunset</button>
       <button class="wp-chip" id="pick-custom-wp-btn">📂 Gambar PC...</button>
+      <button class="wp-chip" id="pick-video-wp-btn">🎬 Video Live...</button>
       <button class="wp-chip" data-wp="wp-transparent">🪟 Transparan Asli</button>
     </div>
 
@@ -472,6 +488,17 @@
       </div>
 
       <div class="island-right">
+        <!-- Pill Indikator & Switcher Aplikasi Sedang Terbuka (Alt+W) -->
+        <button class="running-apps-pill" id="top-running-apps-btn" title="Klik untuk melihat & membuka kembali aplikasi yang sedang berjalan (Alt+W)">
+          <span class="live-pulse-dot" id="top-running-dot"></span>
+          <span id="top-running-label">0 Aplikasi</span>
+        </button>
+
+        <!-- Tombol Toggle Mode Desktop vs Layar Aplikasi (Alt+D) -->
+        <button class="theme-cycle-btn" id="top-desktop-mode-btn" title="Tampilkan Desktop Wallpaper / Layar Aplikasi Aktif (Alt+D)">
+          🖥️
+        </button>
+
         <div class="audio-pill" id="audio-pill" title="Volume & Equalizer">
           <div class="sound-wave" id="sound-wave">
             <span></span><span></span><span></span><span></span>
@@ -800,6 +827,7 @@
       </div>
 
       <div class="power-actions">
+        <button class="pill-action-btn" id="exit-to-windows-btn" title="Tutup WinMac OS & Kembali ke Tampilan Windows Ori">🪟 Windows Ori</button>
         <button class="power-btn" id="reset-pos-start-btn" title="Reset Posisi Semua Bar">🔄</button>
         <button class="power-btn" id="lock-pc-btn" title="Kunci Layar Windows (Lock)">🔒</button>
         <button class="power-btn danger" id="close-start-btn" title="Tutup Start Menu">✕</button>
@@ -1147,9 +1175,47 @@
         <div class="setting-row">
           <div>
             <div class="setting-title">🚀 Jalankan Otomatis Saat Windows Menyala (Auto-Start on Boot)</div>
-            <div class="setting-sub">Daftarkan WinMac OS Suite ke Windows Startup Login Items</div>
+            <div class="setting-sub">Otomatis aktif setiap kali PC/Laptop di-restart tanpa perlu buka CMD</div>
           </div>
-          <input type="checkbox" id="autostart-toggle" class="win-switch" />
+          <input type="checkbox" id="autostart-toggle" class="win-switch" checked />
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">🔊 Efek Suara UI Spatial (macOS / VisionOS SFX)</div>
+            <div class="setting-sub">Suara pop & chime sintetis lembut (WebAudio 0 MB) saat buka/minimize/tutup jendela</div>
+          </div>
+          <input type="checkbox" id="ui-sfx-toggle" class="win-switch" checked />
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">🔋 Auto-Eco Battery Saver (Hemat Baterai Laptop Otomatis)</div>
+            <div class="setting-sub">Otomatis jeda partikel & video wallpaper saat baterai di bawah 25% (tanpa cas)</div>
+          </div>
+          <input type="checkbox" id="eco-battery-toggle" class="win-switch" checked />
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">🖥️ Shortcut Aplikasi Desktop & Mode Administrator</div>
+            <div class="setting-sub">Pasang ikon aplikasi .exe di Desktop atau jalankan ulang sebagai Administrator</div>
+          </div>
+          <div class="rm-ctrl-group">
+            <button class="pill-action-btn" id="install-shortcut-btn">📌 Pasang Shortcut</button>
+            <button class="pill-action-btn" id="run-admin-btn">🛡️ Run as Admin</button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">🪟 Kembali ke Tampilan Windows Original</div>
+            <div class="setting-sub">Keluar sementara ke Windows 11/10 asli, atau matikan Auto-Start sekaligus</div>
+          </div>
+          <div class="rm-ctrl-group">
+            <button class="pill-action-btn" id="quit-temp-btn">🪟 Ke Windows Ori (Keluar)</button>
+            <button class="pill-action-btn" id="quit-disable-startup-btn">🚫 Matikan Auto-Start & Keluar</button>
+          </div>
         </div>
       </div>
 
@@ -1196,6 +1262,31 @@
           </svg>
         </div>
         <span class="dock-dot active"></span>
+      </button>
+
+      <!-- 1B. Tombol Cepat Tampilkan Desktop / Mode Layar Aplikasi (Alt+D) -->
+      <button class="dock-item" id="show-desktop-dock-btn" data-label="Tampilkan Desktop / Layar Aplikasi (Alt+D)">
+        <div class="dock-icon icon-desktop-toggle">
+          <svg viewBox="0 0 48 48" fill="none">
+            <rect x="5" y="8" width="38" height="26" rx="5" fill="#0f172a" stroke="#38bdf8" stroke-width="2.5" />
+            <path d="M8 27L18 19L27 26L34 21L40 27V31H8V27Z" fill="#38bdf8" fill-opacity="0.55" />
+            <rect x="18" y="36" width="12" height="4" rx="2" fill="#94a3b8" />
+          </svg>
+        </div>
+        <span class="dock-dot active" id="desktop-mode-dot"></span>
+      </button>
+
+      <!-- 1C. Tombol Pusat Aplikasi Sedang Terbuka / Task Switcher (Alt+W) -->
+      <button class="dock-item" id="dock-task-switcher-btn" data-label="Aplikasi Sedang Terbuka / Switcher (Alt+W)">
+        <div class="dock-icon icon-task-view">
+          <svg viewBox="0 0 48 48" fill="none">
+            <rect x="6" y="9" width="22" height="17" rx="4" fill="#38bdf8" />
+            <rect x="20" y="16" width="22" height="17" rx="4" fill="#6366f1" stroke="#0f172a" stroke-width="2" />
+            <rect x="12" y="24" width="22" height="16" rx="4" fill="#22c55e" stroke="#0f172a" stroke-width="2" />
+          </svg>
+          <span class="dock-count-badge hidden" id="dock-running-badge">0</span>
+        </div>
+        <span class="dock-dot" id="dock-switcher-dot"></span>
       </button>
 
       <div class="dock-separator"></div>
@@ -1311,6 +1402,10 @@
         <span class="dock-dot"></span>
       </button>
 
+      <!-- Container Live Aplikasi yang Sedang Berjalan (MS Word, Excel, PowerPoint, Browser, dll.) -->
+      <div class="dock-separator" id="running-dock-sep"></div>
+      <div id="running-dock-items" class="custom-dock-items running-dock-items"></div>
+
       <!-- Container Shortcut Aplikasi Tambahan User -->
       <div id="custom-dock-items" class="custom-dock-items"></div>
 
@@ -1341,6 +1436,98 @@
         </div>
         <span class="dock-dot"></span>
       </button>
+    </div>
+  </div>
+
+  <!-- Strip Taskbar Custom WinMac OS Saat Mode Layar Aplikasi Aktif (Menutup Taskbar Bawaan Windows 100%) -->
+  <div id="taskbar-cover-strip" class="interactive-widget">
+    <div class="tb-wing-left">
+      <button class="tb-pill-btn primary" id="tb-back-desktop-btn" title="Kembali ke Desktop Wallpaper & Widget Rainmeter (Alt+D)">
+        🖥️ Kembali ke Desktop
+      </button>
+      <button class="tb-pill-btn" id="tb-open-switcher-btn" title="Lihat Semua Jendela Aplikasi yang Sedang Terbuka (Alt+W)">
+        <span class="live-pulse-dot"></span>
+        <span id="tb-active-app-label">Layar Aplikasi Aktif</span>
+      </button>
+      <button class="tb-pill-btn" id="tb-pin-widgets-btn" title="Tampilkan / Sembunyikan Widget Rainmeter (Clipboard, Pomodoro, SysMon) di atas Aplikasi">
+        📌 Tampilkan Widget
+      </button>
+    </div>
+
+    <div class="tb-wing-right">
+      <button class="tb-icon-btn" id="tb-spotlight-btn" title="Spotlight Search & Kalkulator (Alt+K)">🔍</button>
+      <button class="tb-icon-btn" id="tb-studio-btn" title="Studio Widget & Wallpaper">⊞</button>
+      <div class="tb-clock-pill" id="tb-clock-pill" title="Klik untuk Kalender & Cuaca">
+        <span id="tb-weather-mini">⛅ 30°C</span>
+        <span>•</span>
+        <strong id="tb-clock-time">08:40</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       10. PUSAT APLIKASI SEDANG TERBUKA / TASK SWITCHER (#win-task-switcher)
+       ========================================================= -->
+  <div id="win-task-switcher" class="acrylic-surface interactive-widget custom-os-window hidden" data-draggable="true">
+    <div class="rm-drawer-header">
+      <span>🪟 Aplikasi Sedang Terbuka (Live Switcher)</span>
+      <div class="rm-ctrl-group">
+        <button class="pill-action-btn" id="switcher-show-desktop-btn" title="Tampilkan Desktop Wallpaper (Alt+D)">🖥️ Desktop</button>
+        <button class="pill-action-btn" id="refresh-running-apps-btn" title="Segarkan Daftar Aplikasi">🔄 Segarkan</button>
+        <button class="tl-btn tl-close" data-close-win="win-task-switcher" title="Tutup"></button>
+      </div>
+    </div>
+
+    <!-- Baris Pintasan Cepat MS Office, Browser & Aplikasi Kerja -->
+    <div class="drawer-sub-lbl">⚡ Buka / Fokuskan Cepat (MS Office, Browser & Editor)</div>
+    <div class="quick-office-grid">
+      <button class="office-quick-card" data-quick-switch="word" data-launch="word">
+        <span class="oq-badge" style="background:#2563eb">W</span>
+        <div class="oq-info">
+          <span class="oq-name">MS Word</span>
+          <span class="oq-status" id="oq-status-word">Klik untuk Buka</span>
+        </div>
+      </button>
+      <button class="office-quick-card" data-quick-switch="excel" data-launch="excel">
+        <span class="oq-badge" style="background:#16a34a">X</span>
+        <div class="oq-info">
+          <span class="oq-name">MS Excel</span>
+          <span class="oq-status" id="oq-status-excel">Klik untuk Buka</span>
+        </div>
+      </button>
+      <button class="office-quick-card" data-quick-switch="powerpoint" data-launch="powerpoint">
+        <span class="oq-badge" style="background:#ea580c">P</span>
+        <div class="oq-info">
+          <span class="oq-name">PowerPoint</span>
+          <span class="oq-status" id="oq-status-powerpoint">Klik untuk Buka</span>
+        </div>
+      </button>
+      <button class="office-quick-card" data-quick-switch="chrome" data-launch="chrome">
+        <span class="oq-badge" style="background:#3b82f6">🌐</span>
+        <div class="oq-info">
+          <span class="oq-name">Chrome</span>
+          <span class="oq-status" id="oq-status-chrome">Klik untuk Buka</span>
+        </div>
+      </button>
+      <button class="office-quick-card" data-quick-switch="vscode" data-launch="vscode">
+        <span class="oq-badge" style="background:#0284c7">💻</span>
+        <div class="oq-info">
+          <span class="oq-name">VS Code</span>
+          <span class="oq-status" id="oq-status-vscode">Klik untuk Buka</span>
+        </div>
+      </button>
+      <button class="office-quick-card" data-quick-switch="explorer" data-launch="explorer">
+        <span class="oq-badge" style="background:#f59e0b">📁</span>
+        <div class="oq-info">
+          <span class="oq-name">Win Explorer</span>
+          <span class="oq-status" id="oq-status-explorer">Klik untuk Buka</span>
+        </div>
+      </button>
+    </div>
+
+    <div class="drawer-sub-lbl">🟢 Jendela Aplikasi yang Sedang Berjalan di Laptop Kamu</div>
+    <div id="running-apps-list" class="running-apps-list">
+      <div class="running-empty">Memindai aplikasi yang sedang terbuka...</div>
     </div>
   </div>
 

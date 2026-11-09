@@ -9,13 +9,15 @@ const defaultConfig = {
   theme: 'theme-mica-dark',
   dockScale: 158,
   alwaysOnTop: true,
-  fullScreenFixed: true,
   autoHideDock: false,
-  autoStart: false,
+  autoStart: true,
   rainmeterLockAll: false,
   wallpaper: 'wp-sonoma',
   customWallpaperUrl: '',
+  customVideoWallpaperUrl: '',
   particleEffect: 'fireflies',
+  uiSoundEffects: true,
+  autoEcoBattery: true,
   customAccent: '',
   fontStyle: 'sans',
   pomoStreak: 0,
@@ -91,10 +93,66 @@ function bindInteractiveWidgetEvents(widget) {
 document.querySelectorAll('.interactive-widget').forEach(bindInteractiveWidgetEvents);
 
 // =========================================================
-// 3. WINDOW MANAGER, AERO SNAP & DOCK MINIMIZED INDICATORS
+// 3. WINDOW MANAGER, AERO SNAP, SPATIAL SFX & DOCK INDICATORS
 // =========================================================
 let topZIndex = 1350;
 const minimizedState = {};
+let uiAudioCtx = null;
+let isEcoBatteryPaused = false;
+
+function playUiSound(type = 'open') {
+  if (appConfig.uiSoundEffects === false) return;
+  try {
+    if (!uiAudioCtx) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      uiAudioCtx = new AudioContextClass();
+    }
+    if (uiAudioCtx.state === 'suspended') {
+      uiAudioCtx.resume().catch(() => {});
+    }
+
+    const now = uiAudioCtx.currentTime;
+    const osc = uiAudioCtx.createOscillator();
+    const gain = uiAudioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(uiAudioCtx.destination);
+
+    if (type === 'open') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(420, now);
+      osc.frequency.exponentialRampToValueAtTime(680, now + 0.065);
+      gain.gain.setValueAtTime(0.032, now);
+      gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.075);
+      osc.start(now);
+      osc.stop(now + 0.08);
+    } else if (type === 'minimize') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(580, now);
+      osc.frequency.exponentialRampToValueAtTime(290, now + 0.085);
+      gain.gain.setValueAtTime(0.028, now);
+      gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.09);
+      osc.start(now);
+      osc.stop(now + 0.095);
+    } else if (type === 'close') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(480, now);
+      osc.frequency.exponentialRampToValueAtTime(220, now + 0.06);
+      gain.gain.setValueAtTime(0.025, now);
+      gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.065);
+      osc.start(now);
+      osc.stop(now + 0.07);
+    } else if (type === 'launch') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, now);
+      osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.11);
+      gain.gain.setValueAtTime(0.035, now);
+      gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.12);
+      osc.start(now);
+      osc.stop(now + 0.125);
+    }
+  } catch (_) {}
+}
 
 function updateDockDotState(winId, state) {
   const dockBtn = document.querySelector(`.dock-item[data-custom-win="${winId}"]`);
@@ -118,9 +176,16 @@ function openCustomWindow(winId) {
   }
 
   minimizedState[winId] = false;
-  winEl.classList.remove('hidden');
+  winEl.classList.remove('hidden', 'win-anim-minimize', 'win-anim-close', 'win-anim-open');
+  void winEl.offsetWidth;
+  winEl.classList.add('win-anim-open');
+  playUiSound('open');
+
   topZIndex += 1;
   winEl.style.zIndex = topZIndex;
+
+  // Pastikan overlay mendapatkan fokus keyboard agar input (Search, Spotlight, Terminal, Notes) langsung bisa diketik
+  ipcRenderer.send('focus-overlay-window');
 
   updateDockDotState(winId, 'running');
 
@@ -131,18 +196,43 @@ function openCustomWindow(winId) {
 
 function minimizeCustomWindow(winId) {
   const winEl = document.getElementById(winId);
-  if (!winEl) return;
+  if (!winEl || winEl.classList.contains('hidden')) return;
   minimizedState[winId] = true;
-  winEl.classList.add('hidden');
   updateDockDotState(winId, 'minimized');
+
+  // Animasi Genie Swoosh ke arah Bottom Dock + Efek Pulse pada Ikon Dock
+  winEl.classList.remove('win-anim-open', 'win-anim-close');
+  winEl.classList.add('win-anim-minimize');
+  playUiSound('minimize');
+
+  const dockBtn = document.querySelector(`.dock-item[data-custom-win="${winId}"]`);
+  if (dockBtn) {
+    dockBtn.classList.remove('dock-receive');
+    void dockBtn.offsetWidth;
+    dockBtn.classList.add('dock-receive');
+  }
+
+  setTimeout(() => {
+    winEl.classList.add('hidden');
+    winEl.classList.remove('win-anim-minimize');
+  }, 240);
 }
 
 function closeCustomWindow(winId) {
   const winEl = document.getElementById(winId);
-  if (!winEl) return;
+  if (!winEl || winEl.classList.contains('hidden')) return;
   minimizedState[winId] = false;
-  winEl.classList.add('hidden');
   updateDockDotState(winId, 'closed');
+
+  // Animasi Implode & Fade saat menutup jendela
+  winEl.classList.remove('win-anim-open', 'win-anim-minimize');
+  winEl.classList.add('win-anim-close');
+  playUiSound('close');
+
+  setTimeout(() => {
+    winEl.classList.add('hidden');
+    winEl.classList.remove('win-anim-close');
+  }, 185);
 }
 
 function toggleCustomWindow(winId) {
@@ -165,6 +255,11 @@ ipcRenderer.on('shortcut-trigger', (event, action) => {
   } else if (action === 'toggle-spotlight') {
     toggleCustomWindow('win-spotlight');
     setTimeout(() => document.getElementById('spotlight-input')?.focus(), 60);
+  } else if (action === 'toggle-task-switcher') {
+    toggleCustomWindow('win-task-switcher');
+    refreshRunningApps(true);
+  } else if (action === 'toggle-desktop-mode') {
+    setAppPassthroughMode(!isAppPassthroughMode);
   } else if (action === 'toggle-notes') {
     toggleCustomWindow('win-notes');
   } else if (action === 'toggle-rainmeter-all') {
@@ -246,7 +341,8 @@ document.querySelectorAll('.custom-os-window').forEach((winEl) => {
 document.querySelectorAll('[data-native-app]').forEach((btn) => {
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
-    ipcRenderer.send('launch-app', btn.dataset.nativeApp);
+    const appKey = btn.dataset.nativeApp;
+    focusOrLaunchNativeApp(appKey);
     document.getElementById('win12-start-menu')?.classList.add('hidden');
   });
 });
@@ -304,6 +400,8 @@ function updateClock() {
   const minutes = String(now.getMinutes()).padStart(2, '0');
   const seconds = String(now.getSeconds()).padStart(2, '0');
   clockTimeEl.textContent = `${hours}:${minutes}`;
+  const tbClockEl = document.getElementById('tb-clock-time');
+  if (tbClockEl) tbClockEl.textContent = `${hours}:${minutes}`;
 
   const dateFormatter = new Intl.DateTimeFormat('id-ID', {
     weekday: 'short',
@@ -450,6 +548,8 @@ async function fetchLiveWeather() {
     const tzCity = (data.timezone || 'Asia/Jakarta').split('/').pop().replace(/_/g, ' ');
 
     if (weatherMiniBadge) weatherMiniBadge.textContent = `${wmo.icon} ${temp}°C`;
+    const tbWeatherMini = document.getElementById('tb-weather-mini');
+    if (tbWeatherMini) tbWeatherMini.textContent = `${wmo.icon} ${temp}°C`;
     if (calWeatherBig) calWeatherBig.textContent = `${wmo.icon} ${temp}°C • ${wmo.desc}`;
     if (calWeatherLoc) {
       calWeatherLoc.textContent = `${tzCity} (Live) • Kelembaban ${hum}% • Angin ${wind} km/j`;
@@ -1422,6 +1522,58 @@ if (autoStartToggle) {
   });
 }
 
+const uiSfxToggle = document.getElementById('ui-sfx-toggle');
+if (uiSfxToggle) {
+  uiSfxToggle.checked = appConfig.uiSoundEffects !== false;
+  uiSfxToggle.addEventListener('change', (e) => {
+    appConfig.uiSoundEffects = e.target.checked;
+    saveConfig();
+    if (appConfig.uiSoundEffects) playUiSound('open');
+  });
+}
+
+const ecoBatteryToggle = document.getElementById('eco-battery-toggle');
+if (ecoBatteryToggle) {
+  ecoBatteryToggle.checked = appConfig.autoEcoBattery !== false;
+  ecoBatteryToggle.addEventListener('change', (e) => {
+    appConfig.autoEcoBattery = e.target.checked;
+    saveConfig();
+    evaluateEcoBatteryState();
+  });
+}
+
+// Smart Battery & Auto-Eco Power Saver Monitor (Chromium Battery API)
+let currentBatteryInfo = { level: 1, charging: true };
+
+function evaluateEcoBatteryState() {
+  const shouldPause =
+    appConfig.autoEcoBattery !== false &&
+    !currentBatteryInfo.charging &&
+    currentBatteryInfo.level <= 0.25;
+  isEcoBatteryPaused = shouldPause;
+  if (typeof syncVideoWallpaperPlayback === 'function') {
+    syncVideoWallpaperPlayback();
+  }
+}
+
+if (navigator.getBattery) {
+  navigator
+    .getBattery()
+    .then((battery) => {
+      const updateBatteryStatus = () => {
+        currentBatteryInfo = {
+          level: typeof battery.level === 'number' ? battery.level : 1,
+          charging: Boolean(battery.charging)
+        };
+        evaluateEcoBatteryState();
+      };
+      updateBatteryStatus();
+      battery.addEventListener('levelchange', updateBatteryStatus);
+      battery.addEventListener('chargingchange', updateBatteryStatus);
+    })
+    .catch(() => {});
+}
+
 // =========================================================
 // 11. RAINMETER DESKTOP SKINS MANAGER & AUDIO VISUALIZER
 // =========================================================
@@ -1698,10 +1850,34 @@ window.addEventListener('click', (e) => {
 });
 
 // =========================================================
-// 11B. BUILT-IN 4K WALLPAPER, PARTICLE ENGINE & LIVE COLOR/FONT STUDIO
+// 11B. BUILT-IN 4K WALLPAPER, VIDEO WALLPAPER, PARTICLE ENGINE & STUDIO
 // =========================================================
 const wpLayer = document.getElementById('desktop-wallpaper-layer');
-const wpPresets = ['wp-sonoma', 'wp-win12-bloom', 'wp-cyber-night', 'wp-fuji-sunset', 'wp-custom', 'wp-transparent'];
+const wpVideoPlayer = document.getElementById('wp-video-player');
+const wpPresets = [
+  'wp-sonoma',
+  'wp-win12-bloom',
+  'wp-cyber-night',
+  'wp-fuji-sunset',
+  'wp-custom',
+  'wp-video',
+  'wp-transparent'
+];
+
+function syncVideoWallpaperPlayback() {
+  if (!wpVideoPlayer) return;
+  if (appConfig.wallpaper !== 'wp-video' || !appConfig.customVideoWallpaperUrl) {
+    wpVideoPlayer.pause();
+    wpVideoPlayer.classList.add('hidden');
+    return;
+  }
+  wpVideoPlayer.classList.remove('hidden');
+  if (document.body.classList.contains('app-passthrough-mode') || isEcoBatteryPaused) {
+    wpVideoPlayer.pause();
+  } else {
+    wpVideoPlayer.play().catch(() => {});
+  }
+}
 
 function applyWallpaper(wpName, persist = true) {
   if (!wpLayer) return;
@@ -1711,6 +1887,11 @@ function applyWallpaper(wpName, persist = true) {
   if (wpName === 'wp-custom' && appConfig.customWallpaperUrl) {
     wpLayer.classList.add('wp-custom');
     wpLayer.style.backgroundImage = `url("${appConfig.customWallpaperUrl}")`;
+  } else if (wpName === 'wp-video' && appConfig.customVideoWallpaperUrl) {
+    wpLayer.classList.add('wp-video');
+    if (wpVideoPlayer && wpVideoPlayer.src !== appConfig.customVideoWallpaperUrl) {
+      wpVideoPlayer.src = appConfig.customVideoWallpaperUrl;
+    }
   } else {
     wpLayer.classList.add(wpName || 'wp-sonoma');
   }
@@ -1718,11 +1899,13 @@ function applyWallpaper(wpName, persist = true) {
   document.querySelectorAll('[data-wp]').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.wp === wpName);
   });
+  document.getElementById('pick-video-wp-btn')?.classList.toggle('active', wpName === 'wp-video');
 
   if (persist) {
     appConfig.wallpaper = wpName;
     saveConfig();
   }
+  syncVideoWallpaperPlayback();
 }
 
 document.querySelectorAll('[data-wp]').forEach((btn) => {
@@ -1736,6 +1919,14 @@ document.getElementById('pick-custom-wp-btn')?.addEventListener('click', async (
   if (url) {
     appConfig.customWallpaperUrl = url;
     applyWallpaper('wp-custom');
+  }
+});
+
+document.getElementById('pick-video-wp-btn')?.addEventListener('click', async () => {
+  const url = await ipcRenderer.invoke('pick-wallpaper-video');
+  if (url) {
+    appConfig.customVideoWallpaperUrl = url;
+    applyWallpaper('wp-video');
   }
 });
 
@@ -1786,9 +1977,9 @@ function renderParticleTick() {
   pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
   if (mode === 'off') return;
 
-  // Smart Gaming / Battery Pause: jika CPU > 70%, jeda partikel otomatis
+  // Smart Gaming / Battery Pause: jika CPU > 70% atau Auto-Eco Battery aktif, jeda partikel otomatis
   const latestCpu = cpuHistory[cpuHistory.length - 1] || 15;
-  if (latestCpu > 70) return;
+  if (latestCpu > 70 || isEcoBatteryPaused) return;
 
   const accent = appConfig.customAccent || '#38bdf8';
 
@@ -2542,15 +2733,440 @@ initParticles(appConfig.particleEffect || 'fireflies');
 applyCustomStudioStyle();
 applyRainmeterSkinConfig();
 restoreSavedPositions();
-if (!appConfig.fullScreenFixed) {
+if (!appConfig.alwaysOnTopV3) {
   appConfig.alwaysOnTop = true;
-  appConfig.fullScreenFixed = true;
+  appConfig.autoStart = true;
+  appConfig.alwaysOnTopV3 = true;
   saveConfig();
 }
 if (alwaysOnTopToggle) {
   alwaysOnTopToggle.checked = Boolean(appConfig.alwaysOnTop);
 }
+if (autoStartToggle) {
+  autoStartToggle.checked = appConfig.autoStart !== false;
+}
 ipcRenderer.send('set-always-on-top', Boolean(appConfig.alwaysOnTop));
+
+document.getElementById('install-shortcut-btn')?.addEventListener('click', async () => {
+  await ipcRenderer.invoke('install-desktop-shortcuts');
+  triggerLaunchHud('📌', 'Shortcut & Auto-Start Aktif!', 'Tersedia di Desktop & Startup Windows');
+});
+
+document.getElementById('run-admin-btn')?.addEventListener('click', () => {
+  triggerLaunchHud('🛡️', 'Menjalankan Mode Administrator...', 'Meminta izin UAC Windows');
+  ipcRenderer.send('restart-as-admin');
+});
 if (appConfig.autoHideDock) {
   scheduleAutoHideDock();
 }
+
+// =========================================================
+// 14. LIVE RUNNING APPS DETECTOR, TASK SWITCHER & APP PASSTHROUGH
+//     (Memudahkan Melihat & Membuka Kembali MS Office, Chrome, VS Code, dll.)
+// =========================================================
+let liveRunningApps = [];
+let isAppPassthroughMode = false;
+let currentFocusedAppLabel = 'Layar Aplikasi Aktif';
+
+const topRunningAppsBtn = document.getElementById('top-running-apps-btn');
+const topRunningLabel = document.getElementById('top-running-label');
+const topDesktopModeBtn = document.getElementById('top-desktop-mode-btn');
+const showDesktopDockBtn = document.getElementById('show-desktop-dock-btn');
+const desktopModeDot = document.getElementById('desktop-mode-dot');
+const dockTaskSwitcherBtn = document.getElementById('dock-task-switcher-btn');
+const dockRunningBadge = document.getElementById('dock-running-badge');
+const dockSwitcherDot = document.getElementById('dock-switcher-dot');
+const runningDockItemsEl = document.getElementById('running-dock-items');
+const runningDockSepEl = document.getElementById('running-dock-sep');
+const runningAppsListEl = document.getElementById('running-apps-list');
+const tbActiveAppLabel = document.getElementById('tb-active-app-label');
+const appLaunchHud = document.getElementById('app-launch-hud');
+const hudAppBadge = document.getElementById('hud-app-badge');
+const hudAppTitle = document.getElementById('hud-app-title');
+const hudAppSub = document.getElementById('hud-app-sub');
+let hudHideTimer = null;
+
+function triggerLaunchHud(badge, title, sub = 'WinMac OS Spring Engine', color = '') {
+  if (!appLaunchHud) return;
+  clearTimeout(hudHideTimer);
+  if (hudAppBadge) {
+    hudAppBadge.textContent = badge || '🚀';
+    hudAppBadge.style.background =
+      color || 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))';
+  }
+  if (hudAppTitle) hudAppTitle.textContent = title;
+  if (hudAppSub) hudAppSub.textContent = sub;
+
+  appLaunchHud.classList.remove('hidden');
+  playUiSound('launch');
+  hudHideTimer = setTimeout(() => {
+    appLaunchHud.classList.add('hidden');
+  }, 1150);
+}
+
+function animateRainmeterSkinsCascade() {
+  const skins = document.querySelectorAll('#rainmeter-layer .rm-skin:not(.rm-hidden)');
+  skins.forEach((skin, idx) => {
+    skin.classList.remove('rm-anim-pop');
+    void skin.offsetWidth;
+    skin.style.animationDelay = `${idx * 45}ms`;
+    skin.classList.add('rm-anim-pop');
+  });
+}
+
+function setAppPassthroughMode(enable, activeLabel = '') {
+  const prevMode = isAppPassthroughMode;
+  isAppPassthroughMode = Boolean(enable);
+  document.body.classList.toggle('app-passthrough-mode', isAppPassthroughMode);
+
+  if (activeLabel) {
+    currentFocusedAppLabel = activeLabel;
+  }
+  if (tbActiveAppLabel) {
+    tbActiveAppLabel.textContent = currentFocusedAppLabel;
+  }
+
+  if (topDesktopModeBtn) {
+    topDesktopModeBtn.classList.toggle('app-mode-active', isAppPassthroughMode);
+    topDesktopModeBtn.textContent = isAppPassthroughMode ? '🪟' : '🖥️';
+    topDesktopModeBtn.title = isAppPassthroughMode
+      ? 'Sedang di Layar Aplikasi • Klik untuk Kembali ke Desktop Wallpaper (Alt+D)'
+      : 'Sedang di Desktop • Klik untuk Melihat Jendela Aplikasi (Alt+D)';
+  }
+
+  if (showDesktopDockBtn) {
+    showDesktopDockBtn.dataset.label = isAppPassthroughMode
+      ? '🖥️ Kembali ke Desktop Wallpaper (Alt+D)'
+      : '🪟 Tampilkan Layar Aplikasi Aktif (Alt+D)';
+  }
+
+  if (desktopModeDot) {
+    desktopModeDot.classList.toggle('running-live', isAppPassthroughMode);
+    desktopModeDot.classList.toggle('active', !isAppPassthroughMode);
+  }
+
+  if (isAppPassthroughMode) {
+    // Tutup popup overlay internal agar aplikasi seperti MS Word / Chrome / VS Code terlihat 100% jelas
+    closeCustomWindow('win12-start-menu');
+    closeCustomWindow('win-task-switcher');
+    closeCustomWindow('win-rm-drawer');
+    closeCustomWindow('win-spotlight');
+    ipcRenderer.send('set-ignore-mouse-events', true, { forward: true });
+  } else if (prevMode !== isAppPassthroughMode) {
+    triggerLaunchHud('🖥️', 'Kembali ke Desktop Pro', '4K Wallpaper & Rainmeter Suite Aktif');
+    animateRainmeterSkinsCascade();
+  }
+  syncVideoWallpaperPlayback();
+}
+
+async function focusRunningAppItem(appItem) {
+  if (!appItem) return;
+  triggerLaunchHud(
+    appItem.badge || '🪟',
+    `Menampilkan ${appItem.label}`,
+    appItem.title || 'Jendela Aktif',
+    appItem.color
+  );
+  setAppPassthroughMode(true, `Aktif: ${appItem.label}`);
+  await ipcRenderer.invoke('focus-running-app', {
+    pid: appItem.pid,
+    processName: appItem.processName
+  });
+}
+
+async function focusOrLaunchNativeApp(appKey) {
+  if (!appKey) return;
+  if (appKey === 'lock') {
+    ipcRenderer.send('launch-app', 'lock');
+    return;
+  }
+
+  // Cek apakah aplikasi (misal word, excel, powerpoint, chrome, vscode) sudah terbuka
+  const existing = liveRunningApps.find((a) => a.appKey === appKey);
+  if (existing) {
+    triggerLaunchHud(
+      existing.badge || '🪟',
+      `Menampilkan ${existing.label}`,
+      existing.title || 'Jendela Sedang Berjalan',
+      existing.color
+    );
+  } else {
+    triggerLaunchHud('🚀', `Membuka ${appKey.toUpperCase()}...`, 'Menjalankan aplikasi Windows');
+  }
+  setAppPassthroughMode(true, existing ? `Aktif: ${existing.label}` : `Membuka: ${appKey.toUpperCase()}`);
+
+  if (existing) {
+    await ipcRenderer.invoke('focus-running-app', {
+      pid: existing.pid,
+      processName: existing.processName
+    });
+  } else {
+    ipcRenderer.send('launch-app', appKey);
+    setTimeout(() => refreshRunningApps(true), 1800);
+  }
+}
+
+function renderRunningAppsUI() {
+  const count = liveRunningApps.length;
+
+  // 1. Update Pill di Top Bar & Badge di Dock
+  if (topRunningLabel) {
+    topRunningLabel.textContent = count > 0 ? `${count} Aplikasi Aktif` : '0 Aplikasi';
+  }
+  if (dockRunningBadge) {
+    dockRunningBadge.textContent = String(count);
+    dockRunningBadge.classList.toggle('hidden', count === 0);
+  }
+  if (dockSwitcherDot) {
+    dockSwitcherDot.classList.toggle('running-live', count > 0);
+  }
+
+  // 2. Update Indikator Aplikasi Bawaan yang Dipin di Dock (Chrome & VS Code)
+  const chromeBtn = document.querySelector('#dock [data-native-app="chrome"]');
+  const vscodeBtn = document.querySelector('#dock [data-native-app="vscode"]');
+  const chromeApp = liveRunningApps.find((a) => a.appKey === 'chrome');
+  const vscodeApp = liveRunningApps.find((a) => a.appKey === 'vscode');
+
+  if (chromeBtn) {
+    const dot = chromeBtn.querySelector('.dock-dot');
+    dot?.classList.toggle('running-live', Boolean(chromeApp));
+    chromeBtn.dataset.label = chromeApp
+      ? `🟢 Google Chrome — ${chromeApp.title} (Klik untuk Buka)`
+      : 'Google Chrome';
+  }
+
+  if (vscodeBtn) {
+    const dot = vscodeBtn.querySelector('.dock-dot');
+    dot?.classList.toggle('running-live', Boolean(vscodeApp));
+    vscodeBtn.dataset.label = vscodeApp
+      ? `🟢 VS Code — ${vscodeApp.title} (Klik untuk Buka)`
+      : 'Visual Studio Code';
+  }
+
+  // 3. Render Aplikasi Lain yang Sedang Terbuka (MS Word, Excel, PowerPoint, Edge, Spotify, dll.) ke Bottom Dock
+  if (runningDockItemsEl) {
+    runningDockItemsEl.innerHTML = '';
+    const unpinnedRunning = liveRunningApps.filter((a) => !a.pinnedDock);
+    if (runningDockSepEl) {
+      runningDockSepEl.style.display = unpinnedRunning.length > 0 ? 'block' : 'none';
+    }
+
+    unpinnedRunning.forEach((appItem) => {
+      const btn = document.createElement('button');
+      btn.className = 'dock-item running-dynamic-item';
+      const shortTitle =
+        appItem.title && appItem.title.length > 36
+          ? appItem.title.slice(0, 36) + '...'
+          : appItem.title || appItem.label;
+      btn.dataset.label = `🟢 ${appItem.label} — ${shortTitle}`;
+
+      btn.innerHTML = `
+        <div class="dock-icon">
+          <div class="running-dock-badge-icon" style="background: ${appItem.color || '#3b82f6'}">
+            ${appItem.badge || '🪟'}
+          </div>
+          ${
+            appItem.windowCount > 1
+              ? `<span class="dock-count-badge">${appItem.windowCount}</span>`
+              : ''
+          }
+        </div>
+        <span class="dock-dot running-live"></span>
+      `;
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        btn.classList.remove('launching');
+        void btn.offsetWidth;
+        btn.classList.add('launching');
+        focusRunningAppItem(appItem);
+      });
+
+      // Klik Kanan pada ikon aplikasi berjalan di Dock untuk Minimize cepat
+      btn.addEventListener('contextmenu', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        await ipcRenderer.invoke('minimize-running-app', { pid: appItem.pid });
+      });
+
+      runningDockItemsEl.appendChild(btn);
+    });
+  }
+
+  // 4. Update Status Kartu Cepat MS Office & Browser di Jendela Task Switcher (#win-task-switcher)
+  ['word', 'excel', 'powerpoint', 'chrome', 'vscode', 'explorer'].forEach((key) => {
+    const card = document.querySelector(`[data-quick-switch="${key}"]`);
+    const statusEl = document.getElementById(`oq-status-${key}`);
+    const running = liveRunningApps.find((a) => a.appKey === key);
+    if (card) {
+      card.classList.toggle('is-open', Boolean(running));
+    }
+    if (statusEl) {
+      statusEl.textContent = running ? `● Aktif: ${running.title}` : 'Klik untuk Buka';
+    }
+  });
+
+  // 5. Render Daftar Lengkap Jendela Aplikasi yang Sedang Berjalan di #win-task-switcher
+  if (runningAppsListEl) {
+    runningAppsListEl.innerHTML = '';
+    if (liveRunningApps.length === 0) {
+      runningAppsListEl.innerHTML = `
+        <div class="running-empty">
+          Belum ada jendela aplikasi eksternal (seperti MS Word, Excel, atau Chrome) yang terdeteksi terbuka.<br/>
+          Gunakan tombol cepat di atas untuk membuka aplikasi!
+        </div>
+      `;
+      return;
+    }
+
+    liveRunningApps.forEach((appItem) => {
+      const row = document.createElement('div');
+      row.className = 'running-app-card';
+      row.innerHTML = `
+        <div class="ra-left" title="Klik untuk menampilkan ${appItem.label} ke depan layar">
+          <div class="ra-icon" style="background: ${appItem.color || '#3b82f6'}">${appItem.badge || '🪟'}</div>
+          <div class="ra-meta">
+            <span class="ra-title">${appItem.title || appItem.label}</span>
+            <span class="ra-sub">${appItem.label} • ${appItem.category} (${appItem.windowCount} jendela)</span>
+          </div>
+        </div>
+        <div class="ra-actions">
+          <button class="ra-btn primary" data-act="focus" title="Tampilkan ke Depan">↗ Buka</button>
+          <button class="ra-btn" data-act="min" title="Minimize Jendela">—</button>
+          <button class="ra-btn danger" data-act="close" title="Tutup Aplikasi">✕</button>
+        </div>
+      `;
+
+      row.querySelector('.ra-left')?.addEventListener('click', () => {
+        focusRunningAppItem(appItem);
+      });
+      row.querySelector('[data-act="focus"]')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        focusRunningAppItem(appItem);
+      });
+      row.querySelector('[data-act="min"]')?.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await ipcRenderer.invoke('minimize-running-app', { pid: appItem.pid });
+      });
+      row.querySelector('[data-act="close"]')?.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await ipcRenderer.invoke('close-running-app', { pid: appItem.pid });
+        setTimeout(() => refreshRunningApps(true), 600);
+      });
+
+      runningAppsListEl.appendChild(row);
+    });
+  }
+}
+
+async function refreshRunningApps(force = false) {
+  try {
+    const list = await ipcRenderer.invoke('get-running-apps', force);
+    if (Array.isArray(list)) {
+      liveRunningApps = list;
+      renderRunningAppsUI();
+    }
+  } catch (_) {}
+}
+
+// Event Listeners untuk Tombol Task Switcher & Mode Desktop
+topRunningAppsBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleCustomWindow('win-task-switcher');
+  refreshRunningApps(true);
+});
+
+dockTaskSwitcherBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleCustomWindow('win-task-switcher');
+  refreshRunningApps(true);
+});
+
+topDesktopModeBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  setAppPassthroughMode(!isAppPassthroughMode);
+});
+
+showDesktopDockBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  setAppPassthroughMode(!isAppPassthroughMode);
+});
+
+document.getElementById('switcher-show-desktop-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  setAppPassthroughMode(false);
+  closeCustomWindow('win-task-switcher');
+});
+
+document.getElementById('refresh-running-apps-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  refreshRunningApps(true);
+});
+
+document.querySelectorAll('[data-quick-switch]').forEach((btn) => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const appKey = btn.dataset.quickSwitch;
+    focusOrLaunchNativeApp(appKey);
+  });
+});
+
+// Event Listeners untuk Tombol di Strip Taskbar Bawah (#taskbar-cover-strip)
+document.getElementById('tb-back-desktop-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  setAppPassthroughMode(false);
+});
+
+document.getElementById('tb-open-switcher-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleCustomWindow('win-task-switcher');
+  refreshRunningApps(true);
+});
+
+const tbPinWidgetsBtn = document.getElementById('tb-pin-widgets-btn');
+tbPinWidgetsBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const pinned = document.body.classList.toggle('pin-widgets-over-app');
+  tbPinWidgetsBtn.classList.toggle('active-pin', pinned);
+  tbPinWidgetsBtn.textContent = pinned ? '📌 Sembunyikan Widget' : '📌 Tampilkan Widget';
+});
+
+document.getElementById('tb-spotlight-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleCustomWindow('win-spotlight');
+  setTimeout(() => document.getElementById('spotlight-input')?.focus(), 60);
+});
+
+document.getElementById('tb-studio-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleCustomWindow('win-rm-drawer');
+});
+
+document.getElementById('tb-clock-pill')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleCustomWindow('win-calendar');
+});
+
+// Tombol Kembali ke Tampilan Windows Ori (Start Menu & Settings)
+document.getElementById('exit-to-windows-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  ipcRenderer.send('quit-to-windows', false);
+});
+
+document.getElementById('quit-temp-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  ipcRenderer.send('quit-to-windows', false);
+});
+
+document.getElementById('quit-disable-startup-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  appConfig.autoStart = false;
+  if (autoStartToggle) autoStartToggle.checked = false;
+  saveConfig();
+  ipcRenderer.send('quit-to-windows', true);
+});
+
+// Jalankan pemindaian awal, animasi masuk widget, & polling ringan tiap 4 detik
+animateRainmeterSkinsCascade();
+refreshRunningApps(true);
+setInterval(() => refreshRunningApps(false), 4000);

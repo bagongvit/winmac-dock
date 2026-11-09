@@ -11,7 +11,7 @@ const {
   nativeImage,
   clipboard
 } = require('electron');
-const { exec } = require('child_process');
+const { exec, execFile } = require('child_process');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
@@ -25,6 +25,22 @@ let isOverlayVisible = true;
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=128');
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
+
+// Kunci Single-Instance agar tidak bertumpuk jika ikon .exe diklik 2x
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock && !process.argv.includes('--force-admin')) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      isOverlayVisible = true;
+      mainWindow.show();
+      mainWindow.setIgnoreMouseEvents(false);
+      mainWindow.focus();
+      mainWindow.webContents.send('shortcut-trigger', 'toggle-start');
+    }
+  });
+}
 
 // =========================================================
 // 1. STATISTIK CPU & RAM REAL-TIME (CACHED & HEMAT BATERAI)
@@ -158,6 +174,14 @@ function updateTrayMenu() {
       click: () => mainWindow?.webContents.send('shortcut-trigger', 'toggle-start')
     },
     {
+      label: '🪟 Aplikasi Sedang Terbuka / Switcher (Alt+W)',
+      click: () => mainWindow?.webContents.send('shortcut-trigger', 'toggle-task-switcher')
+    },
+    {
+      label: '🖥️ Tampilkan Desktop / Mode Layar Aplikasi (Alt+D)',
+      click: () => mainWindow?.webContents.send('shortcut-trigger', 'toggle-desktop-mode')
+    },
+    {
       label: '📁 Buka Custom Explorer (Alt+E)',
       click: () => mainWindow?.webContents.send('shortcut-trigger', 'toggle-explorer')
     },
@@ -193,6 +217,15 @@ function updateTrayMenu() {
     {
       label: '🔄 Reset Posisi Semua Bar & Jendela',
       click: () => mainWindow?.webContents.send('shortcut-trigger', 'reset-positions')
+    },
+    { type: 'separator' },
+    {
+      label: '📌 Pasang Shortcut Desktop & Auto-Start PC',
+      click: () => configureDesktopAppAndStartup(true)
+    },
+    {
+      label: '🛡️ Jalankan Ulang sebagai Administrator (Run as Admin)',
+      click: () => restartAsAdministrator()
     },
     { type: 'separator' },
     {
@@ -264,6 +297,15 @@ ipcMain.on('set-ignore-mouse-events', (event, ignore, options) => {
   mainWindow.setIgnoreMouseEvents(ignore, options || {});
 });
 
+ipcMain.on('focus-overlay-window', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.setIgnoreMouseEvents(false);
+  mainWindow.focus();
+  if (isAlwaysOnTop) {
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  }
+});
+
 ipcMain.on('set-always-on-top', (event, flag) => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   isAlwaysOnTop = Boolean(flag);
@@ -276,14 +318,100 @@ ipcMain.on('set-always-on-top', (event, flag) => {
   updateTrayMenu();
 });
 
+function configureDesktopAppAndStartup(enableStartup = true) {
+  const launcherExe = path.join(__dirname, 'WinMac Desktop OS.exe');
+  const adminExe = path.join(__dirname, 'WinMac Desktop OS (Admin).exe');
+  const icoPath = path.join(__dirname, 'winmac.ico');
+  const targetExe = fs.existsSync(launcherExe) ? launcherExe : process.execPath;
+
+  const psSetup = `
+$wsh = New-Object -ComObject WScript.Shell
+$desktopDir = [Environment]::GetFolderPath('Desktop')
+$startupDir = [Environment]::GetFolderPath('Startup')
+
+# 1. Buat Shortcut di Desktop (Normal & Run as Administrator)
+if (Test-Path "${launcherExe}") {
+  $s1 = $wsh.CreateShortcut((Join-Path $desktopDir "WinMac Desktop OS.lnk"))
+  $s1.TargetPath = "${launcherExe}"
+  $s1.WorkingDirectory = "${__dirname}"
+  $s1.Description = "WinMac Desktop OS Suite Pro (Tanpa CMD)"
+  if (Test-Path "${icoPath}") { $s1.IconLocation = "${icoPath}" }
+  $s1.Save()
+}
+
+if (Test-Path "${adminExe}") {
+  $s2 = $wsh.CreateShortcut((Join-Path $desktopDir "WinMac Desktop OS (Admin).lnk"))
+  $s2.TargetPath = "${adminExe}"
+  $s2.WorkingDirectory = "${__dirname}"
+  $s2.Description = "WinMac Desktop OS Suite Pro (Run as Administrator)"
+  if (Test-Path "${icoPath}") { $s2.IconLocation = "${icoPath}" }
+  $s2.Save()
+}
+
+# 2. Atur Auto-Start Saat PC Restart / Login Windows (Registry Run & Startup Folder)
+$regPath = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+$startupLnk = Join-Path $startupDir "WinMac Desktop OS.lnk"
+
+if ($${enableStartup ? 'true' : 'false'}) {
+  Set-ItemProperty -Path $regPath -Name "WinMacDesktopOS" -Value '"${targetExe}"' -ErrorAction SilentlyContinue
+  if (Test-Path "${launcherExe}") {
+    $s3 = $wsh.CreateShortcut($startupLnk)
+    $s3.TargetPath = "${launcherExe}"
+    $s3.WorkingDirectory = "${__dirname}"
+    if (Test-Path "${icoPath}") { $s3.IconLocation = "${icoPath}" }
+    $s3.Save()
+  }
+} else {
+  Remove-ItemProperty -Path $regPath -Name "WinMacDesktopOS" -ErrorAction SilentlyContinue
+  if (Test-Path $startupLnk) { Remove-Item $startupLnk -Force -ErrorAction SilentlyContinue }
+}
+`;
+
+  execFile(
+    'powershell.exe',
+    ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', psSetup],
+    { windowsHide: true },
+    () => {}
+  );
+}
+
+function restartAsAdministrator() {
+  const adminExe = path.join(__dirname, 'WinMac Desktop OS (Admin).exe');
+  const launcherExe = path.join(__dirname, 'WinMac Desktop OS.exe');
+  const target = fs.existsSync(adminExe) ? adminExe : launcherExe;
+
+  const psAdmin = `Start-Process -FilePath "${target}" -WorkingDirectory "${__dirname}" -Verb RunAs`;
+  execFile(
+    'powershell.exe',
+    ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', psAdmin],
+    { windowsHide: true },
+    (err) => {
+      if (!err) {
+        setTimeout(() => app.quit(), 300);
+      }
+    }
+  );
+}
+
 ipcMain.on('set-autostart', (event, flag) => {
-  try {
-    app.setLoginItemSettings({
-      openAtLogin: Boolean(flag),
-      path: process.execPath
-    });
-  } catch (e) {
-    console.error('Gagal mengatur auto-start:', e.message);
+  configureDesktopAppAndStartup(Boolean(flag));
+});
+
+ipcMain.handle('install-desktop-shortcuts', () => {
+  configureDesktopAppAndStartup(true);
+  return true;
+});
+
+ipcMain.on('restart-as-admin', () => {
+  restartAsAdministrator();
+});
+
+ipcMain.on('quit-to-windows', (event, disableStartup) => {
+  if (disableStartup) {
+    configureDesktopAppAndStartup(false);
+    setTimeout(() => app.quit(), 400);
+  } else {
+    app.quit();
   }
 });
 
@@ -523,6 +651,22 @@ ipcMain.handle('pick-wallpaper-image', async () => {
   return `file://${fullPath.replace(/\\/g, '/')}`;
 });
 
+ipcMain.handle('pick-wallpaper-video', async () => {
+  if (!mainWindow) return null;
+  mainWindow.setIgnoreMouseEvents(false);
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Pilih Video Live Wallpaper (.mp4 / .webm)',
+    filters: [
+      { name: 'Video Live Wallpaper', extensions: ['mp4', 'webm', 'ogg', 'mov'] }
+    ],
+    properties: ['openFile']
+  });
+
+  if (result.canceled || result.filePaths.length === 0) return null;
+  const fullPath = result.filePaths[0];
+  return `file://${fullPath.replace(/\\/g, '/')}`;
+});
+
 ipcMain.on('open-external-url', (event, url) => {
   if (url && /^https?:\/\//i.test(url)) {
     shell.openExternal(url);
@@ -570,12 +714,287 @@ ipcMain.on('launch-app', (event, appId) => {
 
   const cmd = commands[appId];
   if (cmd) {
+    if (appId !== 'lock' && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setIgnoreMouseEvents(true, { forward: true });
+      mainWindow.blur();
+    }
     exec(cmd, { windowsHide: true }, (error) => {
       if (error) {
         console.error(`Gagal menjalankan [${appId}]:`, error.message);
       }
+      if (isAlwaysOnTop && mainWindow && !mainWindow.isDestroyed()) {
+        setTimeout(() => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.setAlwaysOnTop(true, 'screen-saver');
+          }
+        }, 350);
+      }
     });
   }
+});
+
+// =========================================================
+// 4B. LIVE RUNNING APPS DETECTOR & WIN32 WINDOW SWITCHER
+//     (Mendeteksi & Membuka Kembali MS Office, Chrome, VS Code, dll.)
+// =========================================================
+let cachedRunningApps = [];
+let lastRunningAppsCheck = 0;
+let isScanningRunningApps = false;
+
+const IGNORED_PROCESSES = new Set([
+  'electron',
+  'systemsettings',
+  'textinputhost',
+  'applicationframehost',
+  'systemsettingsadminflows',
+  'shellexperiencehost',
+  'searchhost',
+  'searchapp',
+  'startmenuexperiencehost',
+  'widgets',
+  'lockapp',
+  'conhost',
+  'svchost',
+  'dwm',
+  'ctfmon',
+  'taskhostw',
+  'runtimebroker',
+  'sihost',
+  'fontdrvhost',
+  'securityhealthsystray',
+  'idle'
+]);
+
+const KNOWN_APP_MAP = {
+  winword: { appKey: 'word', label: 'Microsoft Word', badge: 'W', color: '#2563eb', category: 'MS Office' },
+  excel: { appKey: 'excel', label: 'Microsoft Excel', badge: 'X', color: '#16a34a', category: 'MS Office' },
+  powerpnt: { appKey: 'powerpoint', label: 'PowerPoint', badge: 'P', color: '#ea580c', category: 'MS Office' },
+  outlook: { appKey: 'outlook', label: 'Microsoft Outlook', badge: 'O', color: '#0284c7', category: 'MS Office' },
+  onenote: { appKey: 'onenote', label: 'OneNote', badge: 'N', color: '#9333ea', category: 'MS Office' },
+  chrome: { appKey: 'chrome', label: 'Google Chrome', badge: '🌐', color: '#3b82f6', category: 'Browser', pinnedDock: true },
+  msedge: { appKey: 'edge', label: 'Microsoft Edge', badge: '🌊', color: '#0ea5e9', category: 'Browser' },
+  firefox: { appKey: 'firefox', label: 'Mozilla Firefox', badge: '🦊', color: '#f97316', category: 'Browser' },
+  brave: { appKey: 'brave', label: 'Brave Browser', badge: '🦁', color: '#fb923c', category: 'Browser' },
+  code: { appKey: 'vscode', label: 'VS Code', badge: '💻', color: '#0284c7', category: 'Developer', pinnedDock: true },
+  antigravity: { appKey: 'vscode', label: 'Antigravity IDE', badge: '💻', color: '#0284c7', category: 'Developer', pinnedDock: true },
+  cursor: { appKey: 'vscode', label: 'Cursor IDE', badge: '💻', color: '#0284c7', category: 'Developer', pinnedDock: true },
+  windsurf: { appKey: 'vscode', label: 'Windsurf IDE', badge: '💻', color: '#0284c7', category: 'Developer', pinnedDock: true },
+  explorer: { appKey: 'explorer', label: 'File Explorer', badge: '📁', color: '#f59e0b', category: 'System' },
+  windowsterminal: { appKey: 'terminal', label: 'Windows Terminal', badge: '🐚', color: '#334155', category: 'Developer' },
+  powershell: { appKey: 'powershell', label: 'PowerShell', badge: '🐚', color: '#2563eb', category: 'Developer' },
+  cmd: { appKey: 'cmd', label: 'Command Prompt', badge: '🐚', color: '#475569', category: 'Developer' },
+  notepad: { appKey: 'notepad', label: 'Notepad', badge: '📝', color: '#38bdf8', category: 'Utility' },
+  calculatorapp: { appKey: 'calculator', label: 'Calculator', badge: '🧮', color: '#0ea5e9', category: 'Utility' },
+  calc: { appKey: 'calculator', label: 'Calculator', badge: '🧮', color: '#0ea5e9', category: 'Utility' },
+  spotify: { appKey: 'spotify', label: 'Spotify Music', badge: '🎵', color: '#22c55e', category: 'Media' },
+  whatsapp: { appKey: 'whatsapp', label: 'WhatsApp', badge: '💬', color: '#10b981', category: 'Chat' },
+  telegram: { appKey: 'telegram', label: 'Telegram', badge: '✈️', color: '#0ea5e9', category: 'Chat' },
+  discord: { appKey: 'discord', label: 'Discord', badge: '🎮', color: '#6366f1', category: 'Chat' },
+  zoom: { appKey: 'zoom', label: 'Zoom Meeting', badge: '📹', color: '#2563eb', category: 'Meeting' },
+  teams: { appKey: 'teams', label: 'Microsoft Teams', badge: '👥', color: '#4f46e5', category: 'Meeting' },
+  postman: { appKey: 'postman', label: 'Postman API', badge: '🚀', color: '#f97316', category: 'Developer' },
+  figma: { appKey: 'figma', label: 'Figma Design', badge: '🎨', color: '#ec4899', category: 'Design' },
+  acrord32: { appKey: 'acrobat', label: 'Adobe Acrobat PDF', badge: '📕', color: '#dc2626', category: 'Office' },
+  acrobat: { appKey: 'acrobat', label: 'Adobe Acrobat PDF', badge: '📕', color: '#dc2626', category: 'Office' },
+  vlc: { appKey: 'vlc', label: 'VLC Media Player', badge: '🎬', color: '#f97316', category: 'Media' },
+  taskmgr: { appKey: 'taskmgr', label: 'Task Manager', badge: '📊', color: '#14b8a6', category: 'System' }
+};
+
+ipcMain.handle('get-running-apps', async (event, forceRefresh = false) => {
+  const now = Date.now();
+  if (!forceRefresh && cachedRunningApps.length > 0 && now - lastRunningAppsCheck < 3000) {
+    return cachedRunningApps;
+  }
+  if (isScanningRunningApps) {
+    return cachedRunningApps;
+  }
+
+  isScanningRunningApps = true;
+  // Pastikan overlay Dock & Top Bar selalu berada di atas aplikasi eksternal & Taskbar Windows
+  if (isAlwaysOnTop && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  }
+
+  const psScript = `
+    $procs = Get-Process | Where-Object {
+      ($_.MainWindowHandle -ne 0 -and $_.MainWindowTitle -ne '') -or
+      ($_.ProcessName -in @('WINWORD','EXCEL','POWERPNT','OUTLOOK','ONENOTE','chrome','msedge','firefox','brave','Code','Antigravity','Cursor','Windsurf','notepad','Spotify','WhatsApp','Telegram','Discord','Zoom','Teams','Postman','Figma','vlc','Taskmgr','WindowsTerminal') -and $_.MainWindowHandle -ne 0)
+    } | Select-Object Id, ProcessName, MainWindowTitle;
+    if ($procs) { $procs | ConvertTo-Json -Compress } else { '[]' }
+  `;
+
+  return new Promise((resolve) => {
+    execFile(
+      'powershell.exe',
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', psScript],
+      { windowsHide: true, timeout: 4500 },
+      (err, stdout) => {
+        isScanningRunningApps = false;
+        lastRunningAppsCheck = Date.now();
+
+        if (err || !stdout) {
+          resolve(cachedRunningApps);
+          return;
+        }
+
+        try {
+          const trimmed = stdout.trim();
+          const rawList = trimmed ? JSON.parse(trimmed) : [];
+          const list = Array.isArray(rawList) ? rawList : [rawList];
+
+          const groupedMap = new Map();
+          for (const item of list) {
+            if (!item || !item.ProcessName) continue;
+            const rawName = String(item.ProcessName);
+            const lowerName = rawName.toLowerCase();
+            if (IGNORED_PROCESSES.has(lowerName)) continue;
+
+            const title = String(item.MainWindowTitle || '').trim();
+            // Abaikan shell desktop background explorer ("Program Manager" atau tanpa judul)
+            if (lowerName === 'explorer' && (!title || title === 'Program Manager')) continue;
+
+            const meta = KNOWN_APP_MAP[lowerName] || {
+              appKey: lowerName,
+              label: rawName.charAt(0).toUpperCase() + rawName.slice(1),
+              badge: rawName.slice(0, 2).toUpperCase(),
+              color: '#6366f1',
+              category: 'Application',
+              pinnedDock: false
+            };
+
+            const existing = groupedMap.get(lowerName);
+            if (!existing) {
+              groupedMap.set(lowerName, {
+                pid: item.Id,
+                processName: rawName,
+                appKey: meta.appKey,
+                label: meta.label,
+                title: title || meta.label,
+                badge: meta.badge,
+                color: meta.color,
+                category: meta.category,
+                pinnedDock: Boolean(meta.pinnedDock),
+                windowCount: 1
+              });
+            } else {
+              existing.windowCount += 1;
+              if (!existing.title && title) {
+                existing.title = title;
+                existing.pid = item.Id;
+              }
+            }
+          }
+
+          cachedRunningApps = Array.from(groupedMap.values());
+          resolve(cachedRunningApps);
+        } catch (_) {
+          resolve(cachedRunningApps);
+        }
+      }
+    );
+  });
+});
+
+// Fokuskan & kembalikan (Un-minimize / Restore) jendela aplikasi yang sedang terbuka ke paling depan
+ipcMain.handle('focus-running-app', async (event, payload = {}) => {
+  const { pid, processName } = payload;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    mainWindow.blur();
+  }
+
+  const safeProc = String(processName || '').replace(/[^a-zA-Z0-9_.-]/g, '');
+  const safePid = Number(pid) || 0;
+
+  const psFocus = `
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class WinMacFocus {
+  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+}
+"@
+$wsh = New-Object -ComObject WScript.Shell
+$target = $null
+if (${safePid} -gt 0) {
+  $target = Get-Process -Id ${safePid} -ErrorAction SilentlyContinue
+}
+if ((-not $target -or $target.MainWindowHandle -eq 0) -and "${safeProc}" -ne "") {
+  $target = Get-Process -Name "${safeProc}" -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+}
+if ($target -and $target.MainWindowHandle -ne 0) {
+  $h = $target.MainWindowHandle
+  if ([WinMacFocus]::IsIconic($h)) {
+    [WinMacFocus]::ShowWindowAsync($h, 9) | Out-Null
+  } else {
+    [WinMacFocus]::ShowWindowAsync($h, 5) | Out-Null
+  }
+  [WinMacFocus]::SetForegroundWindow($h) | Out-Null
+  $wsh.AppActivate($target.Id) | Out-Null
+}
+`;
+
+  return new Promise((resolve) => {
+    execFile(
+      'powershell.exe',
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', psFocus],
+      { windowsHide: true, timeout: 4000 },
+      () => {
+        if (isAlwaysOnTop && mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.setAlwaysOnTop(true, 'screen-saver');
+        }
+        resolve(true);
+      }
+    );
+  });
+});
+
+ipcMain.handle('minimize-running-app', async (event, payload = {}) => {
+  const safePid = Number(payload.pid) || 0;
+  if (!safePid) return false;
+  const psMin = `
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class WinMacMin {
+  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+}
+"@
+$p = Get-Process -Id ${safePid} -ErrorAction SilentlyContinue
+if ($p -and $p.MainWindowHandle -ne 0) {
+  [WinMacMin]::ShowWindowAsync($p.MainWindowHandle, 6) | Out-Null
+}
+`;
+  return new Promise((resolve) => {
+    execFile(
+      'powershell.exe',
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', psMin],
+      { windowsHide: true, timeout: 3500 },
+      () => resolve(true)
+    );
+  });
+});
+
+ipcMain.handle('close-running-app', async (event, payload = {}) => {
+  const safePid = Number(payload.pid) || 0;
+  if (!safePid) return false;
+  const psClose = `
+$p = Get-Process -Id ${safePid} -ErrorAction SilentlyContinue
+if ($p) { $p.CloseMainWindow() | Out-Null }
+`;
+  return new Promise((resolve) => {
+    execFile(
+      'powershell.exe',
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', psClose],
+      { windowsHide: true, timeout: 3500 },
+      () => {
+        lastRunningAppsCheck = 0;
+        resolve(true);
+      }
+    );
+  });
 });
 
 // =========================================================
@@ -584,6 +1003,7 @@ ipcMain.on('launch-app', (event, appId) => {
 app.whenReady().then(() => {
   createWindow();
   createTrayIcon();
+  configureDesktopAppAndStartup(true);
 
   // Global Shortcut: Alt+Space untuk Start Menu, Alt+E untuk Custom Explorer
   globalShortcut.register('Alt+Space', () => {
@@ -592,6 +1012,8 @@ app.whenReady().then(() => {
       isOverlayVisible = true;
       mainWindow.show();
     }
+    mainWindow.setIgnoreMouseEvents(false);
+    mainWindow.focus();
     mainWindow.webContents.send('shortcut-trigger', 'toggle-start');
   });
 
@@ -601,6 +1023,8 @@ app.whenReady().then(() => {
       isOverlayVisible = true;
       mainWindow.show();
     }
+    mainWindow.setIgnoreMouseEvents(false);
+    mainWindow.focus();
     mainWindow.webContents.send('shortcut-trigger', 'toggle-explorer');
   });
 
@@ -610,7 +1034,29 @@ app.whenReady().then(() => {
       isOverlayVisible = true;
       mainWindow.show();
     }
+    mainWindow.setIgnoreMouseEvents(false);
+    mainWindow.focus();
     mainWindow.webContents.send('shortcut-trigger', 'toggle-spotlight');
+  });
+
+  globalShortcut.register('Alt+W', () => {
+    if (!mainWindow) return;
+    if (!isOverlayVisible) {
+      isOverlayVisible = true;
+      mainWindow.show();
+    }
+    mainWindow.setIgnoreMouseEvents(false);
+    mainWindow.focus();
+    mainWindow.webContents.send('shortcut-trigger', 'toggle-task-switcher');
+  });
+
+  globalShortcut.register('Alt+D', () => {
+    if (!mainWindow) return;
+    if (!isOverlayVisible) {
+      isOverlayVisible = true;
+      mainWindow.show();
+    }
+    mainWindow.webContents.send('shortcut-trigger', 'toggle-desktop-mode');
   });
 
   app.on('activate', () => {
