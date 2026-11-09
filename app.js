@@ -1014,23 +1014,26 @@ function renderExplorerItems(items) {
     const card = document.createElement('div');
     card.className = 'file-item-card';
     card.title = item.path;
+
+    const iconOrThumbHtml =
+      item.isImage && item.imageUrl
+        ? `<div class="file-thumb-wrap"><img class="file-thumb-img" src="${item.imageUrl}" loading="lazy" alt="${item.name}" /></div>`
+        : `<div class="file-ic">${getFileIcon(item)}</div>`;
+
     card.innerHTML = `
-      <div class="file-ic">${getFileIcon(item)}</div>
+      ${iconOrThumbHtml}
       <div class="file-name">${item.name}</div>
       <div class="file-sub">${item.isDirectory ? 'Folder' : formatBytes(item.size)}</div>
     `;
 
-    // Klik 1x: Pilih item (atau jika sudah terpilih & folder, masuk)
+    // Klik 1x: Pilih item & langsung tampilkan Preview di panel kanan
     card.addEventListener('click', (e) => {
       e.stopPropagation();
       hideContextMenu();
       document.querySelectorAll('.file-item-card').forEach((c) => c.classList.remove('selected'));
       card.classList.add('selected');
       selectedFileItem = item;
-
-      if (!expPreviewPane.classList.contains('hidden')) {
-        showQuickLookPreview(item);
-      }
+      showQuickLookPreview(item);
     });
 
     // Klik 2x: Masuk ke folder atau buka file di Windows
@@ -1054,9 +1057,16 @@ function renderExplorerItems(items) {
 
     expFilesGridEl.appendChild(card);
   });
+
+  // Jika di dalam folder ada file gambar, otomatis tampilkan preview gambar pertama di panel kanan
+  const firstImageItem = items.find((it) => it.isImage);
+  if (firstImageItem) {
+    selectedFileItem = firstImageItem;
+    showQuickLookPreview(firstImageItem);
+  }
 }
 
-// Quick Look Preview (macOS Spasi)
+// Quick Look Preview (macOS Spasi & Otomatis saat Klik 1x)
 async function showQuickLookPreview(item) {
   if (!item) return;
   expPreviewPane.classList.remove('hidden');
@@ -1068,7 +1078,11 @@ async function showQuickLookPreview(item) {
     previewMetaEl.innerHTML = `
       <div><strong>Tipe:</strong> Folder Direktori</div>
       <div><strong>Lokasi:</strong> ${item.path}</div>
+      <div style="margin-top:8px;">
+        <button class="addr-go-btn" id="ql-open-dir-btn" style="width:100%;">📂 Masuk ke Folder</button>
+      </div>
     `;
+    document.getElementById('ql-open-dir-btn')?.addEventListener('click', () => navigateExplorer(item.path));
     return;
   }
 
@@ -1079,7 +1093,10 @@ async function showQuickLookPreview(item) {
   }
 
   if (res.type === 'image') {
-    previewBodyEl.innerHTML = `<img src="${res.url}" alt="${item.name}" />`;
+    previewBodyEl.innerHTML = `<img src="${res.url}" alt="${item.name}" style="cursor:zoom-in" title="Klik untuk membuka ukuran penuh" />`;
+    previewBodyEl.querySelector('img')?.addEventListener('click', () => {
+      ipcRenderer.invoke('open-path', item.path);
+    });
   } else if (res.type === 'text') {
     const pre = document.createElement('pre');
     pre.textContent = res.content || '(File kosong)';
@@ -1093,7 +1110,26 @@ async function showQuickLookPreview(item) {
     <div><strong>Ukuran:</strong> ${formatBytes(res.size)}</div>
     <div><strong>Diubah:</strong> ${res.mtime}</div>
     <div><strong>Ekstensi:</strong> ${item.ext || '-'}</div>
+    <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+      <button class="pill-action-btn" id="ql-open-file-btn" style="flex:1;">📂 Buka File</button>
+      ${
+        res.type === 'image'
+          ? `<button class="addr-go-btn" id="ql-set-wp-btn" style="flex:1;">🖼️ Jadi Wallpaper</button>`
+          : ''
+      }
+    </div>
   `;
+
+  document.getElementById('ql-open-file-btn')?.addEventListener('click', () => {
+    ipcRenderer.invoke('open-path', item.path);
+  });
+  document.getElementById('ql-set-wp-btn')?.addEventListener('click', () => {
+    appConfig.customWallpaperUrl = res.fileUrl || res.url;
+    applyWallpaper('wp-custom');
+    if (typeof pushNotification === 'function') {
+      pushNotification('🖼️', 'Wallpaper Diperbarui dari Explorer', item.name, true);
+    }
+  });
 }
 
 document.getElementById('close-preview-btn')?.addEventListener('click', () => {

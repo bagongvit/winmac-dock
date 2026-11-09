@@ -16,6 +16,7 @@ const { exec, execFile } = require('child_process');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 let mainWindow;
 let tray = null;
@@ -642,6 +643,8 @@ ipcMain.handle('read-directory', async (event, dirPath) => {
     const entries = await fs.promises.readdir(targetPath, { withFileTypes: true });
     const items = [];
 
+    const imageExts = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
+
     for (const entry of entries) {
       if (entry.name.startsWith('$') || entry.name.toLowerCase() === 'desktop.ini') continue;
 
@@ -654,11 +657,16 @@ ipcMain.handle('read-directory', async (event, dirPath) => {
         mtime = stat.mtime ? stat.mtime.toISOString() : null;
       } catch (_) {}
 
+      const ext = entry.isDirectory() ? 'folder' : path.extname(entry.name).toLowerCase();
+      const isImage = !entry.isDirectory() && imageExts.has(ext);
+
       items.push({
         name: entry.name,
         path: fullPath,
         isDirectory: entry.isDirectory(),
-        ext: entry.isDirectory() ? 'folder' : path.extname(entry.name).toLowerCase(),
+        ext,
+        isImage,
+        imageUrl: isImage ? pathToFileURL(fullPath).href : '',
         size,
         mtime
       });
@@ -697,10 +705,29 @@ ipcMain.handle('preview-file', async (event, filePath) => {
     ];
 
     if (imageExts.includes(ext)) {
+      let previewUrl = pathToFileURL(filePath).href;
+      // Gunakan DataURL untuk gambar <= 8MB agar 100% langsung tampil meskipun path mengandung karakter khusus
+      if (stat.size <= 8 * 1024 * 1024) {
+        try {
+          const mimeMap = {
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif',
+            '.svg': 'image/svg+xml',
+            '.webp': 'image/webp',
+            '.bmp': 'image/bmp',
+            '.ico': 'image/x-icon'
+          };
+          const buf = await fs.promises.readFile(filePath);
+          previewUrl = `data:${mimeMap[ext] || 'image/png'};base64,${buf.toString('base64')}`;
+        } catch (_) {}
+      }
       return {
         ok: true,
         type: 'image',
-        url: `file://${filePath.replace(/\\/g, '/')}`,
+        url: previewUrl,
+        fileUrl: pathToFileURL(filePath).href,
         size: stat.size,
         mtime: stat.mtime.toLocaleString('id-ID')
       };
