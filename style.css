@@ -3324,7 +3324,7 @@ body.app-passthrough-mode .dock-separator {
   z-index: 900;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding: 0 16px;
   opacity: 0;
   transform: translateY(100%);
