@@ -34,11 +34,21 @@ Semua widget memiliki tombol **Lipat (`—`)**, **Sembunyikan (`✕`)**, *Magnet
 4. **🍅 Pomodoro Focus Timer**: Lingkaran hitung mundur **25m Fokus / 5m Rehat** dengan bunyi lonceng *WebAudio* dan pencatat *streak* harian.
 5. **📋 Smart Clipboard History**: Merekam otomatis 12 teks terakhir yang di-*copy* (`Ctrl+C`) untuk disalin ulang dengan 1 klik.
 
-### 6. 🖼️ 4K Aesthetic Backgrounds, Live Video Wallpaper & Smart Eco-Battery
+### 6. 🖼️ 13 Mode Background, Live Video Wallpaper & Smart Eco-Battery
 - **13 Mode Background**: **🕐 Otomatis Pagi/Siang/Sore/Malam** (berganti sendiri mengikuti jam), *macOS Sonoma Horizon*, *Windows 12 Midnight Bloom*, *macOS Big Sur Waves*, *Aurora Borealis*, *Galaxy Nebula*, *Ocean Sunset*, *Misty Pine Forest*, *Cyberpunk Synthwave*, *Mount Fuji Twilight*, **📂 Gambar Kustom PC**, **🎬 Video Live Wallpaper (`.mp4`/`.webm`)**, atau **🪟 Transparan Asli**.
 - Semua background dibuat murni dengan CSS/SVG (0 MB gambar). Animasinya (aurora bergerak, bintang berkelip, kabut hutan, kilau laut) hanya memakai `transform`/`opacity` yang dirender GPU, dan **otomatis berhenti** saat kamu sedang di Mode Layar Aplikasi atau Eco Battery aktif.
 - **5 Efek Partikel (`<canvas>` 28 FPS Ultra-Ringan)**: *Fireflies (Kunang-kunang Neon)*, *Starfield*, *Snowfall*, *Cyber Matrix Rain*.
 - **🔋 Auto-Eco Battery & Gaming Saver**: Otomatis menjeda animasi partikel & video wallpaper saat baterai laptop `< 25%` (tanpa charger), saat CPU `> 70%`, atau saat sedang fokus di dalam aplikasi kerja.
+
+### 7. 🚀 8 Fitur Produktivitas Ekstra (Pro Suite Update)
+1. **🔔 Notification Center & Dynamic Island Toast (`Alt + N`)**: Menampilkan notifikasi *real-time* di Dynamic Island lengkap dengan riwayat aktivitas, catatan cepat, dan mode **🌙 Do Not Disturb (DND)**.
+2. **🎵 Kontrol Media Sistem Windows Asli**: Mengontrol *Play/Pause*, *Next Track*, dan *Prev Track* untuk **Spotify, YouTube di Browser, & VLC** secara langsung serta mendeteksi judul lagu/video yang sedang diputar.
+3. **⏰ Kalender + Agenda & Alarm Pengingat**: Jadwalkan pengingat harian dengan jam (`HH:MM`) di widget Kalender yang otomatis membunyikan alarm & menampilkan notifikasi saat waktunya tiba.
+4. **🔋 Detail Baterai & Ping Latency Live**: Indikator persentase baterai, status pengisian (`⚡ AC` / estimasi sisa waktu), dan *ping latency* di Top Dynamic Island & SysMonitor Pro.
+5. **📐 Hot Corners ala macOS**: Arahkan kursor ke 4 pojok layar untuk aksi instan (Kiri-Atas: Start Menu, Kanan-Atas: Notifikasi, Kiri-Bawah: Task Switcher, Kanan-Bawah: Desktop/App Mode).
+6. **🗂️ Quick App Stack Folder di Dock**: Popover grup aplikasi cepat bergaya macOS App Stack di Bottom Dock.
+7. **⚡ Spotlight Super Pintar (`Alt + K`)**: Mendukung **konversi mata uang & satuan** (`10 usd to idr`, `100 km to mile`, `32 c to f`), **pencarian file lokal di laptop** (`f <nama file>`), pembuka website langsung (`github.com`), dan kalkulator.
+8. **📸 Screenshot & Editor Coret-Coret Studio (`Alt + S`)**: Tangkap layar HD instan, beri coretan/tanda dengan pena warna neon, lalu **Copy ke Clipboard (`Ctrl+V`)** atau **Simpan PNG** ke folder `Pictures/WinMac-Screenshots`.
 
 ---
 
@@ -49,7 +59,9 @@ Semua widget memiliki tombol **Lipat (`—`)**, **Sembunyikan (`✕`)**, *Magnet
 | `Alt + Space` | Membuka / Menutup **Windows 12 Start Menu** |
 | `Alt + W` | Membuka / Menutup **Pusat Aplikasi Sedang Terbuka (Live Task Switcher)** |
 | `Alt + D` | Beralih antara **Desktop Wallpaper penuh** vs **Mode Layar Aplikasi Kerja** |
-| `Alt + K` | Membuka / Menutup **Spotlight Command & Kalkulator Kilat** |
+| `Alt + N` | Membuka / Menutup **Pusat Notifikasi & Riwayat (`Notification Center`)** |
+| `Alt + S` | Menangkap Layar & Membuka **Screenshot Editor Coret-Coret Studio** |
+| `Alt + K` | Membuka / Menutup **Spotlight Command, Cari File & Konversi Mata Uang/Satuan** |
 | `Alt + E` | Membuka / Menutup **Custom File Explorer × macOS Finder** |
 | `Spasi` *(di Explorer)* | Membuka **Quick Look Preview** untuk file gambar/kode yang dipilih |
 

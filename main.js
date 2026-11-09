@@ -9,7 +9,8 @@ const {
   globalShortcut,
   dialog,
   nativeImage,
-  clipboard
+  clipboard,
+  desktopCapturer
 } = require('electron');
 const { exec, execFile } = require('child_process');
 const os = require('os');
@@ -453,6 +454,147 @@ ipcMain.on('set-system-brightness', (event, level) => {
       () => {}
     );
   }, 200);
+});
+
+// Kontrol Media Sistem Windows Asli (Spotify, YouTube Browser, VLC, dll.) via VK_MEDIA Keys
+ipcMain.on('media-key-control', (event, action) => {
+  const keyMap = {
+    'play-pause': 179, // VK_MEDIA_PLAY_PAUSE
+    next: 176,         // VK_MEDIA_NEXT_TRACK
+    prev: 177,         // VK_MEDIA_PREV_TRACK
+    stop: 178,         // VK_MEDIA_STOP
+    mute: 173          // VK_VOLUME_MUTE
+  };
+  const code = keyMap[action];
+  if (!code) return;
+  execFile(
+    'powershell.exe',
+    [
+      '-NoLogo',
+      '-NoProfile',
+      '-NonInteractive',
+      '-WindowStyle',
+      'Hidden',
+      '-Command',
+      `$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys([char]${code})`
+    ],
+    { windowsHide: true },
+    () => {}
+  );
+});
+
+// Pencarian Cepat File Lokal di Laptop untuk Spotlight (Desktop, Downloads, Documents, Workspace)
+ipcMain.handle('search-local-files', async (event, rawQuery) => {
+  const q = String(rawQuery || '').trim().toLowerCase();
+  if (!q || q.length < 2) return [];
+
+  const home = os.homedir();
+  const roots = [
+    { label: 'Workspace', dir: __dirname },
+    { label: 'Desktop', dir: path.join(home, 'Desktop') },
+    { label: 'Downloads', dir: path.join(home, 'Downloads') },
+    { label: 'Documents', dir: path.join(home, 'Documents') },
+    { label: 'Pictures', dir: path.join(home, 'Pictures') }
+  ];
+
+  const results = [];
+  const maxResults = 16;
+
+  async function scanDir(dirPath, rootLabel, depth = 0) {
+    if (results.length >= maxResults || depth > 1) return;
+    let entries = [];
+    try {
+      entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+    } catch (_) {
+      return;
+    }
+
+    for (const entry of entries) {
+      if (results.length >= maxResults) break;
+      const name = entry.name;
+      if (name.startsWith('.') || name.startsWith('$') || name === 'node_modules') continue;
+
+      const fullPath = path.join(dirPath, name);
+      if (name.toLowerCase().includes(q)) {
+        results.push({
+          name,
+          path: fullPath,
+          isDirectory: entry.isDirectory(),
+          location: rootLabel
+        });
+      }
+      if (entry.isDirectory() && depth < 1 && results.length < maxResults) {
+        await scanDir(fullPath, rootLabel, depth + 1);
+      }
+    }
+  }
+
+  for (const r of roots) {
+    if (fs.existsSync(r.dir)) {
+      await scanDir(r.dir, r.label, 0);
+    }
+  }
+  return results;
+});
+
+// Built-in HD Screenshot Capture & Annotation Studio Saver
+ipcMain.handle('capture-screen-hd', async () => {
+  try {
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width, height } = primaryDisplay.size;
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setOpacity(0);
+    }
+    await new Promise((r) => setTimeout(r, 140));
+
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: {
+        width: Math.min(1920, Math.round(width * (primaryDisplay.scaleFactor || 1))),
+        height: Math.min(1080, Math.round(height * (primaryDisplay.scaleFactor || 1)))
+      }
+    });
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setOpacity(1);
+      mainWindow.setIgnoreMouseEvents(false);
+      mainWindow.focus();
+    }
+
+    if (!sources || sources.length === 0) return null;
+    return sources[0].thumbnail.toDataURL();
+  } catch (err) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setOpacity(1);
+    }
+    return null;
+  }
+});
+
+ipcMain.handle('save-annotated-screenshot', async (event, payload = {}) => {
+  try {
+    const { dataUrl, mode } = payload;
+    if (!dataUrl) return { ok: false };
+    const img = nativeImage.createFromDataURL(dataUrl);
+
+    if (mode === 'clipboard' || mode === 'both') {
+      clipboard.writeImage(img);
+    }
+
+    let savedPath = '';
+    if (mode === 'save' || mode === 'both') {
+      const picDir = path.join(os.homedir(), 'Pictures', 'WinMac-Screenshots');
+      await fs.promises.mkdir(picDir, { recursive: true });
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      savedPath = path.join(picDir, `WinMac-Shot-${stamp}.png`);
+      await fs.promises.writeFile(savedPath, img.toPNG());
+    }
+
+    return { ok: true, savedPath };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
 });
 
 // Dialog Pilih Aplikasi (.exe) untuk Ditambahkan ke Dock
@@ -1050,6 +1192,26 @@ app.whenReady().then(() => {
       mainWindow.show();
     }
     mainWindow.webContents.send('shortcut-trigger', 'toggle-desktop-mode');
+  });
+
+  globalShortcut.register('Alt+N', () => {
+    if (!mainWindow) return;
+    if (!isOverlayVisible) {
+      isOverlayVisible = true;
+      mainWindow.show();
+    }
+    mainWindow.setIgnoreMouseEvents(false);
+    mainWindow.focus();
+    mainWindow.webContents.send('shortcut-trigger', 'toggle-notifications');
+  });
+
+  globalShortcut.register('Alt+S', () => {
+    if (!mainWindow) return;
+    if (!isOverlayVisible) {
+      isOverlayVisible = true;
+      mainWindow.show();
+    }
+    mainWindow.webContents.send('shortcut-trigger', 'trigger-screenshot-studio');
   });
 
   app.on('activate', () => {

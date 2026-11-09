@@ -277,6 +277,24 @@
             </div>
           </div>
         </div>
+
+        <!-- Live Battery & Network Latency Detail -->
+        <div class="rm-net-row" style="margin-top:6px;">
+          <div class="rm-net-pill">
+            <span class="net-arr" style="color:#4ade80;">🔋</span>
+            <div>
+              <div class="net-lbl">BATTERY</div>
+              <div class="net-val" id="rm-bat-status">100% (AC Power)</div>
+            </div>
+          </div>
+          <div class="rm-net-pill">
+            <span class="net-arr" style="color:#38bdf8;">📶</span>
+            <div>
+              <div class="net-lbl">PING LATENCY</div>
+              <div class="net-val" id="rm-ping-val">14 ms • Stabil</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -308,9 +326,11 @@
           </div>
         </div>
         <div class="rm-vis-controls">
+          <button class="rm-vis-btn" id="rm-vis-mode-btn" title="Ganti Sumber: Kontrol Media Windows Asli (Spotify/YouTube) vs Lofi Synth">🪟</button>
+          <button class="rm-vis-btn" id="rm-vis-prev-btn" title="Lagu Sebelumnya (Prev Track)">⏮</button>
           <button class="rm-vis-btn" id="rm-vis-sound-btn" title="Aktifkan/Matikan Suara Synth Ambient">🔈</button>
-          <button class="rm-vis-btn" id="rm-vis-play-btn" title="Play / Pause Visualizer">⏸</button>
-          <button class="rm-vis-btn" id="rm-vis-next-btn" title="Ganti Track">⏭</button>
+          <button class="rm-vis-btn" id="rm-vis-play-btn" title="Play / Pause Media">⏸</button>
+          <button class="rm-vis-btn" id="rm-vis-next-btn" title="Lagu Berikutnya (Next Track)">⏭</button>
         </div>
       </div>
     </div>
@@ -560,6 +580,10 @@
             <span class="chip-dot ram-dot"></span>
             <span id="compact-ram">48%</span>
           </span>
+          <span class="mini-chip" id="top-battery-chip" title="Status Baterai & Daya Laptop">
+            <span class="chip-dot bat-dot" id="compact-bat-dot"></span>
+            <span id="compact-bat">⚡ 100%</span>
+          </span>
         </div>
       </div>
 
@@ -592,11 +616,22 @@
         </div>
 
         <!-- Tombol Spotlight Command Bar (Alt+K) -->
-        <button class="theme-cycle-btn" id="spotlight-trigger-btn" title="Spotlight Command & Kalkulator Kilat (Alt+K)">
+        <button class="theme-cycle-btn" id="spotlight-trigger-btn" title="Spotlight Command, Cari File & Konversi (Alt+K)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
             <circle cx="11" cy="11" r="7"></circle>
             <line x1="20" y1="20" x2="16" y2="16"></line>
           </svg>
+        </button>
+
+        <!-- Tombol Pusat Notifikasi & Agenda (Alt+N) -->
+        <button class="theme-cycle-btn notif-bell-btn" id="top-notif-btn" title="Pusat Notifikasi & Pengingat (Alt+N)">
+          🔔
+          <span class="notif-badge hidden" id="notif-unread-badge">0</span>
+        </button>
+
+        <!-- Tombol Screenshot & Coret-Coret Studio (Alt+S) -->
+        <button class="theme-cycle-btn" id="top-screenshot-btn" title="Tangkap Layar & Editor Coret-Coret (Alt+S)">
+          📸
         </button>
 
         <!-- Tombol Cepat Studio Widget & Background -->
@@ -631,14 +666,16 @@
           </div>
           <div class="media-info">
             <span class="media-title" id="media-title">Chill Synthwave Mix</span>
-            <span class="media-sub" id="media-sub">WinMac Spatial Audio</span>
+            <span class="media-sub" id="media-sub">Kontrol Media Windows / Synth</span>
           </div>
           <div class="media-controls">
-            <button class="media-btn" id="play-pause-btn" type="button" title="Play / Pause Visualizer">
+            <button class="media-btn" id="media-prev-btn" type="button" title="Lagu Sebelumnya (Spotify/YouTube)">⏮</button>
+            <button class="media-btn" id="play-pause-btn" type="button" title="Play / Pause Media Windows & Visualizer">
               <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
               </svg>
             </button>
+            <button class="media-btn" id="media-next-btn" type="button" title="Lagu Berikutnya (Spotify/YouTube)">⏭</button>
           </div>
         </div>
 
@@ -762,6 +799,17 @@
       <span>Min</span><span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span>
     </div>
     <div class="cal-days-grid" id="cal-days-grid"></div>
+
+    <!-- Fitur Baru: Agenda & Alarm Pengingat (Reminder) -->
+    <div class="cal-agenda-section">
+      <div class="drawer-sub-lbl" style="margin-top:10px;">⏰ Agenda & Pengingat Alarm Hari Ini</div>
+      <div class="agenda-form-row">
+        <input type="time" id="agenda-time-input" class="agenda-time-input" value="14:00" />
+        <input type="text" id="agenda-text-input" class="agenda-text-input" placeholder="Tulis jadwal / pengingat..." autocomplete="off" />
+        <button class="addr-go-btn" id="agenda-add-btn">+ Set</button>
+      </div>
+      <div id="agenda-list" class="agenda-list"></div>
+    </div>
   </div>
 
   <!-- =========================================================
@@ -1283,6 +1331,14 @@
 
         <div class="setting-row">
           <div>
+            <div class="setting-title">📐 Hot Corners ala macOS (Pojok Layar Pintar)</div>
+            <div class="setting-sub">Arahkan kursor ke 4 pojok layar: Kiri-Atas (Start), Kanan-Atas (Notifikasi), Kiri-Bawah (Switcher), Kanan-Bawah (Desktop)</div>
+          </div>
+          <input type="checkbox" id="hot-corners-toggle" class="win-switch" checked />
+        </div>
+
+        <div class="setting-row">
+          <div>
             <div class="setting-title">🖥️ Shortcut Aplikasi Desktop & Mode Administrator</div>
             <div class="setting-sub">Pasang ikon aplikasi .exe di Desktop atau jalankan ulang sebagai Administrator</div>
           </div>
@@ -1494,6 +1550,35 @@
       <!-- Container Shortcut Aplikasi Tambahan User -->
       <div id="custom-dock-items" class="custom-dock-items"></div>
 
+      <!-- Tombol Quick Launcher Folder Stack (ala macOS App Stack) -->
+      <button class="dock-item" id="dock-folder-btn" data-label="🗂️ App Stack Folder (Grup Cepat)">
+        <div class="dock-icon icon-app-stack">
+          <svg viewBox="0 0 48 48" fill="none">
+            <rect x="6" y="10" width="36" height="30" rx="7" fill="#1e293b" stroke="#38bdf8" stroke-width="2" />
+            <rect x="11" y="15" width="7" height="7" rx="2" fill="#38bdf8" />
+            <rect x="21" y="15" width="7" height="7" rx="2" fill="#4ade80" />
+            <rect x="30" y="15" width="7" height="7" rx="2" fill="#f472b6" />
+            <rect x="11" y="25" width="7" height="7" rx="2" fill="#facc15" />
+            <rect x="21" y="25" width="7" height="7" rx="2" fill="#a855f7" />
+            <rect x="30" y="25" width="7" height="7" rx="2" fill="#fb923c" />
+          </svg>
+        </div>
+        <span class="dock-dot"></span>
+      </button>
+
+      <!-- Tombol Screenshot & Coret-Coret Studio di Dock -->
+      <button class="dock-item" id="dock-screenshot-btn" data-label="📸 Screenshot & Coret-Coret (Alt+S)">
+        <div class="dock-icon icon-screenshot">
+          <svg viewBox="0 0 48 48" fill="none">
+            <rect x="6" y="11" width="36" height="28" rx="6" fill="#0f172a" stroke="#a855f7" stroke-width="2.2" />
+            <circle cx="24" cy="25" r="7" stroke="#38bdf8" stroke-width="2.5" />
+            <circle cx="24" cy="25" r="3" fill="#38bdf8" />
+            <rect x="17" y="7" width="14" height="4" rx="2" fill="#a855f7" />
+          </svg>
+        </div>
+        <span class="dock-dot"></span>
+      </button>
+
       <!-- Tombol Tambah Shortcut Aplikasi (+) -->
       <button class="dock-item" id="add-dock-app-btn" data-label="Tambah Shortcut Aplikasi (+)">
         <div class="dock-icon icon-add">
@@ -1540,6 +1625,8 @@
     </div>
 
     <div class="tb-wing-right">
+      <button class="tb-icon-btn" id="tb-screenshot-btn" title="Screenshot & Editor Coret-Coret (Alt+S)">📸</button>
+      <button class="tb-icon-btn" id="tb-notif-btn" title="Pusat Notifikasi & Pengingat (Alt+N)">🔔</button>
       <button class="tb-icon-btn" id="tb-spotlight-btn" title="Spotlight Search & Kalkulator (Alt+K)">🔍</button>
       <button class="tb-icon-btn" id="tb-studio-btn" title="Studio Widget & Wallpaper">⊞</button>
       <div class="tb-clock-pill" id="tb-clock-pill" title="Klik untuk Kalender & Cuaca">
@@ -1615,6 +1702,134 @@
       <div class="running-empty">Memindai aplikasi yang sedang terbuka...</div>
     </div>
   </div>
+
+  <!-- =========================================================
+       11. NOTIFICATION CENTER & DYNAMIC ISLAND TOAST (#win-notifications, Alt+N)
+       ========================================================= -->
+  <div id="win-notifications" class="acrylic-surface interactive-widget custom-os-window hidden" data-draggable="true">
+    <div class="rm-drawer-header">
+      <span>🔔 Pusat Notifikasi & Riwayat Aktivitas</span>
+      <div class="rm-ctrl-group">
+        <button class="pill-action-btn" id="notif-dnd-btn" title="Mode Jangan Ganggu (Do Not Disturb)">🌙 DND: Mati</button>
+        <button class="pill-action-btn" id="notif-clear-btn" title="Bersihkan Semua Notifikasi">🗑️ Bersihkan</button>
+        <button class="tl-btn tl-close" data-close-win="win-notifications" title="Tutup"></button>
+      </div>
+    </div>
+
+    <div class="notif-quick-compose">
+      <input type="text" id="notif-custom-input" placeholder="Buat catatan kilat / pengingat di Notification Center..." autocomplete="off" />
+      <button class="addr-go-btn" id="notif-send-btn">+ Kirim</button>
+    </div>
+
+    <div id="notif-list" class="notif-list"></div>
+  </div>
+
+  <!-- =========================================================
+       12. QUICK LAUNCHER FOLDER STACK POPOVER (#dock-stack-popover)
+       ========================================================= -->
+  <div id="dock-stack-popover" class="acrylic-surface interactive-widget custom-os-window hidden">
+    <div class="rm-drawer-header">
+      <span>🗂️ Quick App Stack (macOS Folder)</span>
+      <button class="tl-btn tl-close" id="close-stack-btn" title="Tutup"></button>
+    </div>
+    <div class="stack-grid">
+      <button class="stack-app-item" data-stack-app="word">
+        <span class="stack-ic" style="background:#2563eb">📘</span>
+        <span>MS Word</span>
+      </button>
+      <button class="stack-app-item" data-stack-app="excel">
+        <span class="stack-ic" style="background:#16a34a">📊</span>
+        <span>MS Excel</span>
+      </button>
+      <button class="stack-app-item" data-stack-app="powerpoint">
+        <span class="stack-ic" style="background:#ea580c">📙</span>
+        <span>PowerPoint</span>
+      </button>
+      <button class="stack-app-item" data-stack-app="chrome">
+        <span class="stack-ic" style="background:#3b82f6">🌐</span>
+        <span>Chrome</span>
+      </button>
+      <button class="stack-app-item" data-stack-app="vscode">
+        <span class="stack-ic" style="background:#0284c7">💻</span>
+        <span>VS Code</span>
+      </button>
+      <button class="stack-app-item" data-stack-app="terminal">
+        <span class="stack-ic" style="background:#334155">🐚</span>
+        <span>Terminal</span>
+      </button>
+      <button class="stack-app-item" data-stack-app="notepad">
+        <span class="stack-ic" style="background:#0ea5e9">📝</span>
+        <span>Notepad</span>
+      </button>
+      <button class="stack-app-item" data-stack-app="calculator">
+        <span class="stack-ic" style="background:#6366f1">🧮</span>
+        <span>Kalkulator</span>
+      </button>
+      <button class="stack-app-item" data-stack-app="taskmgr">
+        <span class="stack-ic" style="background:#14b8a6">📈</span>
+        <span>Task Mgr</span>
+      </button>
+      <button class="stack-app-item" data-stack-custom="win-screenshot">
+        <span class="stack-ic" style="background:#a855f7">📸</span>
+        <span>Screenshot</span>
+      </button>
+      <button class="stack-app-item" data-stack-custom="win-notes">
+        <span class="stack-ic" style="background:#f59e0b">📌</span>
+        <span>Glass Notes</span>
+      </button>
+      <button class="stack-app-item" data-stack-custom="win-explorer">
+        <span class="stack-ic" style="background:#eab308">📁</span>
+        <span>Finder Pro</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       13. SCREENSHOT & SCREEN ANNOTATION STUDIO (#win-screenshot, Alt+S)
+       ========================================================= -->
+  <div id="win-screenshot" class="acrylic-surface interactive-widget custom-os-window app-window hidden" data-draggable="true">
+    <div class="win-titlebar">
+      <div class="traffic-lights">
+        <button class="tl-btn tl-close" data-close-win="win-screenshot" title="Tutup"></button>
+        <button class="tl-btn tl-min" data-min-win="win-screenshot" title="Minimize"></button>
+        <button class="tl-btn tl-max" data-max-win="win-screenshot" title="Perbesar / Normal"></button>
+      </div>
+      <div class="win-tabs">
+        <div class="win-tab active">📸 Screenshot & Editor Coret-Coret Studio (Alt+S)</div>
+      </div>
+      <div class="win-actions-right">
+        <button class="pill-action-btn" id="shot-retake-btn">📸 Tangkap Layar Baru</button>
+        <button class="pill-action-btn" id="shot-clear-btn">↩️ Hapus Coretan</button>
+        <button class="pill-action-btn" id="shot-copy-btn">📋 Copy Clipboard</button>
+        <button class="addr-go-btn" id="shot-save-btn">💾 Simpan PNG</button>
+      </div>
+    </div>
+
+    <div class="shot-toolbar">
+      <span class="quick-lbl">Warna Pena Coret-Coret:</span>
+      <button class="shot-color-dot active" data-shot-color="#ef4444" style="background:#ef4444" title="Merah"></button>
+      <button class="shot-color-dot" data-shot-color="#38bdf8" style="background:#38bdf8" title="Biru Cyan"></button>
+      <button class="shot-color-dot" data-shot-color="#facc15" style="background:#facc15" title="Kuning Stabilo"></button>
+      <button class="shot-color-dot" data-shot-color="#22c55e" style="background:#22c55e" title="Hijau Neon"></button>
+      <button class="shot-color-dot" data-shot-color="#a855f7" style="background:#a855f7" title="Ungu"></button>
+      <button class="shot-color-dot" data-shot-color="#ffffff" style="background:#ffffff" title="Putih"></button>
+      <span class="quick-lbl" style="margin-left:10px;">Tebal Garis:</span>
+      <input type="range" id="shot-size-slider" min="2" max="18" value="4" style="width:90px;" />
+      <span id="shot-status-msg" class="shot-status-msg">Klik & tahan pada gambar di bawah untuk mencoret / menandai area penting</span>
+    </div>
+
+    <div class="shot-canvas-wrap">
+      <canvas id="screenshot-canvas" width="1280" height="720"></canvas>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       14. HOT CORNERS SENSORS ALA macOS (4 Pojok Layar Pintar)
+       ========================================================= -->
+  <div class="hot-corner-zone hc-tl interactive-widget" data-hc="tl" title="Hot Corner: Start Menu"></div>
+  <div class="hot-corner-zone hc-tr interactive-widget" data-hc="tr" title="Hot Corner: Pusat Notifikasi"></div>
+  <div class="hot-corner-zone hc-bl interactive-widget" data-hc="bl" title="Hot Corner: Aplikasi Aktif (Task Switcher)"></div>
+  <div class="hot-corner-zone hc-br interactive-widget" data-hc="br" title="Hot Corner: Tampilkan Desktop / Aplikasi"></div>
 
   <script src="app.js"></script>
 </body>

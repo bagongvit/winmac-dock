@@ -18,9 +18,24 @@ const defaultConfig = {
   particleEffect: 'fireflies',
   uiSoundEffects: true,
   autoEcoBattery: true,
+  hotCorners: true,
+  dndMode: false,
+  mediaControlWindows: true,
   customAccent: '',
   fontStyle: 'sans',
   pomoStreak: 0,
+  notifications: [
+    {
+      id: 1,
+      icon: '🚀',
+      title: 'WinMac Desktop OS Pro Aktif',
+      msg: 'Semua 8 fitur baru (Notifikasi, Media Control, Agenda, Hot Corners, Screenshot Studio) siap digunakan!',
+      time: 'Baru saja'
+    }
+  ],
+  agendaReminders: [
+    { id: 101, time: '16:00', text: 'Rehat Sore & Peregangan Mata', firedDate: '' }
+  ],
   clipboardHistory: [
     'npm start',
     'Alt + K (Spotlight Command) | Alt + Space (Start Menu)',
@@ -260,6 +275,11 @@ ipcRenderer.on('shortcut-trigger', (event, action) => {
     refreshRunningApps(true);
   } else if (action === 'toggle-desktop-mode') {
     setAppPassthroughMode(!isAppPassthroughMode);
+  } else if (action === 'toggle-notifications') {
+    toggleCustomWindow('win-notifications');
+    if (typeof markNotificationsRead === 'function') markNotificationsRead();
+  } else if (action === 'trigger-screenshot-studio') {
+    if (typeof captureAndOpenScreenshotStudio === 'function') captureAndOpenScreenshotStudio();
   } else if (action === 'toggle-notes') {
     toggleCustomWindow('win-notes');
   } else if (action === 'toggle-rainmeter-all') {
@@ -1543,17 +1563,42 @@ if (ecoBatteryToggle) {
 }
 
 // Smart Battery & Auto-Eco Power Saver Monitor (Chromium Battery API)
-let currentBatteryInfo = { level: 1, charging: true };
+let currentBatteryInfo = { level: 1, charging: true, dischargingTime: Infinity };
 
 function evaluateEcoBatteryState() {
+  const pct = Math.round((currentBatteryInfo.level || 1) * 100);
+  const charging = Boolean(currentBatteryInfo.charging);
   const shouldPause =
     appConfig.autoEcoBattery !== false &&
-    !currentBatteryInfo.charging &&
+    !charging &&
     currentBatteryInfo.level <= 0.25;
   isEcoBatteryPaused = shouldPause;
   document.body.classList.toggle('eco-paused', shouldPause);
   if (typeof syncVideoWallpaperPlayback === 'function') {
     syncVideoWallpaperPlayback();
+  }
+
+  // Update Pill Baterai di Top Dynamic Island & SysMonitor Pro
+  const compactBat = document.getElementById('compact-bat');
+  const compactBatDot = document.getElementById('compact-bat-dot');
+  const rmBatStatus = document.getElementById('rm-bat-status');
+
+  if (compactBat) {
+    compactBat.textContent = `${charging ? '⚡' : '🔋'} ${pct}%`;
+  }
+  if (compactBatDot) {
+    const color = pct <= 25 && !charging ? '#ef4444' : charging ? '#38bdf8' : '#4ade80';
+    compactBatDot.style.background = color;
+    compactBatDot.style.boxShadow = `0 0 6px ${color}`;
+  }
+  if (rmBatStatus) {
+    let timeHint = charging ? 'Sedang Mengisi (AC)' : 'Mode Baterai';
+    if (!charging && Number.isFinite(currentBatteryInfo.dischargingTime) && currentBatteryInfo.dischargingTime > 60) {
+      const hrs = Math.floor(currentBatteryInfo.dischargingTime / 3600);
+      const mins = Math.round((currentBatteryInfo.dischargingTime % 3600) / 60);
+      timeHint = `Sisa ~${hrs}j ${mins}m`;
+    }
+    rmBatStatus.textContent = `${pct}% • ${timeHint}`;
   }
 }
 
@@ -1564,13 +1609,15 @@ if (navigator.getBattery) {
       const updateBatteryStatus = () => {
         currentBatteryInfo = {
           level: typeof battery.level === 'number' ? battery.level : 1,
-          charging: Boolean(battery.charging)
+          charging: Boolean(battery.charging),
+          dischargingTime: battery.dischargingTime
         };
         evaluateEcoBatteryState();
       };
       updateBatteryStatus();
       battery.addEventListener('levelchange', updateBatteryStatus);
       battery.addEventListener('chargingchange', updateBatteryStatus);
+      battery.addEventListener('dischargingtimechange', updateBatteryStatus);
     })
     .catch(() => {});
 }
@@ -2299,38 +2346,129 @@ const spotlightCommands = [
   { label: '📁 Buka Custom File Explorer (Alt+E)', keywords: 'explorer file folder finder', run: () => openCustomWindow('win-explorer') },
   { label: '🐚 Buka Glass Terminal Pro', keywords: 'terminal cmd powershell', run: () => openCustomWindow('win-terminal') },
   { label: '📌 Buka Sticky Notes & To-Do', keywords: 'notes catatan todo', run: () => openCustomWindow('win-notes') },
+  { label: '🔔 Buka Pusat Notifikasi & Riwayat (Alt+N)', keywords: 'notification notifikasi bell dnd', run: () => openCustomWindow('win-notifications') },
+  { label: '📸 Tangkap Layar & Editor Coret-Coret (Alt+S)', keywords: 'screenshot capture snipping coret gambar', run: () => captureAndOpenScreenshotStudio() },
+  { label: '🗂️ Buka App Stack Folder di Dock', keywords: 'folder stack grup aplikasi', run: () => toggleCustomWindow('dock-stack-popover') },
   { label: '🔒 Kunci Layar Windows (Lock PC)', keywords: 'lock kunci layar pc', run: () => ipcRenderer.send('launch-app', 'lock') }
 ];
+
+// Konversi Mata Uang & Satuan Pintar di Spotlight (contoh: "10 usd to idr", "100 km to mile", "32 c to f")
+function evaluateUnitOrCurrencyConversion(raw) {
+  const s = (raw || '').trim().toLowerCase();
+  const m = s.match(/^([0-9.,]+)\s*([a-z$€£¥°]+)\s*(?:to|ke|in|=)\s*([a-z$€£¥°]+)$/i);
+  if (!m) return null;
+  const val = parseFloat(m[1].replace(/,/g, ''));
+  if (!Number.isFinite(val)) return null;
+  const from = m[2];
+  const to = m[3];
+
+  // Kurs Mata Uang populer terhadap IDR
+  const fxToIdr = {
+    idr: 1,
+    rp: 1,
+    usd: 15850,
+    $: 15850,
+    eur: 17100,
+    sgd: 11800,
+    myr: 3550,
+    jpy: 105,
+    gbp: 20100,
+    aud: 10300,
+    sar: 4220
+  };
+  if (fxToIdr[from] && fxToIdr[to]) {
+    const idrVal = val * fxToIdr[from];
+    const out = idrVal / fxToIdr[to];
+    const formatted = out >= 100 ? out.toLocaleString('id-ID', { maximumFractionDigits: 2 }) : out.toFixed(4);
+    return `💱 ${val.toLocaleString('id-ID')} ${from.toUpperCase()} = ${formatted} ${to.toUpperCase()}`;
+  }
+
+  // Suhu (C, F, K)
+  if ((from === 'c' || from === 'celcius') && (to === 'f' || to === 'fahrenheit')) {
+    return `🌡️ ${val}°C = ${((val * 9) / 5 + 32).toFixed(2)}°F`;
+  }
+  if ((from === 'f' || from === 'fahrenheit') && (to === 'c' || to === 'celcius')) {
+    return `🌡️ ${val}°F = ${(((val - 32) * 5) / 9).toFixed(2)}°C`;
+  }
+
+  // Panjang / Berat / Data Digital
+  const unitFactors = {
+    km: { m: 1000, cm: 100000, mile: 0.621371, mi: 0.621371 },
+    mile: { km: 1.60934, m: 1609.34 },
+    mi: { km: 1.60934, m: 1609.34 },
+    m: { cm: 100, km: 0.001, ft: 3.28084 },
+    cm: { m: 0.01, inch: 0.393701, in: 0.393701 },
+    kg: { g: 1000, gr: 1000, lb: 2.20462, lbs: 2.20462 },
+    lb: { kg: 0.453592, g: 453.592 },
+    gb: { mb: 1024, tb: 1 / 1024, kb: 1048576 },
+    mb: { gb: 1 / 1024, kb: 1024 }
+  };
+  if (unitFactors[from] && unitFactors[from][to]) {
+    const res = val * unitFactors[from][to];
+    return `📏 ${val} ${from.toUpperCase()} = ${Number(res.toFixed(4))} ${to.toUpperCase()}`;
+  }
+  return null;
+}
+
+let spotlightFileSearchTimer = null;
 
 function renderSpotlight(query) {
   if (!spotlightResults) return;
   const q = (query || '').trim();
   spotlightResults.innerHTML = '';
 
-  // Cek apakah input berupa ekspresi matematika
-  const mathCandidate = q.replace(/%/g, '/100');
-  if (q && /^[0-9+\-*/.()\s%]+$/.test(q) && /[+\-*/%]/.test(q)) {
-    try {
-      const val = Function(`"use strict"; return (${mathCandidate})`)();
-      if (Number.isFinite(val)) {
-        spotlightMathRes.classList.remove('hidden');
-        spotlightMathRes.innerHTML = `
-          <span>🧮 Hasil: ${Number(val.toFixed(6))}</span>
-          <span class="kbd-hint">Klik untuk Copy</span>
-        `;
-        spotlightMathRes.onclick = () => {
-          ipcRenderer.send('copy-to-clipboard', String(Number(val.toFixed(6))));
-          closeCustomWindow('win-spotlight');
-        };
-      }
-    } catch (_) {
-      spotlightMathRes.classList.add('hidden');
-    }
+  // 1. Cek Konversi Mata Uang / Satuan ("10 usd to idr", "100 km to mile", "30 c to f")
+  const convResult = evaluateUnitOrCurrencyConversion(q);
+  if (convResult) {
+    spotlightMathRes?.classList.remove('hidden');
+    spotlightMathRes.innerHTML = `
+      <span>${convResult}</span>
+      <span class="kbd-hint">Klik untuk Copy</span>
+    `;
+    spotlightMathRes.onclick = () => {
+      ipcRenderer.send('copy-to-clipboard', convResult);
+      closeCustomWindow('win-spotlight');
+    };
   } else {
-    spotlightMathRes?.classList.add('hidden');
+    // 2. Cek apakah input berupa ekspresi matematika
+    const mathCandidate = q.replace(/%/g, '/100');
+    if (q && /^[0-9+\-*/.()\s%]+$/.test(q) && /[+\-*/%]/.test(q)) {
+      try {
+        const val = Function(`"use strict"; return (${mathCandidate})`)();
+        if (Number.isFinite(val)) {
+          spotlightMathRes.classList.remove('hidden');
+          spotlightMathRes.innerHTML = `
+            <span>🧮 Hasil: ${Number(val.toFixed(6))}</span>
+            <span class="kbd-hint">Klik untuk Copy</span>
+          `;
+          spotlightMathRes.onclick = () => {
+            ipcRenderer.send('copy-to-clipboard', String(Number(val.toFixed(6))));
+            closeCustomWindow('win-spotlight');
+          };
+        }
+      } catch (_) {
+        spotlightMathRes.classList.add('hidden');
+      }
+    } else {
+      spotlightMathRes?.classList.add('hidden');
+    }
   }
 
-  // Cek pencarian Web (g <query> atau yt <query>)
+  // 3. Cek pembuka Website langsung (contoh: github.com, youtube.com, atau "web ...")
+  if (/^([a-z0-9-]+\.)+[a-z]{2,}(\/.*)?$/i.test(q) || q.toLowerCase().startsWith('web ')) {
+    const rawDomain = q.toLowerCase().startsWith('web ') ? q.slice(4).trim() : q;
+    const targetUrl = /^https?:\/\//i.test(rawDomain) ? rawDomain : `https://${rawDomain}`;
+    const btn = document.createElement('button');
+    btn.className = 'spot-item';
+    btn.innerHTML = `<span>🌍 Buka Website: ${targetUrl}</span><span>Enter ↵</span>`;
+    btn.onclick = () => {
+      ipcRenderer.send('open-external-url', targetUrl);
+      closeCustomWindow('win-spotlight');
+    };
+    spotlightResults.appendChild(btn);
+  }
+
+  // 4. Cek pencarian Web (g <query> atau yt <query>)
   if (q.toLowerCase().startsWith('g ')) {
     const term = q.slice(2).trim();
     const btn = document.createElement('button');
@@ -2367,6 +2505,26 @@ function renderSpotlight(query) {
       };
       spotlightResults.appendChild(btn);
     });
+
+  // 5. Pencarian File Lokal di Laptop ("f <nama>" atau otomatis saat ketik >= 3 huruf)
+  clearTimeout(spotlightFileSearchTimer);
+  const fileQuery = lower.startsWith('f ') ? q.slice(2).trim() : q.length >= 3 ? q : '';
+  if (fileQuery.length >= 2) {
+    spotlightFileSearchTimer = setTimeout(async () => {
+      const files = await ipcRenderer.invoke('search-local-files', fileQuery);
+      if (!files || !files.length) return;
+      files.slice(0, 5).forEach((f) => {
+        const btn = document.createElement('button');
+        btn.className = 'spot-item';
+        btn.innerHTML = `<span>${f.isDirectory ? '📁' : '📄'} ${f.name} <small style="opacity:0.65">(${f.location})</small></span><span>Buka File ↵</span>`;
+        btn.onclick = () => {
+          ipcRenderer.invoke('open-path', f.path);
+          closeCustomWindow('win-spotlight');
+        };
+        spotlightResults.appendChild(btn);
+      });
+    }, 180);
+  }
 }
 
 document.getElementById('spotlight-trigger-btn')?.addEventListener('click', (e) => {
@@ -3207,6 +3365,535 @@ document.getElementById('quit-disable-startup-btn')?.addEventListener('click', (
   if (autoStartToggle) autoStartToggle.checked = false;
   saveConfig();
   ipcRenderer.send('quit-to-windows', true);
+});
+
+// =========================================================
+// 14. FITUR BARU PRO SUITE: NOTIFICATION CENTER, REAL MEDIA CONTROL,
+//     AGENDA REMINDER, APP STACK, SCREENSHOT STUDIO & HOT CORNERS
+// =========================================================
+
+// --- A. NOTIFICATION CENTER & DYNAMIC ISLAND TOAST (Alt+N) ---
+const notifListEl = document.getElementById('notif-list');
+const notifBadgeEl = document.getElementById('notif-unread-badge');
+const notifDndBtn = document.getElementById('notif-dnd-btn');
+const notifCustomInput = document.getElementById('notif-custom-input');
+let unreadNotifCount = 0;
+
+function updateNotifBadge() {
+  if (!notifBadgeEl) return;
+  if (unreadNotifCount > 0) {
+    notifBadgeEl.textContent = String(unreadNotifCount);
+    notifBadgeEl.classList.remove('hidden');
+  } else {
+    notifBadgeEl.classList.add('hidden');
+  }
+}
+
+function markNotificationsRead() {
+  unreadNotifCount = 0;
+  updateNotifBadge();
+}
+
+function renderNotifications() {
+  if (!notifListEl) return;
+  const list = appConfig.notifications || [];
+  notifListEl.innerHTML = '';
+
+  if (list.length === 0) {
+    notifListEl.innerHTML = `<div class="running-empty">Belum ada notifikasi baru.</div>`;
+    return;
+  }
+
+  list.forEach((n) => {
+    const card = document.createElement('div');
+    card.className = 'notif-card';
+    card.innerHTML = `
+      <div class="notif-left">
+        <div class="notif-ic">${n.icon || '🔔'}</div>
+        <div class="notif-body">
+          <span class="notif-title">${n.title}</span>
+          <span class="notif-msg">${n.msg}</span>
+          <span class="notif-time">${n.time || 'Baru saja'}</span>
+        </div>
+      </div>
+      <button class="rm-ctrl-btn" title="Hapus Notifikasi">✕</button>
+    `;
+    card.querySelector('button')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      appConfig.notifications = (appConfig.notifications || []).filter((item) => item.id !== n.id);
+      saveConfig();
+      renderNotifications();
+    });
+    notifListEl.appendChild(card);
+  });
+}
+
+function pushNotification(icon, title, msg, showToast = true) {
+  if (!Array.isArray(appConfig.notifications)) appConfig.notifications = [];
+  const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  appConfig.notifications.unshift({
+    id: Date.now() + Math.random(),
+    icon: icon || '🔔',
+    title,
+    msg,
+    time: `Pukul ${nowStr}`
+  });
+  appConfig.notifications = appConfig.notifications.slice(0, 25);
+  saveConfig();
+  renderNotifications();
+
+  const notifWin = document.getElementById('win-notifications');
+  if (notifWin && notifWin.classList.contains('hidden')) {
+    unreadNotifCount += 1;
+    updateNotifBadge();
+  }
+
+  if (showToast && !appConfig.dndMode) {
+    triggerLaunchHud(icon || '🔔', title, msg);
+  }
+}
+
+function syncDndButton() {
+  if (!notifDndBtn) return;
+  notifDndBtn.textContent = appConfig.dndMode ? '🌙 DND: Aktif' : '🌙 DND: Mati';
+}
+syncDndButton();
+renderNotifications();
+
+document.getElementById('top-notif-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleCustomWindow('win-notifications');
+  markNotificationsRead();
+});
+
+document.getElementById('tb-notif-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleCustomWindow('win-notifications');
+  markNotificationsRead();
+});
+
+notifDndBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  appConfig.dndMode = !appConfig.dndMode;
+  saveConfig();
+  syncDndButton();
+});
+
+document.getElementById('notif-clear-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  appConfig.notifications = [];
+  unreadNotifCount = 0;
+  saveConfig();
+  updateNotifBadge();
+  renderNotifications();
+});
+
+document.getElementById('notif-send-btn')?.addEventListener('click', () => {
+  const val = (notifCustomInput?.value || '').trim();
+  if (!val) return;
+  pushNotification('📌', 'Catatan Notifikasi Cepat', val, true);
+  notifCustomInput.value = '';
+});
+
+notifCustomInput?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('notif-send-btn')?.click();
+});
+
+// --- B. REAL WINDOWS MEDIA CONTROL (Spotify / YouTube Browser / VLC) ---
+const rmVisModeBtn = document.getElementById('rm-vis-mode-btn');
+const rmVisPrevBtn = document.getElementById('rm-vis-prev-btn');
+const mediaPrevBtn = document.getElementById('media-prev-btn');
+const mediaNextBtn = document.getElementById('media-next-btn');
+
+function syncMediaControlModeUI() {
+  const isWinMode = appConfig.mediaControlWindows !== false;
+  if (rmVisModeBtn) {
+    rmVisModeBtn.textContent = isWinMode ? '🪟' : '🎹';
+    rmVisModeBtn.title = isWinMode
+      ? 'Mode Aktif: Kontrol Media Windows Asli (Spotify/YouTube) • Klik untuk ganti ke Synth'
+      : 'Mode Aktif: Lofi Synth Bawaan • Klik untuk ganti ke Media Windows Asli';
+  }
+}
+syncMediaControlModeUI();
+
+rmVisModeBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  appConfig.mediaControlWindows = appConfig.mediaControlWindows === false;
+  saveConfig();
+  syncMediaControlModeUI();
+  pushNotification(
+    '🎵',
+    appConfig.mediaControlWindows ? 'Mode Kontrol Media Windows' : 'Mode Lofi Synth Internal',
+    appConfig.mediaControlWindows
+      ? 'Tombol Play/Next/Prev kini mengontrol Spotify, YouTube & pemutar media Windows.'
+      : 'Tombol Play/Next/Prev kini mengontrol WebAudio Lofi Synth bawaan.',
+    true
+  );
+});
+
+// Hook tombol Play/Pause/Prev/Next agar mengontrol Media Windows asli jika aktif
+document.getElementById('play-pause-btn')?.addEventListener('click', () => {
+  if (appConfig.mediaControlWindows !== false) {
+    ipcRenderer.send('media-key-control', 'play-pause');
+  }
+});
+
+rmVisPlayBtn?.addEventListener('click', () => {
+  if (appConfig.mediaControlWindows !== false) {
+    ipcRenderer.send('media-key-control', 'play-pause');
+  }
+});
+
+rmVisNextBtn?.addEventListener('click', () => {
+  if (appConfig.mediaControlWindows !== false) {
+    ipcRenderer.send('media-key-control', 'next');
+  }
+});
+
+rmVisPrevBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (appConfig.mediaControlWindows !== false) {
+    ipcRenderer.send('media-key-control', 'prev');
+  } else {
+    currentTrackIdx = (currentTrackIdx - 1 + synthTracks.length) % synthTracks.length;
+    updateTrackDisplay();
+  }
+});
+
+mediaPrevBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  ipcRenderer.send('media-key-control', 'prev');
+  triggerLaunchHud('⏮', 'Media Sebelumnya', 'Windows Media Key');
+});
+
+mediaNextBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  ipcRenderer.send('media-key-control', 'next');
+  triggerLaunchHud('⏭', 'Media Berikutnya', 'Windows Media Key');
+});
+
+// Deteksi otomatis judul lagu/video dari aplikasi Spotify / YouTube / VLC yang sedang terbuka
+setInterval(() => {
+  if (appConfig.mediaControlWindows === false || !Array.isArray(liveRunningApps)) return;
+  const mediaApp = liveRunningApps.find(
+    (a) =>
+      a.appKey === 'spotify' ||
+      a.appKey === 'vlc' ||
+      (a.title && /youtube|spotify|music|soundcloud/i.test(a.title))
+  );
+  if (mediaApp && mediaApp.title) {
+    const cleanTitle = mediaApp.title.replace(/\s*-\s*(Google Chrome|Microsoft​ Edge|Brave|Mozilla Firefox|YouTube).*$/i, '');
+    if (islandMediaTitle) islandMediaTitle.textContent = cleanTitle.slice(0, 32);
+    if (islandMediaSub) islandMediaSub.textContent = `🎵 ${mediaApp.label}`;
+    if (rmVisTitle) rmVisTitle.textContent = cleanTitle.slice(0, 28);
+    if (rmVisArtist) rmVisArtist.textContent = `Live: ${mediaApp.label}`;
+  }
+}, 4500);
+
+// --- C. KALENDER AGENDA & ALARM PENGINGAT (REMINDER) ---
+const agendaTimeInput = document.getElementById('agenda-time-input');
+const agendaTextInput = document.getElementById('agenda-text-input');
+const agendaAddBtn = document.getElementById('agenda-add-btn');
+const agendaListEl = document.getElementById('agenda-list');
+
+function renderAgendaList() {
+  if (!agendaListEl) return;
+  const items = appConfig.agendaReminders || [];
+  agendaListEl.innerHTML = '';
+
+  if (items.length === 0) {
+    agendaListEl.innerHTML = `<div class="running-empty" style="padding:6px;">Belum ada jadwal pengingat.</div>`;
+    return;
+  }
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  items.forEach((item) => {
+    const row = document.createElement('div');
+    const isFired = item.firedDate === todayKey;
+    row.className = `agenda-item ${isFired ? 'fired' : ''}`;
+    row.innerHTML = `
+      <div>
+        <span class="agenda-badge">${item.time}</span>
+        <span>${item.text}</span>
+      </div>
+      <button class="rm-ctrl-btn" title="Hapus Pengingat">✕</button>
+    `;
+    row.querySelector('button')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      appConfig.agendaReminders = (appConfig.agendaReminders || []).filter((r) => r.id !== item.id);
+      saveConfig();
+      renderAgendaList();
+    });
+    agendaListEl.appendChild(row);
+  });
+}
+
+agendaAddBtn?.addEventListener('click', () => {
+  const timeVal = (agendaTimeInput?.value || '14:00').trim();
+  const textVal = (agendaTextInput?.value || '').trim();
+  if (!textVal) return;
+
+  if (!Array.isArray(appConfig.agendaReminders)) appConfig.agendaReminders = [];
+  appConfig.agendaReminders.push({
+    id: Date.now(),
+    time: timeVal,
+    text: textVal,
+    firedDate: ''
+  });
+  appConfig.agendaReminders.sort((a, b) => a.time.localeCompare(b.time));
+  saveConfig();
+  agendaTextInput.value = '';
+  renderAgendaList();
+  pushNotification('⏰', `Pengingat Disetel (${timeVal})`, textVal, true);
+});
+
+agendaTextInput?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') agendaAddBtn?.click();
+});
+
+renderAgendaList();
+
+// Cek Alarm Pengingat setiap 15 detik
+setInterval(() => {
+  const items = appConfig.agendaReminders || [];
+  if (!items.length) return;
+  const now = new Date();
+  const hm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const todayKey = now.toISOString().slice(0, 10);
+  let changed = false;
+
+  items.forEach((item) => {
+    if (item.time === hm && item.firedDate !== todayKey) {
+      item.firedDate = todayKey;
+      changed = true;
+      playUiSound('launch');
+      pushNotification('⏰', `Alarm Agenda (${item.time})`, item.text, true);
+    }
+  });
+
+  if (changed) {
+    saveConfig();
+    renderAgendaList();
+  }
+}, 15000);
+
+// --- D. QUICK LAUNCHER APP STACK FOLDER DI DOCK ---
+const dockFolderBtn = document.getElementById('dock-folder-btn');
+const closeStackBtn = document.getElementById('close-stack-btn');
+
+dockFolderBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleCustomWindow('dock-stack-popover');
+});
+
+closeStackBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  closeCustomWindow('dock-stack-popover');
+});
+
+document.querySelectorAll('[data-stack-app]').forEach((btn) => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const appKey = btn.dataset.stackApp;
+    closeCustomWindow('dock-stack-popover');
+    focusOrLaunchNativeApp(appKey);
+  });
+});
+
+document.querySelectorAll('[data-stack-custom]').forEach((btn) => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const winId = btn.dataset.stackCustom;
+    closeCustomWindow('dock-stack-popover');
+    if (winId === 'win-screenshot') {
+      captureAndOpenScreenshotStudio();
+    } else {
+      openCustomWindow(winId);
+    }
+  });
+});
+
+// --- E. SCREENSHOT & SCREEN ANNOTATION STUDIO (Alt+S) ---
+const shotCanvas = document.getElementById('screenshot-canvas');
+const shotCtx = shotCanvas ? shotCanvas.getContext('2d') : null;
+const shotStatusMsg = document.getElementById('shot-status-msg');
+const shotSizeSlider = document.getElementById('shot-size-slider');
+let baseScreenshotImg = null;
+let isDrawingShot = false;
+let shotPenColor = '#ef4444';
+let shotLastX = 0;
+let shotLastY = 0;
+
+async function captureAndOpenScreenshotStudio() {
+  closeCustomWindow('win12-start-menu');
+  closeCustomWindow('dock-stack-popover');
+  const dataUrl = await ipcRenderer.invoke('capture-screen-hd');
+  if (!dataUrl || !shotCanvas || !shotCtx) {
+    ipcRenderer.send('launch-app', 'snipping');
+    return;
+  }
+
+  const img = new Image();
+  img.onload = () => {
+    baseScreenshotImg = img;
+    shotCanvas.width = img.width;
+    shotCanvas.height = img.height;
+    shotCtx.clearRect(0, 0, shotCanvas.width, shotCanvas.height);
+    shotCtx.drawImage(img, 0, 0);
+    openCustomWindow('win-screenshot');
+    if (shotStatusMsg) {
+      shotStatusMsg.textContent = '✓ Layar berhasil ditangkap! Silakan coret/tandai lalu Copy atau Simpan PNG.';
+    }
+  };
+  img.src = dataUrl;
+}
+
+function getCanvasPointerPos(evt) {
+  const rect = shotCanvas.getBoundingClientRect();
+  const scaleX = shotCanvas.width / rect.width;
+  const scaleY = shotCanvas.height / rect.height;
+  return {
+    x: (evt.clientX - rect.left) * scaleX,
+    y: (evt.clientY - rect.top) * scaleY
+  };
+}
+
+shotCanvas?.addEventListener('mousedown', (e) => {
+  if (!shotCtx) return;
+  e.stopPropagation();
+  isDrawingShot = true;
+  const pos = getCanvasPointerPos(e);
+  shotLastX = pos.x;
+  shotLastY = pos.y;
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!isDrawingShot || !shotCtx || !shotCanvas) return;
+  const pos = getCanvasPointerPos(e);
+  shotCtx.save();
+  shotCtx.strokeStyle = shotPenColor;
+  shotCtx.lineWidth = Number(shotSizeSlider?.value || 4) * 1.5;
+  shotCtx.lineCap = 'round';
+  shotCtx.lineJoin = 'round';
+  shotCtx.beginPath();
+  shotCtx.moveTo(shotLastX, shotLastY);
+  shotCtx.lineTo(pos.x, pos.y);
+  shotCtx.stroke();
+  shotCtx.restore();
+  shotLastX = pos.x;
+  shotLastY = pos.y;
+});
+
+window.addEventListener('mouseup', () => {
+  isDrawingShot = false;
+});
+
+document.querySelectorAll('[data-shot-color]').forEach((dot) => {
+  dot.addEventListener('click', (e) => {
+    e.stopPropagation();
+    shotPenColor = dot.dataset.shotColor || '#ef4444';
+    document.querySelectorAll('[data-shot-color]').forEach((d) => d.classList.remove('active'));
+    dot.classList.add('active');
+  });
+});
+
+document.getElementById('shot-retake-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  captureAndOpenScreenshotStudio();
+});
+
+document.getElementById('shot-clear-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (baseScreenshotImg && shotCtx && shotCanvas) {
+    shotCtx.clearRect(0, 0, shotCanvas.width, shotCanvas.height);
+    shotCtx.drawImage(baseScreenshotImg, 0, 0);
+    if (shotStatusMsg) shotStatusMsg.textContent = '↺ Coretan dibersihkan.';
+  }
+});
+
+document.getElementById('shot-copy-btn')?.addEventListener('click', async (e) => {
+  e.stopPropagation();
+  if (!shotCanvas) return;
+  const dataUrl = shotCanvas.toDataURL('image/png');
+  const res = await ipcRenderer.invoke('save-annotated-screenshot', { dataUrl, mode: 'clipboard' });
+  if (res?.ok && shotStatusMsg) {
+    shotStatusMsg.textContent = '📋 Berhasil disalin ke Clipboard! Tinggal Ctrl+V di WhatsApp / Word.';
+    pushNotification('📋', 'Screenshot Disalin ke Clipboard', 'Siap ditempel (Ctrl+V) ke aplikasi mana pun.', true);
+  }
+});
+
+document.getElementById('shot-save-btn')?.addEventListener('click', async (e) => {
+  e.stopPropagation();
+  if (!shotCanvas) return;
+  const dataUrl = shotCanvas.toDataURL('image/png');
+  const res = await ipcRenderer.invoke('save-annotated-screenshot', { dataUrl, mode: 'both' });
+  if (res?.ok && shotStatusMsg) {
+    shotStatusMsg.textContent = `💾 Tersimpan di: ${res.savedPath}`;
+    pushNotification('📸', 'Screenshot Tersimpan', res.savedPath, true);
+  }
+});
+
+document.getElementById('top-screenshot-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  captureAndOpenScreenshotStudio();
+});
+
+document.getElementById('dock-screenshot-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  captureAndOpenScreenshotStudio();
+});
+
+document.getElementById('tb-screenshot-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  captureAndOpenScreenshotStudio();
+});
+
+// --- F. HOT CORNERS ALA macOS (4 Pojok Layar Pintar) ---
+const hotCornersToggle = document.getElementById('hot-corners-toggle');
+
+function syncHotCornersState() {
+  const enabled = appConfig.hotCorners !== false;
+  document.body.classList.toggle('hot-corners-disabled', !enabled);
+  if (hotCornersToggle) hotCornersToggle.checked = enabled;
+}
+syncHotCornersState();
+
+hotCornersToggle?.addEventListener('change', (e) => {
+  appConfig.hotCorners = e.target.checked;
+  saveConfig();
+  syncHotCornersState();
+});
+
+let hcDwellTimer = null;
+document.querySelectorAll('.hot-corner-zone').forEach((zone) => {
+  bindInteractiveWidgetEvents(zone);
+  zone.addEventListener('mouseenter', () => {
+    if (appConfig.hotCorners === false) return;
+    clearTimeout(hcDwellTimer);
+    hcDwellTimer = setTimeout(() => {
+      const corner = zone.dataset.hc;
+      if (corner === 'tl') {
+        toggleCustomWindow('win12-start-menu');
+      } else if (corner === 'tr') {
+        toggleCustomWindow('win-notifications');
+        markNotificationsRead();
+      } else if (corner === 'bl') {
+        toggleCustomWindow('win-task-switcher');
+        refreshRunningApps(true);
+      } else if (corner === 'br') {
+        setAppPassthroughMode(!isAppPassthroughMode);
+      }
+    }, 320);
+  });
+  zone.addEventListener('mouseleave', () => {
+    clearTimeout(hcDwellTimer);
+  });
+});
+
+// Pastikan jendela baru terdaftar di klik-through handler
+['win-notifications', 'dock-stack-popover', 'win-screenshot'].forEach((id) => {
+  const el = document.getElementById(id);
+  if (el) bindInteractiveWidgetEvents(el);
 });
 
 // Jalankan pemindaian awal, animasi masuk widget, & polling ringan tiap 4 detik
