@@ -8,7 +8,6 @@ build/
 out/
 *.exe
 !WinMac Desktop OS.exe
-!WinMac Desktop OS (Admin).exe
 *.zip
 *.blockmap
 

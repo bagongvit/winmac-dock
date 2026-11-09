@@ -320,7 +320,6 @@ ipcMain.on('set-always-on-top', (event, flag) => {
 
 function configureDesktopAppAndStartup(enableStartup = true) {
   const launcherExe = path.join(__dirname, 'WinMac Desktop OS.exe');
-  const adminExe = path.join(__dirname, 'WinMac Desktop OS (Admin).exe');
   const icoPath = path.join(__dirname, 'winmac.ico');
   const targetExe = fs.existsSync(launcherExe) ? launcherExe : process.execPath;
 
@@ -329,23 +328,18 @@ $wsh = New-Object -ComObject WScript.Shell
 $desktopDir = [Environment]::GetFolderPath('Desktop')
 $startupDir = [Environment]::GetFolderPath('Startup')
 
-# 1. Buat Shortcut di Desktop (Normal & Run as Administrator)
+# Bersihkan shortcut duplikat lama jika ada
+Remove-Item (Join-Path $desktopDir "WinMac Desktop OS (Admin).lnk") -Force -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $desktopDir "WinMac Desktop OS (Run as Admin).lnk") -Force -ErrorAction SilentlyContinue
+
+# 1. Buat 1 Shortcut Utama di Desktop
 if (Test-Path "${launcherExe}") {
   $s1 = $wsh.CreateShortcut((Join-Path $desktopDir "WinMac Desktop OS.lnk"))
   $s1.TargetPath = "${launcherExe}"
   $s1.WorkingDirectory = "${__dirname}"
-  $s1.Description = "WinMac Desktop OS Suite Pro (Tanpa CMD)"
+  $s1.Description = "WinMac Desktop OS Suite Pro"
   if (Test-Path "${icoPath}") { $s1.IconLocation = "${icoPath}" }
   $s1.Save()
-}
-
-if (Test-Path "${adminExe}") {
-  $s2 = $wsh.CreateShortcut((Join-Path $desktopDir "WinMac Desktop OS (Admin).lnk"))
-  $s2.TargetPath = "${adminExe}"
-  $s2.WorkingDirectory = "${__dirname}"
-  $s2.Description = "WinMac Desktop OS Suite Pro (Run as Administrator)"
-  if (Test-Path "${icoPath}") { $s2.IconLocation = "${icoPath}" }
-  $s2.Save()
 }
 
 # 2. Atur Auto-Start Saat PC Restart / Login Windows (Registry Run & Startup Folder)
@@ -376,9 +370,8 @@ if ($${enableStartup ? 'true' : 'false'}) {
 }
 
 function restartAsAdministrator() {
-  const adminExe = path.join(__dirname, 'WinMac Desktop OS (Admin).exe');
   const launcherExe = path.join(__dirname, 'WinMac Desktop OS.exe');
-  const target = fs.existsSync(adminExe) ? adminExe : launcherExe;
+  const target = fs.existsSync(launcherExe) ? launcherExe : process.execPath;
 
   const psAdmin = `Start-Process -FilePath "${target}" -WorkingDirectory "${__dirname}" -Verb RunAs`;
   execFile(

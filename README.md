@@ -7,10 +7,10 @@ Aplikasi **Desktop Customization & Overlay Shell** mandiri yang super ringan unt
 ## ✨ Fitur Utama (Versi Terbaru)
 
 ### 1. 🖥️ Aplikasi Desktop `.exe` Mandiri + Auto-Start Windows (Tanpa CMD!)
-- **[WinMac Desktop OS.exe](./WinMac%20Desktop%20OS.exe)** *(~15 KB)*: Launcher GUI native Windows tanpa jendela CMD hitam, mendukung **Auto-Start otomatis** setiap kali PC dinyalakan/di-*restart*.
-- **[WinMac Desktop OS (Admin).exe](./WinMac%20Desktop%20OS%20(Admin).exe)**: Dilengkapi *UAC Administrator Shield Manifest* untuk langsung berjalan sebagai **Administrator** dengan 1 klik.
-- **[Pasang-ke-Desktop-dan-Startup.bat](./Pasang-ke-Desktop-dan-Startup.bat)**: Installer 1-klik untuk memasang *shortcut* ber-ikon kustom (`winmac.ico`) di Desktop & mendaftarkan Auto-Start ke Registry Windows.
-- **[Kembali-ke-Windows-Ori.bat](./Kembali-ke-Windows-Ori.bat)**: Tombol darurat/cepat 1-klik (juga tersedia di Start Menu & Settings) untuk menutup overlay dan kembali 100% ke tampilan Windows Original kapan saja.
+- **[WinMac Desktop OS.exe](./WinMac%20Desktop%20OS.exe)** *(~15 KB)*: Satu-satunya file aplikasi utama (GUI native Windows tanpa jendela CMD hitam).
+- **Otomatis Pasang Shortcut & Auto-Start**: Begitu kamu membuka `WinMac Desktop OS.exe` pertama kali, aplikasi otomatis membuat *shortcut* di Desktop dan mendaftarkan dirinya ke **Windows Startup** agar langsung aktif setiap kali PC dinyalakan/di-*restart*.
+- **Mode Administrator**: Bisa dijalankan lewat klik kanan `WinMac Desktop OS.exe` ➔ **Run as administrator**, atau klik tombol **`🛡️ Run as Admin`** di dalam menu **Settings (`⚙️`)** / System Tray.
+- **Kembali ke Windows Original**: Cukup klik tombol **`🪟 Windows Ori`** di pojok kanan bawah **Start Menu** WinMac (atau **`🚫 Matikan Auto-Start & Keluar`** di menu Settings).
 
 ### 2. 🪟 Detektor Aplikasi Aktif & Live Win32 Window Switcher (`Alt + W`)
 - Mendeteksi secara *real-time* semua aplikasi Windows yang sedang terbuka (**MS Word, Excel, PowerPoint, Google Chrome, VS Code, File Explorer, Spotify, WhatsApp, dll.**).
@@ -63,23 +63,21 @@ Semua widget memiliki tombol **Lipat (`—`)**, **Sembunyikan (`✕`)**, *Magnet
    npm install
    ```
 
-2. **Jalankan sebagai Aplikasi Desktop & Aktifkan Auto-Start:**
-   - Klik 2x file **`Pasang-ke-Desktop-dan-Startup.bat`** untuk memasang shortcut di Desktop Windows dan mengaktifkan Auto-Start saat PC restart.
-   - Atau langsung klik 2x **`WinMac Desktop OS.exe`** (Normal) / **`WinMac Desktop OS (Admin).exe`** (Run as Administrator).
+2. **Jalankan sebagai Aplikasi Desktop (Tanpa CMD):**
+   - Langsung klik 2x **`WinMac Desktop OS.exe`** (atau klik kanan ➔ **Run as administrator**). Aplikasi otomatis memasang shortcut di Desktop Windows dan mengaktifkan Auto-Start saat PC restart.
 
 3. **Cara Kembali ke Tampilan Windows Original Kapan Saja:**
-   - Klik tombol **`🪟 Windows Ori`** di pojok kanan bawah **Start Menu** WinMac, atau
-   - Klik 2x file **`Kembali-ke-Windows-Ori.bat`** di File Explorer untuk menutup tema sekaligus mematikan Auto-Start.
+   - Klik tombol **`🪟 Windows Ori`** di pojok kanan bawah **Start Menu** WinMac (`Alt + Space`), atau
+   - Buka **Settings (`⚙️`)** ➔ klik **`🚫 Matikan Auto-Start & Keluar`**.
 
 ---
 
-## 📂 Struktur Proyek
+## 📂 Struktur Proyek (Rapi & Ringkas)
 
-- `WinMac Desktop OS.exe` & `WinMac Desktop OS (Admin).exe` — Native Windows GUI Launcher (`.exe` tanpa CMD).
-- `Pasang-ke-Desktop-dan-Startup.bat` — Installer 1-klik untuk Shortcut Desktop & Windows Startup Registry.
-- `Kembali-ke-Windows-Ori.bat` — Pemulih 1-klik ke tampilan Windows Original.
-- `Buat-Paket-Portable-Release.bat` & `launcher-src/` — Source C# & script pembuat paket *Release ZIP*.
+- `WinMac Desktop OS.exe` — Aplikasi utama Windows GUI Launcher (tanpa CMD, mendukung Run as Admin & Auto-Startup).
+- `winmac.ico` — Ikon resmi aplikasi & System Tray.
 - `main.js` — Main process Electron (Overlay `screen-saver`, Win32 Window Switcher, IPC File System, Audio/Brightness OS, Auto-Startup & Global Shortcuts).
 - `index.html` — Struktur UI untuk Wallpaper Layer, Video Wallpaper, 5 Rainmeter Skins, Top Dynamic Island, Custom Taskbar Strip, dan Floating Dock.
 - `style.css` — Desain 5 Tema Glassmorphism, animasi *Spring/Genie*, dan *scenic* 4K backgrounds.
 - `app.js` — Logika interaktif, *Live Running Apps Detector*, *Spatial WebAudio SFX*, *Battery Eco Saver*, dan *Particle Canvas Engine*.
+- `package.json` — Konfigurasi dependensi Electron.
