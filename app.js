@@ -1551,6 +1551,7 @@ function evaluateEcoBatteryState() {
     !currentBatteryInfo.charging &&
     currentBatteryInfo.level <= 0.25;
   isEcoBatteryPaused = shouldPause;
+  document.body.classList.toggle('eco-paused', shouldPause);
   if (typeof syncVideoWallpaperPlayback === 'function') {
     syncVideoWallpaperPlayback();
   }
@@ -1859,10 +1860,26 @@ const wpPresets = [
   'wp-win12-bloom',
   'wp-cyber-night',
   'wp-fuji-sunset',
+  'wp-aurora',
+  'wp-nebula',
+  'wp-ocean',
+  'wp-bigsur',
+  'wp-forest',
   'wp-custom',
   'wp-video',
   'wp-transparent'
 ];
+
+// Wallpaper Dinamis: berganti otomatis mengikuti jam (Pagi / Siang / Sore / Malam)
+function resolveDynamicWallpaper(date = new Date()) {
+  const h = date.getHours();
+  if (h >= 5 && h < 10) return 'wp-forest'; // Pagi berkabut
+  if (h >= 10 && h < 15) return 'wp-bigsur'; // Siang cerah
+  if (h >= 15 && h < 18) return 'wp-ocean'; // Sore sunset
+  if (h >= 18 && h < 21) return 'wp-fuji-sunset'; // Senja
+  return 'wp-aurora'; // Malam
+}
+let lastDynamicWallpaper = '';
 
 function syncVideoWallpaperPlayback() {
   if (!wpVideoPlayer) return;
@@ -1892,9 +1909,17 @@ function applyWallpaper(wpName, persist = true) {
     if (wpVideoPlayer && wpVideoPlayer.src !== appConfig.customVideoWallpaperUrl) {
       wpVideoPlayer.src = appConfig.customVideoWallpaperUrl;
     }
+  } else if (wpName === 'wp-dynamic') {
+    lastDynamicWallpaper = resolveDynamicWallpaper();
+    wpLayer.classList.add(lastDynamicWallpaper);
   } else {
-    wpLayer.classList.add(wpName || 'wp-sonoma');
+    wpLayer.classList.add(wpPresets.includes(wpName) ? wpName : 'wp-sonoma');
   }
+
+  // Transisi crossfade halus saat berganti wallpaper
+  wpLayer.classList.remove('wp-switching');
+  void wpLayer.offsetWidth;
+  wpLayer.classList.add('wp-switching');
 
   document.querySelectorAll('[data-wp]').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.wp === wpName);
@@ -1907,6 +1932,18 @@ function applyWallpaper(wpName, persist = true) {
   }
   syncVideoWallpaperPlayback();
 }
+
+wpLayer?.addEventListener('animationend', (e) => {
+  if (e.target === wpLayer) wpLayer.classList.remove('wp-switching');
+});
+
+// Cek tiap 5 menit apakah wallpaper dinamis perlu berganti (sangat ringan)
+setInterval(() => {
+  if (appConfig.wallpaper !== 'wp-dynamic') return;
+  if (resolveDynamicWallpaper() !== lastDynamicWallpaper) {
+    applyWallpaper('wp-dynamic', false);
+  }
+}, 5 * 60 * 1000);
 
 document.querySelectorAll('[data-wp]').forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -2248,6 +2285,12 @@ const spotlightCommands = [
   { label: '🌄 Ganti Wallpaper: macOS Sonoma Horizon', keywords: 'wallpaper background sonoma', run: () => applyWallpaper('wp-sonoma') },
   { label: '🌆 Ganti Wallpaper: Cyberpunk Synthwave', keywords: 'wallpaper background cyber neon', run: () => applyWallpaper('wp-cyber-night') },
   { label: '🗻 Ganti Wallpaper: Mount Fuji Twilight', keywords: 'wallpaper background fuji japan', run: () => applyWallpaper('wp-fuji-sunset') },
+  { label: '🕐 Ganti Wallpaper: Otomatis Pagi/Siang/Sore/Malam', keywords: 'wallpaper background dinamis otomatis jam dynamic', run: () => applyWallpaper('wp-dynamic') },
+  { label: '🌌 Ganti Wallpaper: Aurora Borealis', keywords: 'wallpaper background aurora malam night', run: () => applyWallpaper('wp-aurora') },
+  { label: '🪐 Ganti Wallpaper: Galaxy Nebula', keywords: 'wallpaper background galaxy nebula space planet', run: () => applyWallpaper('wp-nebula') },
+  { label: '🏝️ Ganti Wallpaper: Ocean Sunset', keywords: 'wallpaper background ocean laut pantai sunset', run: () => applyWallpaper('wp-ocean') },
+  { label: '🌈 Ganti Wallpaper: macOS Big Sur Waves', keywords: 'wallpaper background bigsur macos gradient', run: () => applyWallpaper('wp-bigsur') },
+  { label: '🌲 Ganti Wallpaper: Misty Pine Forest', keywords: 'wallpaper background forest hutan gunung kabut', run: () => applyWallpaper('wp-forest') },
   { label: '🪟 Ganti Wallpaper: Transparan (Wallpaper Asli Windows)', keywords: 'wallpaper transparent asli', run: () => applyWallpaper('wp-transparent') },
   { label: '👁️ Tampilkan Semua Widget Rainmeter', keywords: 'show tampilkan widget skin', run: () => setAllRainmeterSkinsVisible(true) },
   { label: '🙈 Sembunyikan Semua Widget Rainmeter', keywords: 'hide sembunyikan widget skin', run: () => setAllRainmeterSkinsVisible(false) },

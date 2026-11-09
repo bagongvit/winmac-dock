@@ -35,7 +35,8 @@ Semua widget memiliki tombol **Lipat (`—`)**, **Sembunyikan (`✕`)**, *Magnet
 5. **📋 Smart Clipboard History**: Merekam otomatis 12 teks terakhir yang di-*copy* (`Ctrl+C`) untuk disalin ulang dengan 1 klik.
 
 ### 6. 🖼️ 4K Aesthetic Backgrounds, Live Video Wallpaper & Smart Eco-Battery
-- **7 Mode Background**: *macOS Sonoma Horizon*, *Windows 12 Midnight Bloom*, *Cyberpunk Synthwave*, *Mount Fuji Twilight*, **📂 Gambar Kustom PC**, **🎬 Video Live Wallpaper (`.mp4`/`.webm`)**, atau **🪟 Transparan Asli**.
+- **13 Mode Background**: **🕐 Otomatis Pagi/Siang/Sore/Malam** (berganti sendiri mengikuti jam), *macOS Sonoma Horizon*, *Windows 12 Midnight Bloom*, *macOS Big Sur Waves*, *Aurora Borealis*, *Galaxy Nebula*, *Ocean Sunset*, *Misty Pine Forest*, *Cyberpunk Synthwave*, *Mount Fuji Twilight*, **📂 Gambar Kustom PC**, **🎬 Video Live Wallpaper (`.mp4`/`.webm`)**, atau **🪟 Transparan Asli**.
+- Semua background dibuat murni dengan CSS/SVG (0 MB gambar). Animasinya (aurora bergerak, bintang berkelip, kabut hutan, kilau laut) hanya memakai `transform`/`opacity` yang dirender GPU, dan **otomatis berhenti** saat kamu sedang di Mode Layar Aplikasi atau Eco Battery aktif.
 - **5 Efek Partikel (`<canvas>` 28 FPS Ultra-Ringan)**: *Fireflies (Kunang-kunang Neon)*, *Starfield*, *Snowfall*, *Cyber Matrix Rain*.
 - **🔋 Auto-Eco Battery & Gaming Saver**: Otomatis menjeda animasi partikel & video wallpaper saat baterai laptop `< 25%` (tanpa charger), saat CPU `> 70%`, atau saat sedang fokus di dalam aplikasi kerja.
 

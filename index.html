@@ -39,16 +39,95 @@
     </div>
 
     <div class="wp-art wp-art-cyber">
+      <div class="wp-stars wp-anim"></div>
       <div class="cyber-sun"></div>
       <div class="cyber-grid"></div>
     </div>
 
     <div class="wp-art wp-art-fuji">
+      <div class="wp-stars wp-stars-dim wp-anim"></div>
       <div class="fuji-sun"></div>
       <svg class="fuji-mountain" viewBox="0 0 1440 600" preserveAspectRatio="none">
         <path d="M0,600 L350,600 L640,210 L800,210 L1090,600 L1440,600 Z" fill="#0f172a" />
         <path d="M640,210 L800,210 L845,270 L775,255 L740,290 L700,250 L665,280 L595,270 Z" fill="#f8fafc" opacity="0.9" />
       </svg>
+      <div class="fuji-lake"></div>
+    </div>
+
+    <!-- Preset Baru: Aurora Borealis (Malam Kutub Utara) -->
+    <div class="wp-art wp-art-aurora">
+      <div class="wp-stars wp-anim"></div>
+      <div class="aurora-band aurora-b1 wp-anim"></div>
+      <div class="aurora-band aurora-b2 wp-anim"></div>
+      <div class="aurora-band aurora-b3 wp-anim"></div>
+      <svg class="aurora-mountains" viewBox="0 0 1440 400" preserveAspectRatio="none">
+        <path d="M0,400 L0,250 L120,170 L210,230 L330,120 L450,220 L560,150 L700,240 L820,130 L960,230 L1080,160 L1200,240 L1320,180 L1440,230 L1440,400 Z" fill="#06121f" />
+        <path d="M0,400 L0,300 L160,240 L300,290 L470,220 L640,300 L800,250 L980,300 L1150,240 L1300,290 L1440,260 L1440,400 Z" fill="#020812" />
+      </svg>
+      <div class="aurora-lake"></div>
+    </div>
+
+    <!-- Preset Baru: Galaxy Nebula + Planet Bercincin -->
+    <div class="wp-art wp-art-nebula">
+      <div class="wp-stars wp-anim"></div>
+      <div class="nebula-cloud nebula-c1 wp-anim"></div>
+      <div class="nebula-cloud nebula-c2 wp-anim"></div>
+      <div class="nebula-planet">
+        <div class="nebula-ring"></div>
+      </div>
+    </div>
+
+    <!-- Preset Baru: Tropical Ocean Sunset -->
+    <div class="wp-art wp-art-ocean">
+      <div class="ocean-sun"></div>
+      <svg class="ocean-islands" viewBox="0 0 1440 200" preserveAspectRatio="none">
+        <path d="M0,200 L0,150 C80,120 160,110 260,140 C320,100 380,95 430,150 L430,200 Z" fill="#1e1036" />
+        <path d="M980,200 L980,160 C1060,90 1150,80 1230,130 C1300,110 1380,120 1440,140 L1440,200 Z" fill="#1e1036" />
+      </svg>
+      <div class="ocean-sea">
+        <div class="ocean-reflection"></div>
+        <div class="ocean-shimmer wp-anim"></div>
+      </div>
+    </div>
+
+    <!-- Preset Baru: macOS Big Sur Gradient Waves -->
+    <div class="wp-art wp-art-bigsur">
+      <svg class="bigsur-waves" viewBox="0 0 1440 900" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="bs1" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#f472b6" />
+            <stop offset="100%" stop-color="#8b5cf6" />
+          </linearGradient>
+          <linearGradient id="bs2" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#fb923c" />
+            <stop offset="100%" stop-color="#ec4899" />
+          </linearGradient>
+          <linearGradient id="bs3" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#6366f1" />
+            <stop offset="100%" stop-color="#0ea5e9" />
+          </linearGradient>
+          <linearGradient id="bs4" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#1e1b4b" />
+            <stop offset="100%" stop-color="#312e81" />
+          </linearGradient>
+        </defs>
+        <path d="M0,260 C260,140 520,360 820,250 C1080,150 1280,240 1440,180 L1440,900 L0,900 Z" fill="url(#bs1)" opacity="0.92" />
+        <path d="M0,420 C300,300 560,500 900,380 C1150,290 1320,400 1440,350 L1440,900 L0,900 Z" fill="url(#bs2)" opacity="0.9" />
+        <path d="M0,570 C340,470 700,650 1060,520 C1250,460 1370,530 1440,500 L1440,900 L0,900 Z" fill="url(#bs3)" opacity="0.92" />
+        <path d="M0,720 C380,640 760,790 1140,690 C1300,650 1390,700 1440,680 L1440,900 L0,900 Z" fill="url(#bs4)" />
+      </svg>
+    </div>
+
+    <!-- Preset Baru: Misty Pine Forest Dawn -->
+    <div class="wp-art wp-art-forest">
+      <div class="forest-sun"></div>
+      <svg class="forest-layers" viewBox="0 0 1440 700" preserveAspectRatio="none">
+        <path d="M0,700 L0,300 L180,210 L340,280 L520,170 L700,260 L880,180 L1060,270 L1240,190 L1440,260 L1440,700 Z" fill="#475569" opacity="0.45" />
+        <path d="M0,700 L0,380 L220,300 L420,370 L640,280 L860,360 L1080,290 L1280,360 L1440,320 L1440,700 Z" fill="#334155" opacity="0.65" />
+        <path d="M0,700 L0,470 L260,400 L520,460 L780,390 L1040,460 L1300,400 L1440,440 L1440,700 Z" fill="#1e293b" opacity="0.85" />
+        <path d="M0,700 L0,560 L36,470 L72,560 L108,490 L144,560 L180,450 L216,560 L252,500 L288,560 L324,460 L360,560 L396,480 L432,560 L468,440 L504,560 L540,495 L576,560 L612,465 L648,560 L684,505 L720,560 L756,455 L792,560 L828,485 L864,560 L900,445 L936,560 L972,500 L1008,560 L1044,470 L1080,560 L1116,490 L1152,560 L1188,450 L1224,560 L1260,495 L1296,560 L1332,465 L1368,560 L1404,485 L1440,560 L1440,700 Z" fill="#0b1220" />
+      </svg>
+      <div class="forest-mist wp-anim"></div>
     </div>
 
     <!-- Pemutar Video Live Wallpaper (.mp4 / .webm ala Wallpaper Engine) -->
@@ -346,8 +425,14 @@
     <!-- Pilihan Background / Wallpaper Keren -->
     <div class="drawer-sub-lbl">🖼️ Pilih Background / Wallpaper Desktop</div>
     <div class="wp-preset-grid">
+      <button class="wp-chip wp-chip-wide" data-wp="wp-dynamic">🕐 Otomatis Pagi/Siang/Sore/Malam</button>
       <button class="wp-chip active" data-wp="wp-sonoma">🌄 Sonoma Horizon</button>
       <button class="wp-chip" data-wp="wp-win12-bloom">💠 Win 12 Bloom</button>
+      <button class="wp-chip" data-wp="wp-bigsur">🌈 Big Sur Waves</button>
+      <button class="wp-chip" data-wp="wp-aurora">🌌 Aurora Borealis</button>
+      <button class="wp-chip" data-wp="wp-nebula">🪐 Galaxy Nebula</button>
+      <button class="wp-chip" data-wp="wp-ocean">🏝️ Ocean Sunset</button>
+      <button class="wp-chip" data-wp="wp-forest">🌲 Misty Forest</button>
       <button class="wp-chip" data-wp="wp-cyber-night">🌆 Cyber Synth</button>
       <button class="wp-chip" data-wp="wp-fuji-sunset">🗻 Fuji Sunset</button>
       <button class="wp-chip" id="pick-custom-wp-btn">📂 Gambar PC...</button>

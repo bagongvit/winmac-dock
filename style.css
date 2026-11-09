@@ -2428,6 +2428,31 @@ body.font-serif {
   border-radius: 50%;
   background: linear-gradient(180deg, #facc15 0%, #f97316 45%, #ec4899 100%);
   box-shadow: 0 0 80px rgba(236, 72, 153, 0.65);
+  /* Garis potongan retro khas matahari Synthwave */
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 0 52%,
+    transparent 52% 56%,
+    #000 56% 65%,
+    transparent 65% 70%,
+    #000 70% 78%,
+    transparent 78% 84%,
+    #000 84% 90%,
+    transparent 90% 97%,
+    #000 97%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    #000 0 52%,
+    transparent 52% 56%,
+    #000 56% 65%,
+    transparent 65% 70%,
+    #000 70% 78%,
+    transparent 78% 84%,
+    #000 84% 90%,
+    transparent 90% 97%,
+    #000 97%
+  );
 }
 .cyber-grid {
   position: absolute;
@@ -2470,6 +2495,379 @@ body.font-serif {
   left: 0;
   width: 100%;
   height: 62%;
+}
+
+.fuji-lake {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 16%;
+  background:
+    linear-gradient(90deg, transparent 44%, rgba(251, 113, 133, 0.35) 50%, transparent 56%),
+    linear-gradient(180deg, rgba(30, 27, 75, 0.92) 0%, #070b19 100%);
+  border-top: 1px solid rgba(251, 146, 60, 0.35);
+}
+
+/* =========================================================
+   12B. WALLPAPER UPGRADE PACK (CSS-only, GPU-friendly)
+   Semua animasi hanya memakai transform/opacity (dikomposisi GPU),
+   dan otomatis berhenti saat Mode Layar Aplikasi / Eco Battery aktif.
+   ========================================================= */
+#desktop-wallpaper-layer.wp-switching {
+  animation: wpCrossfade 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes wpCrossfade {
+  from {
+    opacity: 0.25;
+    transform: scale(1.03);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+body.app-passthrough-mode .wp-anim,
+body.eco-paused .wp-anim {
+  animation-play-state: paused !important;
+}
+
+/* Lapisan bintang statis (pola gradien berulang, tanpa ratusan elemen DOM) */
+.wp-stars {
+  position: absolute;
+  inset: 0 0 35% 0;
+  background-image:
+    radial-gradient(1.4px 1.4px at 20px 30px, #ffffff, transparent),
+    radial-gradient(1px 1px at 90px 120px, #e0f2fe, transparent),
+    radial-gradient(1.6px 1.6px at 160px 60px, #ffffff, transparent),
+    radial-gradient(1px 1px at 230px 180px, #c7d2fe, transparent),
+    radial-gradient(1.2px 1.2px at 300px 90px, #ffffff, transparent),
+    radial-gradient(1px 1px at 50px 220px, #f0abfc, transparent),
+    radial-gradient(1.3px 1.3px at 340px 240px, #ffffff, transparent);
+  background-size: 380px 280px;
+  opacity: 0.75;
+  animation: wpTwinkle 5s ease-in-out infinite alternate;
+  -webkit-mask-image: linear-gradient(180deg, #000 40%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 40%, transparent 100%);
+}
+
+.wp-stars-dim {
+  inset: 0 0 55% 0;
+  opacity: 0.45;
+}
+
+@keyframes wpTwinkle {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 0.9;
+  }
+}
+
+/* Sonoma: glow bergerak pelan */
+.sonoma-glow-1 {
+  animation: wpDriftA 22s ease-in-out infinite alternate;
+}
+.sonoma-glow-2 {
+  animation: wpDriftB 26s ease-in-out infinite alternate;
+}
+body.app-passthrough-mode .sonoma-glow-1,
+body.app-passthrough-mode .sonoma-glow-2,
+body.eco-paused .sonoma-glow-1,
+body.eco-paused .sonoma-glow-2 {
+  animation-play-state: paused;
+}
+
+@keyframes wpDriftA {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(90px, 30px) scale(1.12);
+  }
+}
+
+@keyframes wpDriftB {
+  from {
+    transform: translate(0, 0) scale(1.05);
+  }
+  to {
+    transform: translate(-80px, 40px) scale(0.95);
+  }
+}
+
+/* Preset 5: Aurora Borealis */
+#desktop-wallpaper-layer.wp-aurora {
+  background: linear-gradient(180deg, #020617 0%, #04172b 45%, #062a3a 75%, #020812 100%);
+}
+#desktop-wallpaper-layer.wp-aurora .wp-art-aurora {
+  display: block;
+}
+.aurora-band {
+  position: absolute;
+  left: -10%;
+  width: 120%;
+  height: 34%;
+  border-radius: 50%;
+  filter: blur(38px);
+  opacity: 0.75;
+  mix-blend-mode: screen;
+}
+.aurora-b1 {
+  top: 10%;
+  background: linear-gradient(90deg, transparent, #22c55e 25%, #2dd4bf 55%, transparent 85%);
+  transform: rotate(-8deg);
+  animation: auroraSway1 14s ease-in-out infinite alternate;
+}
+.aurora-b2 {
+  top: 22%;
+  background: linear-gradient(90deg, transparent 10%, #a855f7 40%, #22d3ee 70%, transparent);
+  opacity: 0.55;
+  transform: rotate(6deg);
+  animation: auroraSway2 18s ease-in-out infinite alternate;
+}
+.aurora-b3 {
+  top: 4%;
+  height: 22%;
+  background: linear-gradient(90deg, transparent 20%, #4ade80 50%, transparent 80%);
+  opacity: 0.45;
+  animation: auroraSway1 11s ease-in-out infinite alternate-reverse;
+}
+@keyframes auroraSway1 {
+  from {
+    transform: translateX(-4%) rotate(-8deg) scaleY(1);
+  }
+  to {
+    transform: translateX(5%) rotate(-3deg) scaleY(1.25);
+  }
+}
+@keyframes auroraSway2 {
+  from {
+    transform: translateX(4%) rotate(6deg) scaleY(0.9);
+  }
+  to {
+    transform: translateX(-5%) rotate(2deg) scaleY(1.2);
+  }
+}
+.aurora-mountains {
+  position: absolute;
+  left: 0;
+  bottom: 14%;
+  width: 100%;
+  height: 34%;
+}
+.aurora-lake {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 14.5%;
+  background:
+    radial-gradient(ellipse at 45% 0%, rgba(45, 212, 191, 0.32), transparent 60%),
+    linear-gradient(180deg, #031322 0%, #01060d 100%);
+  border-top: 1px solid rgba(45, 212, 191, 0.25);
+}
+
+/* Preset 6: Galaxy Nebula */
+#desktop-wallpaper-layer.wp-nebula {
+  background: radial-gradient(ellipse at 50% 40%, #1e1b4b 0%, #0b0720 55%, #02010a 100%);
+}
+#desktop-wallpaper-layer.wp-nebula .wp-art-nebula {
+  display: block;
+}
+#desktop-wallpaper-layer.wp-nebula .wp-stars {
+  inset: 0;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.nebula-cloud {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  mix-blend-mode: screen;
+}
+.nebula-c1 {
+  top: 8%;
+  left: 8%;
+  width: 62%;
+  height: 58%;
+  background: radial-gradient(circle at 40% 45%, rgba(236, 72, 153, 0.6), rgba(139, 92, 246, 0.35) 45%, transparent 70%);
+  animation: wpDriftA 30s ease-in-out infinite alternate;
+}
+.nebula-c2 {
+  bottom: 6%;
+  right: 4%;
+  width: 58%;
+  height: 56%;
+  background: radial-gradient(circle at 55% 50%, rgba(56, 189, 248, 0.55), rgba(79, 70, 229, 0.3) 45%, transparent 70%);
+  animation: wpDriftB 34s ease-in-out infinite alternate;
+}
+.nebula-planet {
+  position: absolute;
+  right: 14%;
+  top: 22%;
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, #fde68a 0%, #f97316 38%, #7c2d12 72%, #1c0a05 100%);
+  box-shadow:
+    inset -26px -18px 40px rgba(0, 0, 0, 0.65),
+    0 0 60px rgba(249, 115, 22, 0.35);
+}
+.nebula-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 340px;
+  height: 78px;
+  border-radius: 50%;
+  border: 9px solid rgba(253, 230, 138, 0.55);
+  border-top-color: rgba(253, 230, 138, 0.15);
+  transform: translate(-50%, -50%) rotate(-18deg);
+  box-shadow: 0 0 18px rgba(253, 230, 138, 0.25);
+}
+
+/* Preset 7: Tropical Ocean Sunset */
+#desktop-wallpaper-layer.wp-ocean {
+  background: linear-gradient(180deg, #1e1b4b 0%, #7e22ce 30%, #f472b6 52%, #fdba74 64%, #fde68a 66%);
+}
+#desktop-wallpaper-layer.wp-ocean .wp-art-ocean {
+  display: block;
+}
+.ocean-sun {
+  position: absolute;
+  left: 50%;
+  bottom: 31%;
+  width: 230px;
+  height: 230px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, #fffbeb 0%, #fde68a 45%, #fb923c 100%);
+  box-shadow: 0 0 120px rgba(253, 186, 116, 0.8);
+}
+.ocean-islands {
+  position: absolute;
+  left: 0;
+  bottom: 33%;
+  width: 100%;
+  height: 12%;
+}
+.ocean-sea {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34%;
+  overflow: hidden;
+  background: linear-gradient(180deg, #7c3aed 0%, #3b0764 40%, #0f0524 100%);
+}
+.ocean-reflection {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 260px;
+  height: 100%;
+  transform: translateX(-50%);
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(253, 230, 138, 0.75) 0 3px,
+    transparent 3px 12px
+  );
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 85%);
+  mask-image: linear-gradient(180deg, #000 0%, transparent 85%);
+  opacity: 0.8;
+}
+.ocean-shimmer {
+  position: absolute;
+  inset: 0 -20%;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.08) 0 1px,
+    transparent 1px 18px
+  );
+  animation: oceanShimmer 6s ease-in-out infinite alternate;
+}
+@keyframes oceanShimmer {
+  from {
+    transform: translateX(-3%) translateY(0);
+  }
+  to {
+    transform: translateX(3%) translateY(6px);
+  }
+}
+
+/* Preset 8: macOS Big Sur Gradient Waves */
+#desktop-wallpaper-layer.wp-bigsur {
+  background: linear-gradient(180deg, #fbcfe8 0%, #c4b5fd 35%, #818cf8 70%, #312e81 100%);
+}
+#desktop-wallpaper-layer.wp-bigsur .wp-art-bigsur {
+  display: block;
+}
+.bigsur-waves {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Preset 9: Misty Pine Forest Dawn */
+#desktop-wallpaper-layer.wp-forest {
+  background: linear-gradient(180deg, #94a3b8 0%, #cbd5e1 28%, #fcd9b6 52%, #64748b 100%);
+}
+#desktop-wallpaper-layer.wp-forest .wp-art-forest {
+  display: block;
+}
+.forest-sun {
+  position: absolute;
+  left: 30%;
+  top: 22%;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff7ed 0%, #fed7aa 55%, rgba(254, 215, 170, 0) 72%);
+  box-shadow: 0 0 140px rgba(254, 215, 170, 0.9);
+}
+.forest-layers {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 78%;
+}
+.forest-mist {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  bottom: 16%;
+  height: 28%;
+  background: radial-gradient(ellipse at center, rgba(241, 245, 249, 0.55), transparent 70%);
+  filter: blur(18px);
+  animation: forestMist 20s ease-in-out infinite alternate;
+}
+@keyframes forestMist {
+  from {
+    transform: translateX(-6%);
+  }
+  to {
+    transform: translateX(6%);
+  }
+}
+
+/* Grid pilihan wallpaper: tombol "Otomatis" selebar penuh */
+.wp-chip-wide {
+  grid-column: 1 / -1;
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.18), rgba(168, 85, 247, 0.18));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wp-anim,
+  .sonoma-glow-1,
+  .sonoma-glow-2 {
+    animation: none !important;
+  }
 }
 
 /* Canvas Partikel Live */
