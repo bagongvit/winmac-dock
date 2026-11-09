@@ -4302,3 +4302,239 @@ body.app-passthrough-mode #taskbar-cover-strip {
 body.hot-corners-disabled .hot-corner-zone {
   display: none !important;
 }
+
+/* =========================================================
+   18. 3-MODE OS THEME SWITCHER:
+       1) TEMA SEKARANG (os-mode-hybrid)
+       2) WINDOWS 12 FLUENT (os-mode-win12)
+       3) APPLE macOS SONOMA (os-mode-macos)
+   ========================================================= */
+.os-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.os-mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 9px 6px;
+  border-radius: 13px;
+  border: 1px solid var(--border-inner);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: center;
+  transition:
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.os-mode-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-primary);
+  background: var(--card-hover);
+}
+
+.os-mode-btn.active {
+  border-color: var(--accent-primary);
+  background: linear-gradient(145deg, rgba(56, 189, 248, 0.24), rgba(99, 102, 241, 0.22));
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.28),
+    inset 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+
+.os-mode-ic {
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.os-mode-name {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.os-mode-desc {
+  font-size: 9px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* Menu Bar Kiri Khas macOS (Default tersembunyi kecuali di mode macOS) */
+.macos-menubar-menus {
+  display: none;
+  align-items: center;
+  gap: 13px;
+  font-size: 12.5px;
+  color: #f8fafc;
+  padding-left: 4px;
+}
+
+.macos-menubar-menus .apple-logo {
+  font-size: 15px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.macos-menubar-menus .mac-menu-item {
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: background 0.15s ease;
+}
+
+.macos-menubar-menus strong.mac-menu-item {
+  font-weight: 800;
+}
+
+.macos-menubar-menus .apple-logo:hover,
+.macos-menubar-menus .mac-menu-item:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ---------------------------------------------------------
+   MODE 2: WINDOWS 12 FLUENT EDITION (body.os-mode-win12)
+   --------------------------------------------------------- */
+body.os-mode-win12 #top-island:not(:hover):not(.pinned) {
+  top: 10px;
+  border-radius: 14px;
+  padding: 6px 14px;
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(56, 189, 248, 0.38);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+body.os-mode-win12 #bottom-dock-wrapper {
+  bottom: 10px;
+}
+
+body.os-mode-win12:not(.app-passthrough-mode) #dock {
+  height: 60px;
+  padding: 6px 18px 8px;
+  border-radius: 16px;
+  gap: 8px;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.84);
+  border: 1px solid rgba(56, 189, 248, 0.38);
+  box-shadow:
+    0 16px 38px rgba(0, 0, 0, 0.6),
+    0 0 22px rgba(56, 189, 248, 0.14),
+    inset 0 1px 1px rgba(255, 255, 255, 0.25);
+}
+
+body.os-mode-win12:not(.app-passthrough-mode) .dock-item {
+  width: 44px !important;
+  height: 44px !important;
+  padding: 3px;
+  border-radius: 11px;
+  transform: none !important;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+body.os-mode-win12:not(.app-passthrough-mode) .dock-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-3px) !important;
+}
+
+body.os-mode-win12 .dock-icon {
+  border-radius: 20%;
+}
+
+/* Indikator Garis Lebar Menyala Khas Windows 11 / Windows 12 */
+body.os-mode-win12 .dock-dot.active {
+  width: 8px;
+  height: 3.5px;
+  border-radius: 999px;
+  bottom: -4px;
+  background: rgba(148, 163, 184, 0.85);
+}
+
+body.os-mode-win12 .dock-dot.running,
+body.os-mode-win12 .dock-dot.running-live {
+  width: 20px !important;
+  height: 3.5px !important;
+  border-radius: 999px !important;
+  bottom: -4px !important;
+  background: #38bdf8 !important;
+  box-shadow: 0 0 10px #38bdf8 !important;
+}
+
+body.os-mode-win12 .custom-os-window {
+  border-radius: 16px;
+}
+
+/* ---------------------------------------------------------
+   MODE 3: APPLE macOS SONOMA EDITION (body.os-mode-macos)
+   --------------------------------------------------------- */
+body.os-mode-macos .macos-menubar-menus {
+  display: inline-flex;
+}
+
+body.os-mode-macos #top-island:not(:hover):not(.pinned) .win12-pulse-badge,
+body.os-mode-macos #top-island:not(:hover):not(.pinned) .mini-stat-pills {
+  display: none;
+}
+
+body.os-mode-macos #top-island:not(:hover):not(.pinned) {
+  top: 0 !important;
+  left: 0 !important;
+  transform: none !important;
+  width: 100vw !important;
+  min-width: 100vw !important;
+  max-width: 100vw !important;
+  height: 32px !important;
+  padding: 1px 16px !important;
+  border-radius: 0 !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
+  background: rgba(15, 23, 42, 0.58) !important;
+  backdrop-filter: blur(28px) saturate(195%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(195%) !important;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.25) !important;
+}
+
+body.os-mode-macos:not(.app-passthrough-mode) #dock {
+  border-radius: 24px;
+  padding: 9px 15px 12px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.24) 0%,
+    rgba(15, 23, 42, 0.52) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  box-shadow:
+    0 22px 48px rgba(0, 0, 0, 0.58),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.65),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.35);
+}
+
+body.os-mode-macos .dock-icon {
+  border-radius: 23%;
+}
+
+/* Titik Putih Bersinar Khas macOS Dock */
+body.os-mode-macos .dock-dot.active,
+body.os-mode-macos .dock-dot.running,
+body.os-mode-macos .dock-dot.running-live {
+  width: 5px !important;
+  height: 5px !important;
+  border-radius: 50% !important;
+  bottom: -7px !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.95) !important;
+}
+

@@ -6,6 +6,7 @@ const { ipcRenderer } = require('electron');
 const STORAGE_KEY = 'winmac_os_config_v2';
 
 const defaultConfig = {
+  osMode: 'os-mode-hybrid',
   theme: 'theme-mica-dark',
   dockScale: 158,
   alwaysOnTop: true,
@@ -707,6 +708,59 @@ document.querySelectorAll('[data-set-theme]').forEach((btn) => {
     applyTheme(btn.dataset.setTheme);
   });
 });
+
+// Pilihan 3 Mode Tema OS Utama: Tema Sekarang (os-mode-hybrid), Windows 12 (os-mode-win12), macOS (os-mode-macos)
+const osModes = ['os-mode-hybrid', 'os-mode-win12', 'os-mode-macos'];
+
+function applyOsMode(modeName, persist = true) {
+  const validMode = osModes.includes(modeName) ? modeName : 'os-mode-hybrid';
+  osModes.forEach((m) => document.body.classList.remove(m));
+  document.body.classList.add(validMode);
+
+  document.querySelectorAll('[data-os-mode]').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.osMode === validMode);
+  });
+
+  if (persist) {
+    appConfig.osMode = validMode;
+    saveConfig();
+    playUiSound('open');
+  }
+}
+
+document.querySelectorAll('[data-os-mode]').forEach((btn) => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    applyOsMode(btn.dataset.osMode, true);
+  });
+});
+
+// Klik item pada Menu Bar Apple macOS ( Finder File Edit View Go Window Help)
+document.querySelectorAll('[data-mac-menu]').forEach((item) => {
+  item.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const act = item.dataset.macMenu;
+    if (act === 'start') {
+      toggleCustomWindow('win12-start-menu');
+    } else if (act === 'finder' || act === 'file') {
+      openCustomWindow('win-explorer');
+    } else if (act === 'edit') {
+      openCustomWindow('win-notes');
+    } else if (act === 'view') {
+      toggleCustomWindow('win-rm-drawer');
+    } else if (act === 'go') {
+      toggleCustomWindow('win-spotlight');
+      setTimeout(() => document.getElementById('spotlight-input')?.focus(), 60);
+    } else if (act === 'window') {
+      toggleCustomWindow('win-task-switcher');
+      refreshRunningApps(true);
+    } else if (act === 'help') {
+      openCustomWindow('win-settings');
+    }
+  });
+});
+
+applyOsMode(appConfig.osMode || 'os-mode-hybrid', false);
 
 volumeSlider.addEventListener('input', (e) => {
   const val = Number(e.target.value);
@@ -2367,6 +2421,9 @@ const spotlightResults = document.getElementById('spotlight-results');
 const spotlightCommands = [
   { label: '🌄 Ganti Wallpaper: macOS Sonoma Horizon', keywords: 'wallpaper background sonoma', run: () => applyWallpaper('wp-sonoma') },
   { label: '🌆 Ganti Wallpaper: Cyberpunk Synthwave', keywords: 'wallpaper background cyber neon', run: () => applyWallpaper('wp-cyber-night') },
+  { label: '🌌 Mode Tema OS: Tema Sekarang (WinMac Hybrid)', keywords: 'tema theme mode hybrid winmac sekarang default', run: () => applyOsMode('os-mode-hybrid') },
+  { label: '🪟 Mode Tema OS: Windows 12 Fluent Taskbar', keywords: 'tema theme mode windows 12 win12 taskbar fluent', run: () => applyOsMode('os-mode-win12') },
+  { label: '🍎 Mode Tema OS: Apple macOS Sonoma (Top Menu Bar)', keywords: 'tema theme mode macos apple finder sonoma menubar', run: () => applyOsMode('os-mode-macos') },
   { label: '🗻 Ganti Wallpaper: Mount Fuji Twilight', keywords: 'wallpaper background fuji japan', run: () => applyWallpaper('wp-fuji-sunset') },
   { label: '🕐 Ganti Wallpaper: Otomatis Pagi/Siang/Sore/Malam', keywords: 'wallpaper background dinamis otomatis jam dynamic', run: () => applyWallpaper('wp-dynamic') },
   { label: '🌌 Ganti Wallpaper: Aurora Borealis', keywords: 'wallpaper background aurora malam night', run: () => applyWallpaper('wp-aurora') },

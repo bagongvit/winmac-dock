@@ -428,6 +428,26 @@
       <button class="tl-btn tl-close" data-close-win="win-rm-drawer" title="Tutup"></button>
     </div>
 
+    <!-- 3 Pilihan Tema OS Utama: Tema Sekarang, Windows 12, macOS -->
+    <div class="drawer-sub-lbl">🖥️ Pilih Mode Tema OS (3 Pilihan Utama)</div>
+    <div class="os-mode-grid">
+      <button class="os-mode-btn active" data-os-mode="os-mode-hybrid" title="Tema Sekarang: Perpaduan Dynamic Island + macOS Dock + Rainmeter">
+        <span class="os-mode-ic">🌌</span>
+        <span class="os-mode-name">Tema Sekarang</span>
+        <span class="os-mode-desc">WinMac Hybrid</span>
+      </button>
+      <button class="os-mode-btn" data-os-mode="os-mode-win12" title="Gaya Windows 12 Fluent: Taskbar Kapsul Melayang & Indikator Bar Lebar">
+        <span class="os-mode-ic">🪟</span>
+        <span class="os-mode-name">Windows 12</span>
+        <span class="os-mode-desc">Fluent Taskbar</span>
+      </button>
+      <button class="os-mode-btn" data-os-mode="os-mode-macos" title="Gaya Apple macOS: Top Menu Bar Penuh ( Finder File Edit) & 3D Glass Dock">
+        <span class="os-mode-ic">🍎</span>
+        <span class="os-mode-name">macOS</span>
+        <span class="os-mode-desc">Menu Bar & Dock</span>
+      </button>
+    </div>
+
     <!-- 1-Click Workspace Profiles -->
     <div class="drawer-sub-lbl">⚡ Profil Tata Letak Instan (1-Klik)</div>
     <div class="rm-profile-grid">
@@ -569,6 +589,18 @@
             <rect x="2" y="13" width="9" height="9" rx="2" fill="#818cf8" />
             <rect x="13" y="13" width="9" height="9" rx="2" fill="#38bdf8" />
           </svg>
+        </div>
+
+        <!-- Menu Bar Khas Apple macOS (Tampil saat mode macOS aktif) -->
+        <div class="macos-menubar-menus">
+          <span class="apple-logo" data-mac-menu="start" title="Apple Menu / Start Menu"></span>
+          <strong class="mac-menu-item" data-mac-menu="finder" title="Buka Finder / File Explorer">Finder</strong>
+          <span class="mac-menu-item" data-mac-menu="file" title="Buka File Explorer">File</span>
+          <span class="mac-menu-item" data-mac-menu="edit" title="Buka Catatan & Clipboard">Edit</span>
+          <span class="mac-menu-item" data-mac-menu="view" title="Studio Tampilan & Background">View</span>
+          <span class="mac-menu-item" data-mac-menu="go" title="Spotlight Command (Alt+K)">Go</span>
+          <span class="mac-menu-item" data-mac-menu="window" title="Task Switcher (Alt+W)">Window</span>
+          <span class="mac-menu-item" data-mac-menu="help" title="Pengaturan Sistem">Help</span>
         </div>
 
         <div class="mini-stat-pills">
@@ -1218,7 +1250,28 @@
 
     <div class="settings-body">
       <div class="settings-section">
-        <h4>🎨 Pilih Tema Glassmorphism (Tersimpan Permanen)</h4>
+        <h4>🖥️ Pilih Mode Tema OS (Tema Sekarang • Windows 12 • macOS)</h4>
+        <div class="os-mode-grid settings-os-grid">
+          <button class="os-mode-btn active" data-os-mode="os-mode-hybrid">
+            <span class="os-mode-ic">🌌</span>
+            <span class="os-mode-name">Tema Sekarang (WinMac)</span>
+            <span class="os-mode-desc">Dynamic Island + macOS Dock + Rainmeter</span>
+          </button>
+          <button class="os-mode-btn" data-os-mode="os-mode-win12">
+            <span class="os-mode-ic">🪟</span>
+            <span class="os-mode-name">Windows 12</span>
+            <span class="os-mode-desc">Floating Fluent Taskbar + Tray Kanan</span>
+          </button>
+          <button class="os-mode-btn" data-os-mode="os-mode-macos">
+            <span class="os-mode-ic">🍎</span>
+            <span class="os-mode-name">macOS</span>
+            <span class="os-mode-desc">Top Menu Bar Penuh ( Finder) + 3D Glass Dock</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h4>🎨 Pilih Warna Kaca Glassmorphism (Tersimpan Permanen)</h4>
         <div class="theme-cards-grid">
           <button class="theme-card-btn active" data-set-theme="theme-mica-dark">
             <span class="swatch swatch-dark"></span>
