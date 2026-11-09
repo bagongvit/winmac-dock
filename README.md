@@ -58,7 +58,7 @@ Semua widget memiliki tombol **Lipat (`—`)**, **Sembunyikan (`✕`)**, *Magnet
 
 1. **Clone repositori & instal dependensi (cukup 1 kali):**
    ```bash
-   git clone https://github.com/petrukpunokawan/winmac-dock.git
+   git clone https://github.com/bagongvit/winmac-dock.git
    cd winmac-dock
    npm install
    ```
