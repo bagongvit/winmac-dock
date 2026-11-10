@@ -89,20 +89,81 @@ function saveConfig() {
 }
 
 // =========================================================
-// 2. CLICK-THROUGH OVERLAY HANDLER
+// 2. CLICK-THROUGH OVERLAY HANDLER (Global Hit-Testing Anti-Race)
 // =========================================================
 let isResizingWindow = false;
+let currentIgnoreMouseState = null;
+let lastPointerPos = { x: -1, y: -1 };
 
-function bindInteractiveWidgetEvents(widget) {
-  widget.addEventListener('mouseenter', () => {
-    if (widget.classList.contains('rm-locked')) return;
+function isElementClickableWidget(el) {
+  if (!el || el.nodeType !== 1) return false;
+  if (el.id === 'bottom-dock-wrapper') return false;
+  if (el.classList.contains('interactive-widget')) {
+    if (el.classList.contains('hidden') || el.classList.contains('rm-hidden') || el.classList.contains('rm-locked')) {
+      return false;
+    }
+    return true;
+  }
+  return Boolean(
+    el.closest('.interactive-widget:not(.hidden):not(.rm-hidden):not(.rm-locked)') ||
+    el.closest('.exp-context-menu:not(.hidden)')
+  );
+}
+
+function setOverlayIgnoreMouse(shouldIgnore) {
+  if (currentIgnoreMouseState === shouldIgnore) return;
+  currentIgnoreMouseState = shouldIgnore;
+  if (shouldIgnore) {
+    ipcRenderer.send('set-ignore-mouse-events', true, { forward: true });
+  } else {
     ipcRenderer.send('set-ignore-mouse-events', false);
+  }
+}
+
+function syncOverlayMouseAtPoint(x, y) {
+  if (isDraggingWidget || isResizingWindow) {
+    setOverlayIgnoreMouse(false);
+    return;
+  }
+  if (x < 0 || y < 0) return;
+
+  const stack = document.elementsFromPoint(x, y);
+  const hitInteractive = stack.some((el) => {
+    if (el.id === 'bottom-dock-wrapper' || el.id === 'rainmeter-layer') return false;
+    if (el.classList.contains('hot-corner-zone')) return !document.body.classList.contains('hot-corners-disabled');
+    if (el.id === 'dock') return true;
+    return isElementClickableWidget(el);
   });
 
-  widget.addEventListener('mouseleave', () => {
-    if (!isDraggingWidget && !isResizingWindow) {
-      ipcRenderer.send('set-ignore-mouse-events', true, { forward: true });
-    }
+  setOverlayIgnoreMouse(!hitInteractive);
+}
+
+window.addEventListener(
+  'mousemove',
+  (e) => {
+    lastPointerPos.x = e.clientX;
+    lastPointerPos.y = e.clientY;
+    syncOverlayMouseAtPoint(e.clientX, e.clientY);
+  },
+  { passive: true }
+);
+
+window.addEventListener(
+  'pointermove',
+  (e) => {
+    lastPointerPos.x = e.clientX;
+    lastPointerPos.y = e.clientY;
+    syncOverlayMouseAtPoint(e.clientX, e.clientY);
+  },
+  { passive: true }
+);
+
+function bindInteractiveWidgetEvents(widget) {
+  if (!widget || widget.dataset.hitBound) return;
+  widget.dataset.hitBound = '1';
+  widget.addEventListener('pointerenter', () => {
+    if (widget.classList.contains('rm-locked')) return;
+    setOverlayIgnoreMouse(false);
   });
 }
 
@@ -216,6 +277,7 @@ function openCustomWindow(winId) {
   winEl.style.zIndex = topZIndex;
 
   // Pastikan overlay mendapatkan fokus keyboard agar input (Search, Spotlight, Terminal, Notes) langsung bisa diketik
+  currentIgnoreMouseState = false;
   ipcRenderer.send('focus-overlay-window');
 
   updateDockDotState(winId, 'running');
@@ -253,6 +315,7 @@ function minimizeCustomWindow(winId) {
     winEl.classList.add('hidden');
     winEl.classList.remove('win-anim-minimize');
     delete winAnimTimers[winId];
+    syncOverlayMouseAtPoint(lastPointerPos.x, lastPointerPos.y);
   }, 240);
 }
 
@@ -277,6 +340,7 @@ function closeCustomWindow(winId) {
     winEl.classList.add('hidden');
     winEl.classList.remove('win-anim-close', 'maximized', 'snap-left', 'snap-right');
     delete winAnimTimers[winId];
+    syncOverlayMouseAtPoint(lastPointerPos.x, lastPointerPos.y);
   }, 185);
 }
 
@@ -328,23 +392,8 @@ ipcRenderer.on('sync-always-on-top', (event, flag) => {
   saveConfig();
 });
 
-// Tombol Merah (Close)
-document.querySelectorAll('[data-close-win]').forEach((btn) => {
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    closeCustomWindow(btn.dataset.closeWin);
-  });
-});
-
-// Tombol Kuning (Minimize ke Dock dengan indikator Oranye)
-document.querySelectorAll('[data-min-win]').forEach((btn) => {
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    minimizeCustomWindow(btn.dataset.minWin);
-  });
-});
-
-// Tombol Hijau (Maximize / Restore) & Double-Click Titlebar + Aero Snap
+// Tombol Merah (Close), Kuning (Minimize), & Hijau (Maximize / Restore)
+// Menggunakan Delegasi Event agar selalu responsif meski posisi/DOM berubah
 function toggleMaximizeWindow(winId) {
   const winEl = document.getElementById(winId);
   if (!winEl) return;
@@ -381,11 +430,38 @@ function toggleMaximizeWindow(winId) {
   playUiSound(willMaximize ? 'open' : 'minimize');
 }
 
-document.querySelectorAll('[data-max-win]').forEach((btn) => {
-  btn.addEventListener('click', (e) => {
+document.addEventListener(
+  'pointerdown',
+  (e) => {
+    const tlBtn = e.target.closest('.tl-btn, .snap-btn');
+    if (tlBtn) {
+      setOverlayIgnoreMouse(false);
+      e.stopPropagation();
+    }
+  },
+  true
+);
+
+document.addEventListener('click', (e) => {
+  const closeBtn = e.target.closest('[data-close-win]');
+  if (closeBtn) {
     e.stopPropagation();
-    toggleMaximizeWindow(btn.dataset.maxWin);
-  });
+    closeCustomWindow(closeBtn.dataset.closeWin);
+    return;
+  }
+
+  const minBtn = e.target.closest('[data-min-win]');
+  if (minBtn) {
+    e.stopPropagation();
+    minimizeCustomWindow(minBtn.dataset.minWin);
+    return;
+  }
+
+  const maxBtn = e.target.closest('[data-max-win]');
+  if (maxBtn) {
+    e.stopPropagation();
+    toggleMaximizeWindow(maxBtn.dataset.maxWin);
+  }
 });
 
 // Double-Click pada Titlebar Jendela untuk Maximize / Restore seperti Windows & macOS asli
@@ -3681,7 +3757,7 @@ function setAppPassthroughMode(enable, activeLabel = '') {
       'win-calculator',
       'win-settings'
     ].forEach((id) => closeCustomWindow(id));
-    ipcRenderer.send('set-ignore-mouse-events', true, { forward: true });
+    setOverlayIgnoreMouse(true);
   } else if (prevMode !== isAppPassthroughMode) {
     triggerLaunchHud('🖥️', 'Kembali ke Desktop Pro', '4K Wallpaper & Rainmeter Suite Aktif');
     animateRainmeterSkinsCascade();

@@ -989,6 +989,7 @@ body.font-serif {
 }
 
 .tl-btn {
+  position: relative;
   width: 14px;
   height: 14px;
   border-radius: 50%;
@@ -1002,7 +1003,17 @@ body.font-serif {
   line-height: 1;
   color: transparent;
   flex-shrink: 0;
-  transition: transform 0.15s ease, filter 0.15s ease, color 0.12s ease;
+  pointer-events: auto;
+  transition: transform 0.14s ease, filter 0.14s ease, color 0.12s ease;
+}
+
+/* Area klik tak terlihat diperbesar (26x26px) agar tombol bulat selalu sangat responsif saat diklik */
+.tl-btn::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: transparent;
 }
 
 .traffic-lights:hover .tl-btn {
@@ -1010,6 +1021,7 @@ body.font-serif {
 }
 
 .tl-btn:hover { transform: scale(1.16); filter: brightness(1.08); }
+.tl-btn:active { transform: scale(0.92); filter: brightness(0.92); }
 .tl-close { background: #ff5f56; box-shadow: 0 0 8px rgba(255, 95, 86, 0.5); }
 .tl-min   { background: #ffbd2e; box-shadow: 0 0 8px rgba(255, 189, 46, 0.5); }
 .tl-max   { background: #27c93f; box-shadow: 0 0 8px rgba(39, 201, 63, 0.5); }
@@ -1681,6 +1693,7 @@ body.font-serif {
   transform: translateX(-50%) translateY(0);
   z-index: 1500;
   padding-top: 38px;
+  pointer-events: none;
   transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
 }
 
@@ -1696,6 +1709,7 @@ body.font-serif {
   padding: 10px 16px 12px;
   border-radius: 26px;
   height: 72px;
+  pointer-events: auto;
 }
 
 .custom-dock-items {
