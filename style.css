@@ -4835,20 +4835,24 @@ body.os-mode-win12 #top-island.pinned .island-expanded {
   z-index: 2100 !important;
 }
 
-/* 2. Taskbar Bawah Windows 12: Floating Lebar 3-Zona (Kiri: Start+Search | Tengah: Ikon | Kanan: System Tray) */
+/* 2. Taskbar Bawah Windows 12: Floating Lebar dengan Start + Search + Ikon Terpusat di Tengah & Tray di Kanan */
 body.os-mode-win12:not(.app-passthrough-mode) #bottom-dock-wrapper {
   bottom: 10px;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
   width: 95vw;
   max-width: 1380px;
 }
 
 body.os-mode-win12:not(.app-passthrough-mode) #dock {
+  position: relative;
   width: 100%;
   height: 54px;
-  padding: 5px 14px;
+  padding: 5px 170px;
   border-radius: 12px;
   gap: 5px;
   align-items: center;
+  justify-content: center;
   background: var(--surface-bg);
   backdrop-filter: blur(var(--glass-blur, 18px)) saturate(180%);
   -webkit-backdrop-filter: blur(var(--glass-blur, 18px)) saturate(180%);
@@ -4862,15 +4866,15 @@ body.os-mode-win12 .dock-drag-handle {
   display: none !important;
 }
 
-/* Zona Kiri Taskbar Windows 12: Start + Search Pill mendorong ikon aplikasi ke tengah */
+/* Pill Cari Khas Windows 11/12 berada tepat di sebelah Start di Tengah Taskbar */
 body.os-mode-win12:not(.app-passthrough-mode) .win12-taskbar-search {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   height: 36px;
-  min-width: 155px;
+  min-width: 125px;
   padding: 0 14px;
-  margin: 0 auto 0 6px;
+  margin: 0 4px;
   border-radius: 999px;
   background: var(--card-bg);
   border: 1px solid var(--border-inner);
@@ -4887,14 +4891,17 @@ body.os-mode-win12:not(.app-passthrough-mode) .win12-taskbar-search:hover {
   background: var(--card-hover);
 }
 
-/* Zona Kanan Taskbar Windows 12: System Tray + Jam 2 Baris di Ujung Kanan */
+/* Zona Kanan Taskbar Windows 12: System Tray + Jam 2 Baris di Ujung Kanan (terpisah absolut agar ikon tetap simetris di tengah!) */
 body.os-mode-win12:not(.app-passthrough-mode) .win12-taskbar-tray {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
   gap: 12px;
   height: 38px;
-  padding: 0 12px 0 14px;
-  margin-left: auto;
+  padding: 0 10px 0 12px;
   border-left: 1px solid var(--border-inner);
   border-radius: 8px;
   cursor: pointer;
@@ -5668,19 +5675,19 @@ body.os-mode-win12.app-passthrough-mode #taskbar-cover-strip {
   border-top: 1px solid var(--border-outer) !important;
 }
 
+body.os-mode-win12.app-passthrough-mode #bottom-dock-wrapper {
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: auto !important;
+}
+
+body.os-mode-win12.app-passthrough-mode #dock {
+  justify-content: center !important;
+  width: auto !important;
+}
+
 body.os-mode-win12.app-passthrough-mode .win12-taskbar-search {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 11px;
-  border-radius: 999px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-inner);
-  color: var(--text-primary);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
+  display: none !important;
 }
 
 /* ---------------------------------------------------------

@@ -1032,6 +1032,16 @@ function applyOsMode(modeName, persist = true) {
   // Pastikan Menu Bar tidak terkunci terbuka saat pindah mode
   document.getElementById('top-island')?.classList.remove('pinned');
 
+  // Pastikan Dock / Taskbar selalu reset tepat di tengah saat berpindah mode OS
+  const dockWrapEl = document.getElementById('bottom-dock-wrapper');
+  if (dockWrapEl) {
+    dockWrapEl.style.left = '';
+    dockWrapEl.style.right = '';
+    dockWrapEl.style.top = '';
+    dockWrapEl.style.bottom = '';
+    dockWrapEl.style.transform = '';
+  }
+
   // Reset skala dock item jika masuk ke mode Windows 12 (Taskbar rata tanpa zoom melengkung)
   if (validMode === 'os-mode-win12' && typeof getAllDockItems === 'function') {
     getAllDockItems().forEach((item) => item.style.setProperty('--scale', '1'));
