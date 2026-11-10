@@ -739,26 +739,56 @@ function applyOsMode(modeName, persist = true) {
   // Pastikan Menu Bar tidak terkunci terbuka saat pindah mode
   document.getElementById('top-island')?.classList.remove('pinned');
 
-  // Sesuaikan Judul & Label Spaces di Jendela Task View (#win-task-switcher) sesuai tema
+  // Reset skala dock item jika masuk ke mode Windows 12 (Taskbar rata tanpa zoom melengkung)
+  if (validMode === 'os-mode-win12' && typeof getAllDockItems === 'function') {
+    getAllDockItems().forEach((item) => item.style.setProperty('--scale', '1'));
+  }
+
+  // Sesuaikan Judul, Label Spaces, Prompt Terminal, Start/Launchpad & Quote sesuai tema OS
   const tvTitle = document.getElementById('task-switcher-title');
   const sp1 = document.getElementById('space-lbl-1');
   const sp2 = document.getElementById('space-lbl-2');
   const sp3 = document.getElementById('space-lbl-3');
+  const startInput = document.getElementById('start-search-input');
+  const sysUserLbl = document.getElementById('sys-user-label');
+  const termPrompt = document.querySelector('.term-prompt');
+  const clockQuote = document.getElementById('rm-clock-quote');
+  const launcherDockBtn = document.getElementById('launcher-btn');
+  const explorerDockBtn = document.querySelector('#dock .dock-item[data-custom-win="win-explorer"]');
+
   if (validMode === 'os-mode-win12') {
     if (tvTitle) tvTitle.textContent = '🪟 Windows 12 Task View & Virtual Desktops';
     if (sp1) sp1.textContent = '🖥️ Desktop 1 (Utama)';
     if (sp2) sp2.textContent = '💻 Desktop 2 (Kerja)';
     if (sp3) sp3.textContent = '🎯 Desktop 3 (Fokus)';
+    if (startInput) startInput.placeholder = 'Ketik di sini untuk mencari aplikasi, pengaturan, dan dokumen di Windows 12...';
+    if (sysUserLbl) sysUserLbl.textContent = '🪟 Windows 12 Pro Fluent';
+    if (termPrompt) termPrompt.textContent = 'PS C:\\Win12>';
+    if (clockQuote) clockQuote.textContent = '"Fluent Design meets Next Valley." — Windows 12 Desktop Edition';
+    if (launcherDockBtn) launcherDockBtn.dataset.label = 'Start Windows 12 (Alt+Space)';
+    if (explorerDockBtn) explorerDockBtn.dataset.label = 'Windows 12 File Explorer (Alt+E)';
   } else if (validMode === 'os-mode-macos') {
     if (tvTitle) tvTitle.textContent = '🍎 macOS Mission Control & Spaces';
     if (sp1) sp1.textContent = 'Desktop 1';
     if (sp2) sp2.textContent = 'Desktop 2';
     if (sp3) sp3.textContent = 'Stage Manager';
+    if (startInput) startInput.placeholder = 'Cari di Launchpad';
+    if (sysUserLbl) sysUserLbl.textContent = '🍎 macOS Sonoma 14.5';
+    if (termPrompt) termPrompt.textContent = 'macbook@sonoma ~ %';
+    if (clockQuote) clockQuote.textContent = '"Think Different." — Apple macOS Sonoma Desktop';
+    if (launcherDockBtn) launcherDockBtn.dataset.label = 'Finder & Launchpad (Alt+Space)';
+    if (explorerDockBtn) explorerDockBtn.dataset.label = 'macOS Finder (Alt+E)';
   } else {
     if (tvTitle) tvTitle.textContent = '🌌 WinMac Hybrid Multitasking Switcher';
     if (sp1) sp1.textContent = '🖥️ Ruang 1 (Semua)';
     if (sp2) sp2.textContent = '💻 Ruang 2 (Developer)';
     if (sp3) sp3.textContent = '🧘 Ruang 3 (Minimalis)';
+    if (startInput) startInput.placeholder = 'Cari aplikasi, dokumen, pengaturan (Alt+Space)...';
+    if (sysUserLbl) sysUserLbl.textContent = '🌌 WinMac Hybrid Suite';
+    if (termPrompt) termPrompt.textContent = 'PS WinMac>';
+    if (clockQuote) clockQuote.textContent = '"Simplicity is the ultimate sophistication." — Rainmeter × WinMac OS';
+    if (launcherDockBtn) launcherDockBtn.dataset.label = 'Start Menu / Command Deck (Alt+Space)';
+    if (explorerDockBtn) explorerDockBtn.dataset.label = 'File Explorer Pro (Alt+E)';
   }
 
   document.querySelectorAll('[data-os-mode]').forEach((btn) => {
@@ -769,6 +799,15 @@ function applyOsMode(modeName, persist = true) {
     appConfig.osMode = validMode;
     saveConfig();
     playUiSound('open');
+    if (typeof showAppLaunchHud === 'function') {
+      if (validMode === 'os-mode-win12') {
+        showAppLaunchHud('🪟', 'Tema Windows 12 Aktif', 'Taskbar 3-Zona Fluent, Tombol Jendela Kanan & Start Menu Bawah');
+      } else if (validMode === 'os-mode-macos') {
+        showAppLaunchHud('🍎', 'Tema Apple macOS Aktif', 'Top Menu Bar, Launchpad 6-Kolom, Traffic Lights & 3D Glass Dock');
+      } else {
+        showAppLaunchHud('🌌', 'Tema WinMac Hybrid Aktif', 'Dynamic Island Atas + Neon Glass Dock + Rainmeter Cyber');
+      }
+    }
   }
 }
 
@@ -798,7 +837,11 @@ document.getElementById('win12-taskbar-search-btn')?.addEventListener('click', (
 
 document.getElementById('win12-taskbar-tray')?.addEventListener('click', (e) => {
   e.stopPropagation();
-  toggleCustomWindow('win-calendar');
+  if (e.target.closest('.win12-tray-icons')) {
+    document.getElementById('top-island')?.classList.toggle('pinned');
+  } else {
+    toggleCustomWindow('win-calendar');
+  }
 });
 
 // Klik item pada Menu Bar Apple macOS ( Finder File Edit View Go Window Help)
@@ -1937,8 +1980,9 @@ addDockAppBtn?.addEventListener('click', async () => {
   }
 });
 
-// Efek Gelombang Fisika Magnification Dock
+// Efek Gelombang Fisika Magnification Dock (Aktif di Mode macOS & WinMac Hybrid; nonaktif di Taskbar Windows 12)
 dock.addEventListener('mousemove', (e) => {
+  if (document.body.classList.contains('os-mode-win12')) return;
   const mouseX = e.clientX;
 
   getAllDockItems().forEach((item) => {

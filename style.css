@@ -4429,47 +4429,89 @@ body.hot-corners-disabled .hot-corner-zone {
 /* ---------------------------------------------------------
    MODE 2: WINDOWS 12 FLUENT EDITION (body.os-mode-win12)
    --------------------------------------------------------- */
-body.os-mode-win12 #top-island:not(:hover):not(.pinned) {
-  top: 10px;
-  min-width: 440px;
-  border-radius: 14px;
-  padding: 5px 14px;
-  background: rgba(15, 23, 42, 0.84);
-  border: 1px solid rgba(56, 189, 248, 0.42);
-  box-shadow:
-    0 10px 26px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+/* 1. Bar Atas Windows 12: Pill Telemetri Ringkas (Tanpa duplikasi tombol Start & Jam) */
+body.os-mode-win12 #top-island .win12-pulse-badge,
+body.os-mode-win12 #top-island .island-center,
+body.os-mode-win12 #top-island .ambient-glow {
+  display: none !important;
 }
 
+body.os-mode-win12 #top-island:not(:hover):not(.pinned) {
+  top: 8px;
+  min-width: auto;
+  border-radius: 10px;
+  padding: 4px 12px;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(56, 189, 248, 0.42);
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* Quick Settings Flyout Windows 12 muncul di Pojok Kanan Bawah di atas System Tray saat diklik */
+body.os-mode-win12 #top-island.pinned {
+  top: 8px !important;
+  border-radius: 10px !important;
+}
+
+body.os-mode-win12 #top-island.pinned .island-expanded {
+  position: fixed !important;
+  bottom: 74px !important;
+  right: 22px !important;
+  top: auto !important;
+  left: auto !important;
+  width: 390px !important;
+  max-height: 430px !important;
+  margin-top: 0 !important;
+  padding: 14px !important;
+  border-radius: 12px !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  backdrop-filter: blur(28px) saturate(180%) !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  z-index: 2100 !important;
+}
+
+/* 2. Taskbar Bawah Windows 12: Floating Lebar 3-Zona (Kiri: Start+Search | Tengah: Ikon | Kanan: System Tray) */
 body.os-mode-win12 #bottom-dock-wrapper {
   bottom: 10px;
+  width: 95vw;
+  max-width: 1380px;
 }
 
 body.os-mode-win12:not(.app-passthrough-mode) #dock {
-  height: 58px;
-  padding: 6px 14px;
-  border-radius: 16px;
-  gap: 6px;
+  width: 100%;
+  height: 54px;
+  padding: 5px 14px;
+  border-radius: 12px;
+  gap: 5px;
   align-items: center;
-  background: rgba(15, 23, 42, 0.88);
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(56, 189, 248, 0.42);
   box-shadow:
-    0 16px 38px rgba(0, 0, 0, 0.65),
-    0 0 24px rgba(56, 189, 248, 0.16),
-    inset 0 1px 1px rgba(255, 255, 255, 0.25);
+    0 16px 38px rgba(0, 0, 0, 0.68),
+    0 0 24px rgba(56, 189, 248, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-/* Tampilkan Search Pill & System Tray Kanan di dalam Taskbar saat Mode Windows 12 aktif */
+body.os-mode-win12 .dock-drag-handle {
+  display: none !important;
+}
+
+/* Zona Kiri Taskbar Windows 12: Start + Search Pill mendorong ikon aplikasi ke tengah */
 body.os-mode-win12:not(.app-passthrough-mode) .win12-taskbar-search {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   height: 36px;
-  padding: 0 13px;
-  margin: 0 4px 0 2px;
+  min-width: 155px;
+  padding: 0 14px;
+  margin: 0 auto 0 6px;
   border-radius: 999px;
-  background: rgba(30, 41, 59, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid rgba(56, 189, 248, 0.32);
   color: #cbd5e1;
   font-size: 11.5px;
   font-weight: 600;
@@ -4480,18 +4522,19 @@ body.os-mode-win12:not(.app-passthrough-mode) .win12-taskbar-search {
 body.os-mode-win12:not(.app-passthrough-mode) .win12-taskbar-search:hover {
   border-color: #38bdf8;
   color: #ffffff;
-  background: rgba(56, 189, 248, 0.16);
+  background: rgba(56, 189, 248, 0.18);
 }
 
+/* Zona Kanan Taskbar Windows 12: System Tray + Jam 2 Baris di Ujung Kanan */
 body.os-mode-win12:not(.app-passthrough-mode) .win12-taskbar-tray {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   height: 38px;
-  padding: 0 10px 0 12px;
-  margin-left: 6px;
-  border-left: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 10px;
+  padding: 0 12px 0 14px;
+  margin-left: auto;
+  border-left: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s ease;
 }
@@ -4503,8 +4546,14 @@ body.os-mode-win12:not(.app-passthrough-mode) .win12-taskbar-tray:hover {
 .win12-tray-icons {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11.5px;
+  gap: 6px;
+  font-size: 12px;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.win12-tray-icons:hover {
+  background: rgba(56, 189, 248, 0.18);
 }
 
 .win12-tray-clock {
@@ -4528,22 +4577,22 @@ body.os-mode-win12:not(.app-passthrough-mode) .win12-taskbar-tray:hover {
 body.os-mode-win12:not(.app-passthrough-mode) .dock-item {
   width: 42px !important;
   height: 42px !important;
-  padding: 3px;
-  border-radius: 10px;
+  padding: 4px;
+  border-radius: 8px;
   transform: none !important;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition: background 0.14s ease;
 }
 
 body.os-mode-win12:not(.app-passthrough-mode) .dock-item:hover {
   background: rgba(255, 255, 255, 0.12);
-  transform: translateY(-2px) !important;
+  transform: none !important;
 }
 
 body.os-mode-win12 .dock-icon {
-  border-radius: 20%;
+  border-radius: 18%;
 }
 
-/* Indikator Garis Lebar Menyala Khas Windows 11 / Windows 12 (Hanya saat aplikasi benar-benar terbuka) */
+/* Indikator Garis Lebar Menyala Khas Windows 11 / Windows 12 */
 body.os-mode-win12 .dock-dot.active {
   width: 0;
   background: transparent;
@@ -4554,13 +4603,111 @@ body.os-mode-win12 .dock-dot.running-live {
   width: 18px !important;
   height: 3.5px !important;
   border-radius: 999px !important;
-  bottom: -3px !important;
+  bottom: -2px !important;
   background: #38bdf8 !important;
   box-shadow: 0 0 10px #38bdf8 !important;
 }
 
-body.os-mode-win12 .custom-os-window {
-  border-radius: 14px;
+/* 3. Jendela Aplikasi Windows 12: Sudut Tegas 10px & Tombol Kontrol (— ▢ ✕) di Pojok Kanan Atas! */
+body.os-mode-win12 .custom-os-window,
+body.os-mode-win12 .app-window {
+  border-radius: 10px !important;
+  border: 1px solid rgba(56, 189, 248, 0.35) !important;
+  background: rgba(15, 23, 42, 0.94) !important;
+}
+
+body.os-mode-win12 .win-titlebar {
+  padding: 8px 10px 8px 14px;
+  background: rgba(2, 6, 23, 0.55);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+body.os-mode-win12 .win-titlebar .win-tabs {
+  order: 1;
+  margin-right: auto;
+}
+
+body.os-mode-win12 .win-titlebar .win-actions-right {
+  order: 2;
+  margin-right: 8px;
+}
+
+body.os-mode-win12 .win-titlebar .traffic-lights {
+  order: 3;
+  gap: 2px;
+}
+
+/* Urutan Tombol Windows 12 di Kanan Atas: Minimize (—), Maximize (▢), Close (✕) */
+body.os-mode-win12 .traffic-lights .tl-min {
+  order: 1;
+}
+body.os-mode-win12 .traffic-lights .tl-max {
+  order: 2;
+}
+body.os-mode-win12 .traffic-lights .tl-close {
+  order: 3;
+}
+
+body.os-mode-win12 .tl-btn {
+  width: 34px !important;
+  height: 26px !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #cbd5e1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  transform: none !important;
+}
+
+body.os-mode-win12 .tl-min::after {
+  content: '—';
+}
+body.os-mode-win12 .tl-max::after {
+  content: '▢';
+}
+body.os-mode-win12 .tl-close::after {
+  content: '✕';
+}
+
+body.os-mode-win12 .tl-min:hover,
+body.os-mode-win12 .tl-max:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+}
+
+body.os-mode-win12 .tl-close:hover {
+  background: #e81123 !important;
+  color: #ffffff !important;
+}
+
+/* 4. Start Menu & Kalender Windows 12 Muncul Tepat di Atas Taskbar Bawah */
+body.os-mode-win12 #win12-start-menu {
+  top: auto !important;
+  bottom: 72px !important;
+  border-radius: 12px !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(56, 189, 248, 0.42) !important;
+}
+
+body.os-mode-win12 #win-calendar {
+  top: auto !important;
+  bottom: 72px !important;
+  right: 22px !important;
+  left: auto !important;
+  transform: none !important;
+  border-radius: 12px !important;
+}
+
+/* 5. Widget Desktop Gaya Windows 12 Fluent Bento Cards */
+body.os-mode-win12 .rm-skin {
+  border-radius: 10px !important;
+  background: rgba(15, 23, 42, 0.88) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.52) !important;
 }
 
 /* ---------------------------------------------------------
@@ -4595,10 +4742,10 @@ body.os-mode-macos #top-island.pinned {
   border-top: none !important;
   border-left: none !important;
   border-right: none !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.14) !important;
-  background: rgba(15, 23, 42, 0.52) !important;
-  backdrop-filter: blur(30px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(30px) saturate(200%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16) !important;
+  background: rgba(15, 23, 42, 0.54) !important;
+  backdrop-filter: blur(32px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(200%) !important;
   box-shadow: 0 1px 10px rgba(0, 0, 0, 0.22) !important;
   overflow: visible !important;
   cursor: default !important;
@@ -4685,15 +4832,146 @@ body.os-mode-macos #top-island.pinned .island-expanded {
   max-height: 420px !important;
   margin-top: 0 !important;
   padding: 14px !important;
-  border-radius: 20px !important;
-  background: rgba(15, 23, 42, 0.86) !important;
-  backdrop-filter: blur(28px) saturate(190%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.24) !important;
+  border-radius: 22px !important;
+  background: rgba(15, 23, 42, 0.84) !important;
+  backdrop-filter: blur(34px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(200%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
   box-shadow: 0 22px 50px rgba(0, 0, 0, 0.65) !important;
   opacity: 1 !important;
   pointer-events: auto !important;
   z-index: 2100 !important;
+}
+
+/* Kalender Popover macOS muncul di Pojok Kanan Atas tepat di bawah Jam Menu Bar */
+body.os-mode-macos #win-calendar {
+  top: 36px !important;
+  right: 12px !important;
+  left: auto !important;
+  transform: none !important;
+  border-radius: 24px !important;
+  border: 1px solid rgba(255, 255, 255, 0.32) !important;
+}
+
+/* Jendela Aplikasi macOS: Traffic Lights (× − +), Judul Tengah Bersih & Tanpa Tombol Snap Windows */
+body.os-mode-macos .custom-os-window,
+body.os-mode-macos .app-window {
+  border-radius: 20px !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow:
+    0 28px 68px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+}
+
+body.os-mode-macos .win-titlebar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(15, 23, 42, 0.4));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+body.os-mode-macos .win-titlebar .snap-btn {
+  display: none !important;
+}
+
+body.os-mode-macos .win-titlebar .win-tab {
+  background: transparent !important;
+  border: none !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #f8fafc !important;
+}
+
+body.os-mode-macos .traffic-lights .tl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-weight: 900;
+  color: transparent;
+  line-height: 1;
+}
+
+body.os-mode-macos .traffic-lights:hover .tl-btn {
+  color: rgba(15, 23, 42, 0.85);
+}
+
+body.os-mode-macos .tl-close::after {
+  content: '×';
+}
+body.os-mode-macos .tl-min::after {
+  content: '−';
+}
+body.os-mode-macos .tl-max::after {
+  content: '+';
+}
+
+/* Start Menu di Mode macOS Berubah Menjadi macOS Launchpad (Grid 6-Kolom Ikon Squircle Besar) */
+body.os-mode-macos #win12-start-menu {
+  top: 52px !important;
+  width: 780px !important;
+  max-width: 94vw !important;
+  padding: 26px 32px !important;
+  border-radius: 30px !important;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.16), rgba(15, 23, 42, 0.72)) !important;
+  backdrop-filter: blur(42px) saturate(210%) !important;
+  -webkit-backdrop-filter: blur(42px) saturate(210%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+}
+
+body.os-mode-macos #win12-start-menu .start-search-wrap {
+  width: 280px;
+  margin: 0 auto 22px auto;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+body.os-mode-macos #win12-start-menu .start-section-header,
+body.os-mode-macos #win12-start-menu .start-recent-grid,
+body.os-mode-macos #win12-start-menu .start-app-tag {
+  display: none !important;
+}
+
+body.os-mode-macos #win12-start-menu .start-apps-grid {
+  grid-template-columns: repeat(6, 1fr) !important;
+  gap: 18px 14px !important;
+  margin-bottom: 18px !important;
+}
+
+body.os-mode-macos #win12-start-menu .start-app-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 6px !important;
+}
+
+body.os-mode-macos #win12-start-menu .start-app-card:hover {
+  transform: scale(1.1) translateY(-3px) !important;
+}
+
+body.os-mode-macos #win12-start-menu .start-app-icon {
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 23% !important;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.42) !important;
+}
+
+body.os-mode-macos #win12-start-menu .start-app-name {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.65);
+}
+
+/* Widget Desktop Gaya macOS Sonoma Bento Widgets */
+body.os-mode-macos .rm-skin:not(#rm-skin-clock) {
+  border-radius: 26px !important;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.17), rgba(15, 23, 42, 0.58)) !important;
+  backdrop-filter: blur(36px) saturate(210%) !important;
+  -webkit-backdrop-filter: blur(36px) saturate(210%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.34) !important;
+  box-shadow:
+    0 20px 44px rgba(0, 0, 0, 0.45),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.45) !important;
 }
 
 /* Ikon Pertama di Dock Bawah Berubah Jadi Wajah Finder macOS */
