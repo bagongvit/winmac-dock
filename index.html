@@ -840,6 +840,12 @@
       </div>
     </div>
 
+    <div class="weather-city-search-box">
+      <input type="text" id="weather-city-input" placeholder="Ganti kota cuaca (contoh: Surabaya, Jakarta, Bandung, Bali, Tokyo)..." autocomplete="off" />
+      <button class="addr-go-btn" id="weather-city-search-btn">🔍 Cari</button>
+    </div>
+    <div id="weather-city-msg" class="weather-city-msg hidden"></div>
+
     <div class="cal-header">
       <button class="nav-icon-btn" id="cal-prev-btn">◀</button>
       <span class="cal-month-title" id="cal-month-title">November 2026</span>
@@ -880,9 +886,10 @@
     </div>
 
     <div class="start-section-header">
-      <span class="section-title">Disematkan (Pinned)</span>
+      <span class="section-title">Aplikasi (Apps)</span>
       <div class="category-pills">
-        <button class="cat-pill active" data-filter="all">Semua</button>
+        <button class="cat-pill active" data-filter="all">Disematkan</button>
+        <button class="cat-pill" data-filter="all-installed">Semua Aplikasi (A-Z)</button>
         <button class="cat-pill" data-filter="custom">UI Kustom</button>
         <button class="cat-pill" data-filter="office">Produktivitas</button>
       </div>
@@ -1042,6 +1049,17 @@
         <span class="start-app-name">Postman</span>
         <span class="start-app-tag">API Tool</span>
       </button>
+    </div>
+
+    <!-- Container Daftar Semua Aplikasi Windows (A-Z) Hasil Scan Otomatis -->
+    <div id="start-all-apps-container" class="start-all-apps-container hidden">
+      <div class="start-all-apps-subbar">
+        <span id="start-all-apps-count">Aplikasi Terpasang di PC</span>
+        <button class="link-btn" id="refresh-installed-apps-btn" title="Pindai Ulang Shortcut Start Menu">⟳ Segarkan</button>
+      </div>
+      <div class="start-all-apps-list" id="start-all-apps-list">
+        <div class="start-app-loading">Memuat aplikasi Windows...</div>
+      </div>
     </div>
 
     <div class="start-section-header">
@@ -1229,6 +1247,7 @@
         <div class="win-tab active">📌 Glass Notes & To-Do Productivity</div>
       </div>
       <div class="win-actions-right">
+        <button class="pill-action-btn" id="notes-export-btn" title="Simpan & Ekspor Catatan ke Desktop (.md / .txt)">💾 Ekspor</button>
         <button class="snap-btn" data-snap-win="win-notes" data-snap-dir="left" title="Aero Snap Kiri">⫷</button>
         <button class="snap-btn" data-snap-win="win-notes" data-snap-dir="right" title="Aero Snap Kanan">⫸</button>
         <span class="saved-badge" id="notes-saved-badge">✓ Tersimpan</span>
@@ -1245,6 +1264,11 @@
       <!-- Kolom Kanan: To-Do List -->
       <div class="todo-pane">
         <div class="pane-label">✅ Daftar Tugas Hari Ini</div>
+        <div class="todo-filter-pills">
+          <button class="todo-pill active" data-todo-filter="all">Semua (<span id="todo-count-all">0</span>)</button>
+          <button class="todo-pill" data-todo-filter="active">Aktif (<span id="todo-count-active">0</span>)</button>
+          <button class="todo-pill" data-todo-filter="done">Selesai (<span id="todo-count-done">0</span>)</button>
+        </div>
         <div class="todo-input-row">
           <input type="text" id="todo-input" placeholder="Tambah tugas baru..." autocomplete="off" />
           <button class="addr-go-btn" id="todo-add-btn">+ Tambah</button>
@@ -1275,6 +1299,8 @@
       </div>
 
       <div class="win-actions-right">
+        <span class="term-hist-hint" title="Gunakan tombol Panah Atas / Bawah (↑ / ↓) untuk riwayat perintah">↑↓ History</span>
+        <button class="pill-action-btn" id="term-clear-btn" title="Bersihkan Output Terminal">🗑️ Clear</button>
         <button class="snap-btn" data-snap-win="win-terminal" data-snap-dir="left" title="Aero Snap Kiri">⫷</button>
         <button class="snap-btn" data-snap-win="win-terminal" data-snap-dir="right" title="Aero Snap Kanan">⫸</button>
         <button class="pill-action-btn" id="term-open-native">↗ Native Terminal</button>
@@ -1284,20 +1310,24 @@
     <div class="term-quick-bar">
       <span class="quick-lbl">Perintah Cepat:</span>
       <button class="term-chip" data-cmd="dir">dir</button>
+      <button class="term-chip" data-cmd="git status">git status</button>
       <button class="term-chip" data-cmd="ipconfig">ipconfig</button>
       <button class="term-chip" data-cmd="node -v">node -v</button>
+      <button class="term-chip" data-cmd="npm -v">npm -v</button>
       <button class="term-chip" data-cmd="whoami">whoami</button>
-      <button class="term-chip" data-cmd="cls">clear</button>
+      <button class="term-chip" data-cmd="systeminfo">systeminfo</button>
+      <button class="term-chip" data-cmd="cls">cls</button>
     </div>
 
     <div class="term-output" id="term-output">
       <div class="term-line accent">WinMac OS Glass Terminal [Version 12.0.2026]</div>
-      <div class="term-line muted">Ketik perintah Windows (misal: dir, ipconfig, node -v) lalu tekan Enter.</div>
+      <div class="term-line muted">Ketik perintah Windows (misal: dir, git status, node -v) lalu tekan Enter. Navigasi riwayat dengan tombol ↑ dan ↓.</div>
     </div>
 
     <div class="term-input-row">
       <span class="term-prompt">PS WinMac&gt;</span>
-      <input type="text" id="term-input" placeholder="Ketik perintah..." autocomplete="off" />
+      <span class="term-cwd-badge" id="term-cwd-badge" title="Folder Kerja Aktif">📁 ~</span>
+      <input type="text" id="term-input" placeholder="Ketik perintah (tekan ↑ untuk riwayat)..." autocomplete="off" />
       <button class="addr-go-btn" id="term-send-btn">Run</button>
     </div>
 
@@ -2169,6 +2199,37 @@
   <div class="hot-corner-zone hc-tr interactive-widget" data-hc="tr" title="Hot Corner: Pusat Notifikasi"></div>
   <div class="hot-corner-zone hc-bl interactive-widget" data-hc="bl" title="Hot Corner: Aplikasi Aktif (Task Switcher)"></div>
   <div class="hot-corner-zone hc-br interactive-widget" data-hc="br" title="Hot Corner: Tampilkan Desktop / Aplikasi"></div>
+
+  <!-- =========================================================
+       15. AESTHETIC LOCK SCREEN & SCREENSAVER MODE (Point 4)
+       ========================================================= -->
+  <div id="win-lockscreen" class="lockscreen-overlay interactive-widget hidden">
+    <div class="lockscreen-ambient-glow"></div>
+    <div class="lockscreen-content">
+      <div class="lockscreen-clock-wrapper">
+        <div class="lockscreen-time" id="lockscreen-time">14:53</div>
+        <div class="lockscreen-date" id="lockscreen-date">Senin, 10 November 2026</div>
+      </div>
+
+      <div class="lockscreen-capsules">
+        <div class="lockscreen-capsule" id="lockscreen-weather">⛅ 29°C Cerah Berawan • Jakarta</div>
+        <div class="lockscreen-capsule" id="lockscreen-battery">⚡ 100% Mengisi Daya • Siap Digunakan</div>
+      </div>
+
+      <div class="lockscreen-user-card">
+        <div class="lockscreen-avatar">👤</div>
+        <div class="lockscreen-username" id="lockscreen-username">petruk punokawan</div>
+        <div class="lockscreen-userrole">WinMac Desktop OS Pro Suite</div>
+      </div>
+
+      <div class="lockscreen-unlock-container">
+        <button class="lockscreen-unlock-btn" id="lockscreen-unlock-btn" title="Klik atau tekan Spasi/Enter untuk membuka kunci layar">
+          <span class="unlock-icon">🔓</span>
+          <span class="unlock-text">Buka Kunci Layar (Tekan Spasi / Enter / Klik)</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

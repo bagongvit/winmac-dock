@@ -986,6 +986,164 @@ ipcMain.on('launch-app', (event, appId) => {
 });
 
 // =========================================================
+// 4A-1. AUTO-SCAN WINDOWS INSTALLED APPS (Start Menu Programs A-Z)
+// =========================================================
+let cachedInstalledApps = null;
+let isScanningInstalledApps = false;
+
+function scanDirShortcuts(dir, results = []) {
+  try {
+    if (!fs.existsSync(dir)) return results;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const ent of entries) {
+      const full = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        scanDirShortcuts(full, results);
+      } else if (ent.name.toLowerCase().endsWith('.lnk')) {
+        results.push({
+          rawName: ent.name.replace(/\.lnk$/i, ''),
+          path: full
+        });
+      }
+    }
+  } catch (_) {}
+  return results;
+}
+
+ipcMain.handle('get-installed-apps', async () => {
+  if (cachedInstalledApps && cachedInstalledApps.length > 0) {
+    return cachedInstalledApps;
+  }
+  if (isScanningInstalledApps) {
+    return cachedInstalledApps || [];
+  }
+  isScanningInstalledApps = true;
+
+  try {
+    const commonPath = 'C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs';
+    const userPath = path.join(
+      process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'),
+      'Microsoft',
+      'Windows',
+      'Start Menu',
+      'Programs'
+    );
+
+    const rawList = [...scanDirShortcuts(commonPath), ...scanDirShortcuts(userPath)];
+    const ignoredKeywords = [
+      'uninstall', 'unins', 'remove', 'readme', 'documentation',
+      'help', 'website', 'license', 'release notes', 'update', 'updater',
+      'setup', 'install', 'configuration tool'
+    ];
+
+    const map = new Map();
+    for (const item of rawList) {
+      const name = item.rawName.trim();
+      const lower = name.toLowerCase();
+      if (!name || name.length < 2) continue;
+      if (ignoredKeywords.some((kw) => lower.includes(kw))) continue;
+
+      if (!map.has(lower)) {
+        map.set(lower, {
+          name,
+          path: item.path,
+          letter: (name.charAt(0).toUpperCase() >= 'A' && name.charAt(0).toUpperCase() <= 'Z')
+            ? name.charAt(0).toUpperCase()
+            : '#'
+        });
+      }
+    }
+
+    const appItems = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+
+    // Ambil ikon asli .lnk via app.getFileIcon
+    const withIcons = await Promise.all(
+      appItems.map(async (appItem) => {
+        let iconDataUrl = '';
+        try {
+          const nativeIcon = await app.getFileIcon(appItem.path, { size: 'normal' });
+          if (nativeIcon && !nativeIcon.isEmpty()) {
+            iconDataUrl = nativeIcon.toDataURL();
+          }
+        } catch (_) {}
+        return {
+          ...appItem,
+          iconDataUrl
+        };
+      })
+    );
+
+    cachedInstalledApps = withIcons;
+    isScanningInstalledApps = false;
+    return cachedInstalledApps;
+  } catch (err) {
+    isScanningInstalledApps = false;
+    return [];
+  }
+});
+
+ipcMain.handle('open-app-path', async (event, appPath) => {
+  try {
+    if (!appPath) return { ok: false, error: 'Path kosong' };
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setIgnoreMouseEvents(true, { forward: true });
+      mainWindow.blur();
+    }
+    const err = await shell.openPath(appPath);
+    if (isAlwaysOnTop && mainWindow && !mainWindow.isDestroyed()) {
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.setAlwaysOnTop(true, 'screen-saver');
+        }
+      }, 400);
+    }
+    return { ok: !err, error: err || '' };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
+
+// =========================================================
+// 4A-2. EXPORT NOTES & TO-DO KE FILE (.TXT / .MD) DI DESKTOP
+// =========================================================
+ipcMain.handle('export-notes-file', async (event, payload = {}) => {
+  try {
+    const { content = '', todos = [], format = 'md' } = payload;
+    const desktopDir = path.join(os.homedir(), 'Desktop');
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const ext = format === 'txt' ? 'txt' : 'md';
+    const fileName = `WinMac-Notes-${stamp}.${ext}`;
+    const targetPath = path.join(desktopDir, fileName);
+
+    let fileBody = '';
+    if (ext === 'md') {
+      fileBody = `# WinMac Desktop OS — Catatan & Tugas\n*Diekspor pada: ${new Date().toLocaleString('id-ID')}*\n\n---\n\n## 📝 Catatan Bebas\n\n${content || '*(Tidak ada catatan)*'}\n\n---\n\n## ✅ Daftar Tugas (To-Do List)\n\n`;
+      if (Array.isArray(todos) && todos.length > 0) {
+        todos.forEach((t) => {
+          fileBody += `- [${t.done ? 'x' : ' '}] ${t.text}\n`;
+        });
+      } else {
+        fileBody += '*(Tidak ada tugas)*\n';
+      }
+    } else {
+      fileBody = `=== WINMAC DESKTOP OS - CATATAN & TUGAS ===\nTanggal: ${new Date().toLocaleString('id-ID')}\n\n--- CATATAN BEBAS ---\n${content || '(Kosong)'}\n\n--- DAFTAR TUGAS ---\n`;
+      if (Array.isArray(todos) && todos.length > 0) {
+        todos.forEach((t, i) => {
+          fileBody += `${i + 1}. [${t.done ? 'SELESAI' : 'BELUM'}] ${t.text}\n`;
+        });
+      } else {
+        fileBody += '(Kosong)\n';
+      }
+    }
+
+    await fs.promises.writeFile(targetPath, fileBody, 'utf8');
+    return { ok: true, path: targetPath, fileName };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+// =========================================================
 // 4B. LIVE RUNNING APPS DETECTOR & WIN32 WINDOW SWITCHER
 //     (Mendeteksi & Membuka Kembali MS Office, Chrome, VS Code, dll.)
 // =========================================================

@@ -610,6 +610,20 @@ function updateClock() {
       rmClockQuoteEl.textContent = rmQuotes[now.getMinutes() % rmQuotes.length];
     }
   }
+
+  // Update Jam & Tanggal Lock Screen (Poin 4)
+  const lockTime = document.getElementById('lockscreen-time');
+  const lockDate = document.getElementById('lockscreen-date');
+  if (lockTime) lockTime.textContent = `${hours}:${minutes}`;
+  if (lockDate) {
+    const fullDateLong = new Intl.DateTimeFormat('id-ID', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }).format(now);
+    lockDate.textContent = fullDateLong;
+  }
 }
 
 function renderCpuSparkline(latestCpu) {
@@ -712,9 +726,12 @@ function mapWmoCode(code) {
 }
 
 async function fetchLiveWeather() {
+  const city = appConfig.weatherCity || 'Jakarta';
+  const lat = appConfig.weatherLat || -6.2088;
+  const lon = appConfig.weatherLon || 106.8456;
   try {
     const res = await fetch(
-      'https://api.open-meteo.com/v1/forecast?latitude=-6.2088&longitude=106.8456&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto'
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto`
     );
     if (!res.ok) throw new Error('Network error');
     const data = await res.json();
@@ -723,7 +740,6 @@ async function fetchLiveWeather() {
     const hum = cur.relative_humidity_2m;
     const wind = Math.round(cur.wind_speed_10m);
     const wmo = mapWmoCode(cur.weather_code);
-    const tzCity = (data.timezone || 'Asia/Jakarta').split('/').pop().replace(/_/g, ' ');
 
     if (weatherMiniBadge) weatherMiniBadge.textContent = `${wmo.icon} ${temp}°C`;
     const tbWeatherMini = document.getElementById('tb-weather-mini');
@@ -732,18 +748,68 @@ async function fetchLiveWeather() {
     if (macosWeatherLbl) macosWeatherLbl.textContent = `${wmo.icon} ${temp}°C`;
     if (calWeatherBig) calWeatherBig.textContent = `${wmo.icon} ${temp}°C • ${wmo.desc}`;
     if (calWeatherLoc) {
-      calWeatherLoc.textContent = `${tzCity} (Live) • Kelembaban ${hum}% • Angin ${wind} km/j`;
+      calWeatherLoc.textContent = `${city} (Live) • Kelembaban ${hum}% • Angin ${wind} km/j`;
     }
     if (rmClockWeather) {
-      rmClockWeather.textContent = `${wmo.icon} ${temp}°C • ${wmo.desc} • Kelembaban ${hum}% (${tzCity})`;
+      rmClockWeather.textContent = `${wmo.icon} ${temp}°C • ${wmo.desc} • Kelembaban ${hum}% (${city})`;
+    }
+    const lockWeather = document.getElementById('lockscreen-weather');
+    if (lockWeather) {
+      lockWeather.textContent = `${wmo.icon} ${temp}°C ${wmo.desc} • ${city}`;
     }
   } catch (_) {
     // Fallback jika sedang offline
     if (calWeatherLoc) {
-      calWeatherLoc.textContent = 'Indonesia • Kelembaban 68% • Angin 12 km/j';
+      calWeatherLoc.textContent = `${city} • Kelembaban 68% • Angin 12 km/j`;
     }
   }
 }
+
+async function searchWeatherCity(query) {
+  const q = (query || '').trim();
+  const statusEl = document.getElementById('weather-city-msg');
+  if (!q) return;
+  if (statusEl) {
+    statusEl.classList.remove('hidden');
+    statusEl.textContent = `Mencari kota "${q}"...`;
+  }
+  try {
+    const geoRes = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=id&format=json`
+    );
+    if (!geoRes.ok) throw new Error('Geocoding error');
+    const geoData = await geoRes.json();
+    if (!geoData.results || geoData.results.length === 0) {
+      if (statusEl) statusEl.textContent = `Kota "${q}" tidak ditemukan. Coba nama kota lain.`;
+      return;
+    }
+    const match = geoData.results[0];
+    const cityName = match.name + (match.country ? `, ${match.country}` : '');
+    appConfig.weatherCity = cityName;
+    appConfig.weatherLat = match.latitude;
+    appConfig.weatherLon = match.longitude;
+    saveConfig();
+
+    if (statusEl) {
+      statusEl.textContent = `✓ Lokasi diatur ke: ${cityName}`;
+      setTimeout(() => statusEl.classList.add('hidden'), 3500);
+    }
+    await fetchLiveWeather();
+  } catch (err) {
+    if (statusEl) statusEl.textContent = 'Gagal mencari kota. Periksa koneksi internet.';
+  }
+}
+
+document.getElementById('weather-city-search-btn')?.addEventListener('click', () => {
+  const input = document.getElementById('weather-city-input');
+  if (input) searchWeatherCity(input.value);
+});
+
+document.getElementById('weather-city-input')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    searchWeatherCity(e.target.value);
+  }
+});
 
 document.getElementById('refresh-weather-btn')?.addEventListener('click', fetchLiveWeather);
 
@@ -1098,7 +1164,8 @@ document.getElementById('close-start-btn')?.addEventListener('click', () => {
 });
 
 document.getElementById('lock-pc-btn')?.addEventListener('click', () => {
-  ipcRenderer.send('launch-app', 'lock');
+  document.getElementById('win12-start-menu')?.classList.add('hidden');
+  showLockScreen();
 });
 
 document.getElementById('reset-pos-start-btn')?.addEventListener('click', () => {
@@ -1121,15 +1188,128 @@ startAppCards.forEach((card) => {
 });
 
 let activeCategory = 'all';
+let installedAppsList = [];
+let hasLoadedInstalledApps = false;
+
+async function loadInstalledApps(force = false) {
+  const container = document.getElementById('start-all-apps-list');
+  const countEl = document.getElementById('start-all-apps-count');
+  if (!container) return;
+  if (hasLoadedInstalledApps && !force && installedAppsList.length > 0) {
+    renderInstalledApps(installedAppsList);
+    return;
+  }
+  container.innerHTML = '<div class="start-app-loading">Memindai semua aplikasi Windows (A-Z)...</div>';
+  try {
+    const apps = await ipcRenderer.invoke('get-installed-apps');
+    installedAppsList = Array.isArray(apps) ? apps : [];
+    hasLoadedInstalledApps = true;
+    if (countEl) countEl.textContent = `${installedAppsList.length} Aplikasi Terpasang di PC`;
+    renderInstalledApps(installedAppsList);
+  } catch (err) {
+    container.innerHTML = '<div class="start-app-loading">Gagal memuat aplikasi Windows.</div>';
+  }
+}
+
+function renderInstalledApps(apps) {
+  const container = document.getElementById('start-all-apps-list');
+  if (!container) return;
+  container.innerHTML = '';
+  if (!apps || apps.length === 0) {
+    container.innerHTML = '<div class="start-app-loading">Tidak ada aplikasi yang cocok.</div>';
+    return;
+  }
+
+  const groups = {};
+  apps.forEach((app) => {
+    const letter = app.letter || '#';
+    if (!groups[letter]) groups[letter] = [];
+    groups[letter].push(app);
+  });
+
+  const letters = Object.keys(groups).sort((a, b) => {
+    if (a === '#') return 1;
+    if (b === '#') return -1;
+    return a.localeCompare(b);
+  });
+
+  letters.forEach((ltr) => {
+    const groupEl = document.createElement('div');
+    groupEl.className = 'start-letter-group';
+    groupEl.innerHTML = `<div class="start-letter-title">${ltr}</div>`;
+
+    groups[ltr].forEach((app) => {
+      const row = document.createElement('div');
+      row.className = 'start-app-row';
+      row.dataset.path = app.path;
+      row.dataset.name = app.name.toLowerCase();
+      row.innerHTML = `
+        ${
+          app.iconDataUrl
+            ? `<img class="start-app-row-icon" src="${app.iconDataUrl}" alt="${app.name}" />`
+            : `<div class="start-app-row-icon">🪟</div>`
+        }
+        <div class="start-app-row-info">
+          <span class="start-app-row-name">${app.name}</span>
+          <span class="start-app-row-sub">Aplikasi Windows</span>
+        </div>
+      `;
+
+      row.addEventListener('click', async () => {
+        document.getElementById('win12-start-menu')?.classList.add('hidden');
+        await ipcRenderer.invoke('open-app-path', app.path);
+      });
+
+      groupEl.appendChild(row);
+    });
+
+    container.appendChild(groupEl);
+  });
+}
+
+document.getElementById('refresh-installed-apps-btn')?.addEventListener('click', () => {
+  loadInstalledApps(true);
+});
 
 function filterStartApps() {
   const q = (startSearchInput?.value || '').toLowerCase().trim();
+  const pinnedGrid = document.getElementById('start-apps-grid');
+  const allAppsContainer = document.getElementById('start-all-apps-container');
+
+  if (activeCategory === 'all-installed') {
+    if (pinnedGrid) pinnedGrid.style.display = 'none';
+    if (allAppsContainer) allAppsContainer.classList.remove('hidden');
+    if (!hasLoadedInstalledApps) {
+      loadInstalledApps();
+    } else {
+      const filtered = installedAppsList.filter((a) => a.name.toLowerCase().includes(q));
+      renderInstalledApps(filtered);
+    }
+    return;
+  }
+
+  // Kategori Pinned / Custom / Office
   startAppCards.forEach((card) => {
     const matchCat = activeCategory === 'all' || card.dataset.cat === activeCategory;
     const matchText =
       card.dataset.name.includes(q) || card.textContent.toLowerCase().includes(q);
     card.style.display = matchCat && matchText ? 'flex' : 'none';
   });
+
+  if (pinnedGrid) pinnedGrid.style.display = 'grid';
+
+  // Jika user mengetik di search bar, tampilkan juga aplikasi terpasang di bawahnya
+  if (q.length > 0) {
+    if (allAppsContainer) allAppsContainer.classList.remove('hidden');
+    if (!hasLoadedInstalledApps) {
+      loadInstalledApps();
+    } else {
+      const matchingInstalled = installedAppsList.filter((a) => a.name.toLowerCase().includes(q));
+      renderInstalledApps(matchingInstalled);
+    }
+  } else {
+    if (allAppsContainer) allAppsContainer.classList.add('hidden');
+  }
 }
 
 startSearchInput?.addEventListener('input', filterStartApps);
@@ -1139,6 +1319,9 @@ catPills.forEach((pill) => {
     catPills.forEach((p) => p.classList.remove('active'));
     pill.classList.add('active');
     activeCategory = pill.dataset.filter;
+    if (activeCategory === 'all-installed') {
+      loadInstalledApps();
+    }
     filterStartApps();
   });
 });
@@ -1899,13 +2082,14 @@ document.getElementById('exp-open-native')?.addEventListener('click', () => {
 });
 
 // =========================================================
-// 8. WIDGET STICKY NOTES & TO-DO LIST (Auto-Save)
+// 8. WIDGET STICKY NOTES & TO-DO LIST (Auto-Save, Filter & Export)
 // =========================================================
 const stickyTextarea = document.getElementById('sticky-textarea');
 const notesSavedBadge = document.getElementById('notes-saved-badge');
 const todoInput = document.getElementById('todo-input');
 const todoAddBtn = document.getElementById('todo-add-btn');
 const todoListEl = document.getElementById('todo-list');
+let currentTodoFilter = 'all';
 
 if (stickyTextarea) {
   stickyTextarea.value = appConfig.stickyNote || '';
@@ -1925,7 +2109,35 @@ function renderTodos() {
   if (!todoListEl) return;
   todoListEl.innerHTML = '';
 
-  appConfig.todos.forEach((todo) => {
+  const total = appConfig.todos.length;
+  const doneCount = appConfig.todos.filter((t) => t.done).length;
+  const activeCount = total - doneCount;
+
+  const countAll = document.getElementById('todo-count-all');
+  const countActive = document.getElementById('todo-count-active');
+  const countDone = document.getElementById('todo-count-done');
+  if (countAll) countAll.textContent = total;
+  if (countActive) countActive.textContent = activeCount;
+  if (countDone) countDone.textContent = doneCount;
+
+  const filtered = appConfig.todos.filter((t) => {
+    if (currentTodoFilter === 'active') return !t.done;
+    if (currentTodoFilter === 'done') return t.done;
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    const emptyRow = document.createElement('div');
+    emptyRow.style.padding = '14px';
+    emptyRow.style.fontSize = '12px';
+    emptyRow.style.color = 'var(--text-secondary)';
+    emptyRow.style.textAlign = 'center';
+    emptyRow.textContent = 'Tidak ada tugas dalam kategori ini.';
+    todoListEl.appendChild(emptyRow);
+    return;
+  }
+
+  filtered.forEach((todo) => {
     const row = document.createElement('div');
     row.className = `todo-item ${todo.done ? 'done' : ''}`;
     row.innerHTML = `
@@ -1952,6 +2164,45 @@ function renderTodos() {
   });
 }
 
+document.querySelectorAll('[data-todo-filter]').forEach((pill) => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('[data-todo-filter]').forEach((p) => p.classList.remove('active'));
+    pill.classList.add('active');
+    currentTodoFilter = pill.dataset.todoFilter;
+    renderTodos();
+  });
+});
+
+document.getElementById('notes-export-btn')?.addEventListener('click', async () => {
+  const content = stickyTextarea ? stickyTextarea.value : '';
+  const todos = appConfig.todos || [];
+  const exportBtn = document.getElementById('notes-export-btn');
+  if (exportBtn) exportBtn.textContent = '⏳ Menyimpan...';
+  try {
+    const res = await ipcRenderer.invoke('export-notes-file', {
+      content,
+      todos,
+      format: 'md'
+    });
+    if (res.ok) {
+      if (notesSavedBadge) {
+        notesSavedBadge.textContent = '✓ Disimpan ke Desktop';
+        setTimeout(() => {
+          notesSavedBadge.textContent = '✓ Tersimpan';
+        }, 3000);
+      }
+      if (exportBtn) exportBtn.textContent = '✓ Tersimpan!';
+      setTimeout(() => {
+        if (exportBtn) exportBtn.textContent = '💾 Ekspor';
+      }, 2000);
+    } else {
+      if (exportBtn) exportBtn.textContent = '❌ Gagal';
+    }
+  } catch (err) {
+    if (exportBtn) exportBtn.textContent = '❌ Gagal';
+  }
+});
+
 function addTodoItem() {
   const val = (todoInput?.value || '').trim();
   if (!val) return;
@@ -1973,24 +2224,42 @@ todoInput?.addEventListener('keydown', (e) => {
 renderTodos();
 
 // =========================================================
-// 9. CUSTOM GLASS TERMINAL & CALCULATOR
+// 9. CUSTOM GLASS TERMINAL & CALCULATOR (Command History & Chips)
 // =========================================================
 const termOutputEl = document.getElementById('term-output');
 const termInputEl = document.getElementById('term-input');
 const termSendBtn = document.getElementById('term-send-btn');
+let termHistory = [];
+let termHistoryIndex = -1;
+
+function updateTerminalCwdDisplay(targetPath) {
+  const cwdBadge = document.getElementById('term-cwd-badge');
+  if (!cwdBadge) return;
+  const p = targetPath || currentExplorerPath || 'C:\\';
+  const folderName = p.split(/[/\\]/).filter(Boolean).pop() || 'Root';
+  cwdBadge.textContent = `📁 ${folderName}`;
+  cwdBadge.title = p;
+}
 
 async function executeTerminalCommand(cmd) {
   const cleanCmd = cmd.trim();
   if (!cleanCmd) return;
+
+  // Simpan riwayat perintah untuk navigasi Panah Atas / Bawah
+  if (termHistory.length === 0 || termHistory[termHistory.length - 1] !== cleanCmd) {
+    termHistory.push(cleanCmd);
+  }
+  termHistoryIndex = termHistory.length;
 
   if (cleanCmd.toLowerCase() === 'cls' || cleanCmd.toLowerCase() === 'clear') {
     termOutputEl.innerHTML = '';
     return;
   }
 
+  const promptText = document.querySelector('.term-prompt')?.textContent || 'PS WinMac>';
   const cmdLine = document.createElement('div');
   cmdLine.className = 'term-line cmd';
-  cmdLine.textContent = `PS WinMac> ${cleanCmd}`;
+  cmdLine.textContent = `${promptText} ${cleanCmd}`;
   termOutputEl.appendChild(cmdLine);
 
   const res = await ipcRenderer.invoke('run-terminal-cmd', cleanCmd, currentExplorerPath);
@@ -2000,6 +2269,7 @@ async function executeTerminalCommand(cmd) {
   termOutputEl.appendChild(outLine);
 
   termOutputEl.scrollTop = termOutputEl.scrollHeight;
+  updateTerminalCwdDisplay(currentExplorerPath);
 }
 
 termSendBtn?.addEventListener('click', () => {
@@ -2011,6 +2281,25 @@ termInputEl?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     executeTerminalCommand(termInputEl.value);
     termInputEl.value = '';
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (termHistory.length === 0) return;
+    if (termHistoryIndex > 0) {
+      termHistoryIndex--;
+    } else {
+      termHistoryIndex = 0;
+    }
+    termInputEl.value = termHistory[termHistoryIndex] || '';
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (termHistory.length === 0) return;
+    if (termHistoryIndex < termHistory.length - 1) {
+      termHistoryIndex++;
+      termInputEl.value = termHistory[termHistoryIndex] || '';
+    } else {
+      termHistoryIndex = termHistory.length;
+      termInputEl.value = '';
+    }
   }
 });
 
@@ -2018,6 +2307,10 @@ document.querySelectorAll('.term-chip').forEach((chip) => {
   chip.addEventListener('click', () => {
     executeTerminalCommand(chip.dataset.cmd);
   });
+});
+
+document.getElementById('term-clear-btn')?.addEventListener('click', () => {
+  if (termOutputEl) termOutputEl.innerHTML = '';
 });
 
 document.getElementById('term-open-native')?.addEventListener('click', () => {
@@ -3033,7 +3326,7 @@ const spotlightCommands = [
   { label: '🔔 Buka Pusat Notifikasi & Riwayat (Alt+N)', keywords: 'notification notifikasi bell dnd', run: () => openCustomWindow('win-notifications') },
   { label: '📸 Tangkap Layar & Editor Coret-Coret (Alt+S)', keywords: 'screenshot capture snipping coret gambar', run: () => captureAndOpenScreenshotStudio() },
   { label: '🗂️ Buka App Stack Folder di Dock', keywords: 'folder stack grup aplikasi', run: () => toggleCustomWindow('dock-stack-popover') },
-  { label: '🔒 Kunci Layar Windows (Lock PC)', keywords: 'lock kunci layar pc', run: () => ipcRenderer.send('launch-app', 'lock') }
+  { label: '🔒 Kunci Layar (Lock Screen / Screensaver Mode)', keywords: 'lock kunci layar pc screensaver sleep', run: () => showLockScreen() }
 ];
 
 // Konversi Mata Uang & Satuan Pintar di Spotlight (contoh: "10 usd to idr", "100 km to mile", "32 c to f")
@@ -4688,9 +4981,57 @@ document.querySelectorAll('.hot-corner-zone').forEach((zone) => {
 });
 
 // Pastikan jendela baru terdaftar di klik-through handler
-['win-notifications', 'dock-stack-popover', 'win-screenshot'].forEach((id) => {
+['win-notifications', 'dock-stack-popover', 'win-screenshot', 'win-lockscreen'].forEach((id) => {
   const el = document.getElementById(id);
   if (el) bindInteractiveWidgetEvents(el);
+});
+
+// =========================================================
+// 15. AESTHETIC LOCK SCREEN & SCREENSAVER CONTROLLER (Poin 4)
+// =========================================================
+let isLockScreenActive = false;
+
+function showLockScreen() {
+  const ls = document.getElementById('win-lockscreen');
+  if (!ls) return;
+  isLockScreenActive = true;
+  ls.classList.remove('hidden', 'unlocking');
+  ipcRenderer.send('set-ignore-mouse-events', false);
+
+  const lockUser = document.getElementById('lockscreen-username');
+  if (lockUser) {
+    lockUser.textContent = (document.getElementById('start-username')?.textContent || 'User');
+  }
+
+  // Update jam & tanggal pada lock screen seketika
+  updateClock();
+}
+
+function hideLockScreen() {
+  const ls = document.getElementById('win-lockscreen');
+  if (!ls || !isLockScreenActive) return;
+  ls.classList.add('unlocking');
+  setTimeout(() => {
+    ls.classList.add('hidden');
+    ls.classList.remove('unlocking');
+    isLockScreenActive = false;
+  }, 320);
+}
+
+document.getElementById('lockscreen-unlock-btn')?.addEventListener('click', hideLockScreen);
+document.getElementById('win-lockscreen')?.addEventListener('click', (e) => {
+  if (e.target.id === 'win-lockscreen' || e.target.classList.contains('lockscreen-ambient-glow')) {
+    hideLockScreen();
+  }
+});
+
+window.addEventListener('keydown', (e) => {
+  if (isLockScreenActive) {
+    if (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape') {
+      e.preventDefault();
+      hideLockScreen();
+    }
+  }
 });
 
 // Jalankan pemindaian awal, animasi masuk widget, & polling ringan tiap 4 detik
