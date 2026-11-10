@@ -5059,9 +5059,9 @@ document.querySelectorAll('.hot-corner-zone').forEach((zone) => {
         toggleCustomWindow('win-task-switcher');
         refreshRunningApps(true);
       } else if (corner === 'br') {
-        setAppPassthroughMode(!isAppPassthroughMode);
+        toggleCustomWindow('win-notes');
       }
-    }, 320);
+    }, 650);
   });
   zone.addEventListener('mouseleave', () => {
     clearTimeout(hcDwellTimer);

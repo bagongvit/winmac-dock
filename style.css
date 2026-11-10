@@ -3636,6 +3636,8 @@ body.app-passthrough-mode #bottom-dock-wrapper {
   top: auto !important;
   right: auto !important;
   bottom: 2px !important;
+  width: auto !important;
+  max-width: calc(100vw - 540px) !important;
   transform: translateX(-50%) !important;
   padding-top: 2px !important;
 }
@@ -3682,12 +3684,14 @@ body.app-passthrough-mode .dock-separator {
   bottom: 0;
   height: 48px;
   background: var(--surface-expanded);
+  backdrop-filter: blur(var(--glass-blur, 20px)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 20px)) saturate(180%);
   border-top: 1px solid var(--border-outer);
   box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.45);
   z-index: 900;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   padding: 0 16px;
   opacity: 0;
   transform: translateY(100%);
@@ -4628,8 +4632,8 @@ body.app-passthrough-mode #taskbar-cover-strip {
 /* Hot Corners ala macOS (4 Pojok Layar Pintar) */
 .hot-corner-zone {
   position: fixed;
-  width: 18px;
-  height: 18px;
+  width: 8px;
+  height: 8px;
   z-index: 2450;
   opacity: 0;
   transition: opacity 0.2s ease, transform 0.2s ease;
@@ -4832,7 +4836,7 @@ body.os-mode-win12 #top-island.pinned .island-expanded {
 }
 
 /* 2. Taskbar Bawah Windows 12: Floating Lebar 3-Zona (Kiri: Start+Search | Tengah: Ikon | Kanan: System Tray) */
-body.os-mode-win12 #bottom-dock-wrapper {
+body.os-mode-win12:not(.app-passthrough-mode) #bottom-dock-wrapper {
   bottom: 10px;
   width: 95vw;
   max-width: 1380px;
@@ -5660,8 +5664,8 @@ body.os-mode-win12 .running-app-card:hover {
 
 /* Mode Aplikasi Saat Tema Windows 12 Aktif */
 body.os-mode-win12.app-passthrough-mode #taskbar-cover-strip {
-  background: rgba(15, 23, 42, 0.94) !important;
-  border-top: 1px solid rgba(56, 189, 248, 0.5) !important;
+  background: var(--surface-expanded) !important;
+  border-top: 1px solid var(--border-outer) !important;
 }
 
 body.os-mode-win12.app-passthrough-mode .win12-taskbar-search {
@@ -5671,9 +5675,9 @@ body.os-mode-win12.app-passthrough-mode .win12-taskbar-search {
   height: 30px;
   padding: 0 11px;
   border-radius: 999px;
-  background: rgba(30, 41, 59, 0.9);
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  color: #e2e8f0;
+  background: var(--card-bg);
+  border: 1px solid var(--border-inner);
+  color: var(--text-primary);
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
@@ -5687,15 +5691,11 @@ body.os-mode-macos #win-task-switcher {
   max-width: 95vw;
   border-radius: 26px;
   padding: 18px 20px;
-  background: linear-gradient(
-    180deg,
-    rgba(30, 41, 59, 0.82) 0%,
-    rgba(15, 23, 42, 0.88) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.38);
+  background: var(--surface-bg);
+  border: 1px solid var(--border-outer);
   box-shadow:
-    0 28px 65px rgba(0, 0, 0, 0.72),
-    inset 0 1.5px 1px rgba(255, 255, 255, 0.45);
+    var(--shadow-elevation),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.35);
 }
 
 body.os-mode-macos .taskview-mac-lights {
@@ -5774,17 +5774,15 @@ body.os-mode-macos .running-app-card:hover {
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* Mode Aplikasi Saat Tema macOS Aktif: Dock bawah memiliki rak kaca 3D khas macOS Sonoma */
+/* Mode Aplikasi Saat Tema macOS Aktif: Dock bawah menyatu mulus di tengah Strip Taskbar tanpa kotak bertumpuk */
 body.os-mode-macos.app-passthrough-mode #dock {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.22) 0%,
-    rgba(15, 23, 42, 0.65) 100%
-  ) !important;
-  border: 1px solid rgba(255, 255, 255, 0.38) !important;
-  border-radius: 16px !important;
-  padding: 3px 12px 5px !important;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.45) !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 2px 8px 4px !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 /* =========================================================
