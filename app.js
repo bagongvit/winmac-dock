@@ -170,8 +170,18 @@ function playUiSound(type = 'open') {
   } catch (_) {}
 }
 
+const winAnimTimers = {};
+const savedWinRects = {};
+
+function getDockButtonForWindow(winId) {
+  if (winId === 'win-screenshot') {
+    return document.getElementById('dock-screenshot-btn');
+  }
+  return document.querySelector(`.dock-item[data-custom-win="${winId}"]`);
+}
+
 function updateDockDotState(winId, state) {
-  const dockBtn = document.querySelector(`.dock-item[data-custom-win="${winId}"]`);
+  const dockBtn = getDockButtonForWindow(winId);
   const dot = dockBtn?.querySelector('.dock-dot');
   if (!dot) return;
 
@@ -186,6 +196,11 @@ function updateDockDotState(winId, state) {
 function openCustomWindow(winId) {
   const winEl = document.getElementById(winId);
   if (!winEl) return;
+
+  if (winAnimTimers[winId]) {
+    clearTimeout(winAnimTimers[winId]);
+    delete winAnimTimers[winId];
+  }
 
   if (winId !== 'win12-start-menu' && winId !== 'win-calendar') {
     document.getElementById('win12-start-menu')?.classList.add('hidden');
@@ -213,6 +228,12 @@ function openCustomWindow(winId) {
 function minimizeCustomWindow(winId) {
   const winEl = document.getElementById(winId);
   if (!winEl || winEl.classList.contains('hidden')) return;
+
+  if (winAnimTimers[winId]) {
+    clearTimeout(winAnimTimers[winId]);
+    delete winAnimTimers[winId];
+  }
+
   minimizedState[winId] = true;
   updateDockDotState(winId, 'minimized');
 
@@ -221,22 +242,29 @@ function minimizeCustomWindow(winId) {
   winEl.classList.add('win-anim-minimize');
   playUiSound('minimize');
 
-  const dockBtn = document.querySelector(`.dock-item[data-custom-win="${winId}"]`);
+  const dockBtn = getDockButtonForWindow(winId);
   if (dockBtn) {
     dockBtn.classList.remove('dock-receive');
     void dockBtn.offsetWidth;
     dockBtn.classList.add('dock-receive');
   }
 
-  setTimeout(() => {
+  winAnimTimers[winId] = setTimeout(() => {
     winEl.classList.add('hidden');
     winEl.classList.remove('win-anim-minimize');
+    delete winAnimTimers[winId];
   }, 240);
 }
 
 function closeCustomWindow(winId) {
   const winEl = document.getElementById(winId);
   if (!winEl || winEl.classList.contains('hidden')) return;
+
+  if (winAnimTimers[winId]) {
+    clearTimeout(winAnimTimers[winId]);
+    delete winAnimTimers[winId];
+  }
+
   minimizedState[winId] = false;
   updateDockDotState(winId, 'closed');
 
@@ -245,9 +273,10 @@ function closeCustomWindow(winId) {
   winEl.classList.add('win-anim-close');
   playUiSound('close');
 
-  setTimeout(() => {
+  winAnimTimers[winId] = setTimeout(() => {
     winEl.classList.add('hidden');
-    winEl.classList.remove('win-anim-close');
+    winEl.classList.remove('win-anim-close', 'maximized', 'snap-left', 'snap-right');
+    delete winAnimTimers[winId];
   }, 185);
 }
 
@@ -315,23 +344,58 @@ document.querySelectorAll('[data-min-win]').forEach((btn) => {
   });
 });
 
-// Tombol Hijau (Maximize) & Aero Snap (Left / Right 50%)
+// Tombol Hijau (Maximize / Restore) & Double-Click Titlebar + Aero Snap
 function toggleMaximizeWindow(winId) {
   const winEl = document.getElementById(winId);
   if (!winEl) return;
-  winEl.classList.remove('snap-left', 'snap-right');
-  winEl.classList.toggle('maximized');
-}
 
-document.getElementById('exp-maximize-btn')?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  toggleMaximizeWindow('win-explorer');
-});
+  winEl.classList.remove('snap-left', 'snap-right');
+  const willMaximize = !winEl.classList.contains('maximized');
+
+  if (willMaximize) {
+    savedWinRects[winId] = {
+      left: winEl.style.left,
+      top: winEl.style.top,
+      width: winEl.style.width,
+      height: winEl.style.height,
+      transform: winEl.style.transform
+    };
+    winEl.classList.add('maximized');
+    topZIndex += 1;
+    winEl.style.zIndex = topZIndex;
+  } else {
+    winEl.classList.remove('maximized');
+    const prev = savedWinRects[winId];
+    if (prev) {
+      winEl.style.left = prev.left;
+      winEl.style.top = prev.top;
+      winEl.style.width = prev.width;
+      winEl.style.height = prev.height;
+      winEl.style.transform = prev.transform;
+    }
+  }
+
+  document.querySelectorAll(`[data-max-win="${winId}"]`).forEach((b) => {
+    b.title = willMaximize ? 'Kembalikan Ukuran Normal (Restore)' : 'Perbesar Penuh (Maximize)';
+  });
+  playUiSound(willMaximize ? 'open' : 'minimize');
+}
 
 document.querySelectorAll('[data-max-win]').forEach((btn) => {
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     toggleMaximizeWindow(btn.dataset.maxWin);
+  });
+});
+
+// Double-Click pada Titlebar Jendela untuk Maximize / Restore seperti Windows & macOS asli
+document.querySelectorAll('.custom-os-window .win-titlebar').forEach((bar) => {
+  bar.addEventListener('dblclick', (e) => {
+    if (e.target.closest('button') || e.target.closest('input')) return;
+    const winEl = bar.closest('.custom-os-window');
+    if (winEl && winEl.id && winEl.querySelector('.tl-max')) {
+      toggleMaximizeWindow(winEl.id);
+    }
   });
 });
 
@@ -4490,7 +4554,14 @@ document.getElementById('top-screenshot-btn')?.addEventListener('click', (e) => 
 
 document.getElementById('dock-screenshot-btn')?.addEventListener('click', (e) => {
   e.stopPropagation();
-  captureAndOpenScreenshotStudio();
+  const shotWin = document.getElementById('win-screenshot');
+  if (minimizedState['win-screenshot']) {
+    openCustomWindow('win-screenshot');
+  } else if (shotWin && !shotWin.classList.contains('hidden')) {
+    minimizeCustomWindow('win-screenshot');
+  } else {
+    captureAndOpenScreenshotStudio();
+  }
 });
 
 document.getElementById('tb-screenshot-btn')?.addEventListener('click', (e) => {

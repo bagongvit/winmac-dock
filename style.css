@@ -937,64 +937,135 @@ body.font-serif {
   background: var(--surface-expanded);
 }
 
-.app-window.maximized {
+.app-window.maximized,
+.custom-os-window.maximized {
   top: 60px !important;
   left: 24px !important;
   transform: none !important;
   width: calc(100vw - 48px) !important;
   height: calc(100vh - 165px) !important;
+  display: flex;
+  flex-direction: column;
+}
+
+#win-calculator.maximized .calc-screen {
+  padding: 28px 32px 20px;
+}
+
+#win-calculator.maximized .calc-result {
+  font-size: 48px;
+}
+
+#win-calculator.maximized .calc-pad {
+  flex: 1;
+  gap: 12px;
+  padding: 20px;
+}
+
+#win-calculator.maximized .calc-key {
+  height: 100%;
+  min-height: 54px;
+  font-size: 20px;
 }
 
 .win-titlebar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  gap: 12px;
+  padding: 11px 15px;
   border-bottom: 1px solid var(--border-inner);
   cursor: grab;
 }
 
 .win-titlebar:active { cursor: grabbing; }
-.traffic-lights { display: flex; align-items: center; gap: 8px; }
+.traffic-lights {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
 
 .tl-btn {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   border: none;
   cursor: pointer;
-  transition: transform 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-weight: 900;
+  line-height: 1;
+  color: transparent;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, filter 0.15s ease, color 0.12s ease;
 }
 
-.tl-btn:hover { transform: scale(1.15); }
+.traffic-lights:hover .tl-btn {
+  color: rgba(15, 23, 42, 0.85);
+}
+
+.tl-btn:hover { transform: scale(1.16); filter: brightness(1.08); }
 .tl-close { background: #ff5f56; box-shadow: 0 0 8px rgba(255, 95, 86, 0.5); }
 .tl-min   { background: #ffbd2e; box-shadow: 0 0 8px rgba(255, 189, 46, 0.5); }
 .tl-max   { background: #27c93f; box-shadow: 0 0 8px rgba(39, 201, 63, 0.5); }
 
-.win-tabs { display: flex; align-items: center; gap: 8px; }
+.tl-close::after { content: '×'; }
+.tl-min::after   { content: '−'; }
+.tl-max::after   { content: '+'; }
+
+.win-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
 
 .win-tab {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 14px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 6px 13px;
   border-radius: 12px;
   background: var(--card-hover);
   border: 1px solid var(--border-inner);
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.win-actions-right { display: flex; gap: 6px; }
+.win-tab span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.win-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
 
 .pill-action-btn {
-  padding: 5px 11px;
+  padding: 5px 10px;
   border-radius: 999px;
   border: 1px solid var(--border-inner);
   background: var(--card-bg);
   color: var(--accent-primary);
-  font-size: 11px;
+  font-size: 10.8px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
   transition: all 0.18s ease;
 }
@@ -4608,6 +4679,23 @@ body.os-mode-win12 .dock-dot.running-live {
   box-shadow: 0 0 10px #38bdf8 !important;
 }
 
+body.os-mode-win12 .dock-dot.minimized {
+  width: 10px !important;
+  height: 3.5px !important;
+  border-radius: 999px !important;
+  bottom: -2px !important;
+  background: #f59e0b !important;
+  box-shadow: 0 0 8px #f59e0b !important;
+}
+
+body.os-mode-win12 .custom-os-window.maximized,
+body.os-mode-win12 .app-window.maximized {
+  top: 52px !important;
+  left: 18px !important;
+  width: calc(100vw - 36px) !important;
+  height: calc(100vh - 134px) !important;
+}
+
 /* 3. Jendela Aplikasi Windows 12: Sudut Tegas 10px & Tombol Kontrol (— ▢ ✕) di Pojok Kanan Atas! */
 body.os-mode-win12 .custom-os-window,
 body.os-mode-win12 .app-window {
@@ -5021,6 +5109,23 @@ body.os-mode-macos .dock-dot.running-live {
   bottom: -7px !important;
   background: #ffffff !important;
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.95) !important;
+}
+
+body.os-mode-macos .dock-dot.minimized {
+  width: 5px !important;
+  height: 5px !important;
+  border-radius: 50% !important;
+  bottom: -7px !important;
+  background: #f59e0b !important;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.95) !important;
+}
+
+body.os-mode-macos .custom-os-window.maximized,
+body.os-mode-macos .app-window.maximized {
+  top: 38px !important;
+  left: 18px !important;
+  width: calc(100vw - 36px) !important;
+  height: calc(100vh - 134px) !important;
 }
 
 /* =========================================================
