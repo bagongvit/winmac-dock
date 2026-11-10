@@ -1786,8 +1786,17 @@ body.font-serif {
 }
 
 .dock-dot.active {
-  width: 5px;
-  background: rgba(148, 163, 184, 0.65);
+  width: 0;
+  background: transparent;
+}
+
+.native-exe-icon-img {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.35));
+  pointer-events: none;
+  z-index: 1;
 }
 
 .dock-dot.running {
@@ -4534,13 +4543,10 @@ body.os-mode-win12 .dock-icon {
   border-radius: 20%;
 }
 
-/* Indikator Garis Lebar Menyala Khas Windows 11 / Windows 12 */
+/* Indikator Garis Lebar Menyala Khas Windows 11 / Windows 12 (Hanya saat aplikasi benar-benar terbuka) */
 body.os-mode-win12 .dock-dot.active {
-  width: 7px;
-  height: 3.5px;
-  border-radius: 999px;
-  bottom: -3px;
-  background: rgba(148, 163, 184, 0.85);
+  width: 0;
+  background: transparent;
 }
 
 body.os-mode-win12 .dock-dot.running,
@@ -4722,8 +4728,13 @@ body.os-mode-macos .dock-icon {
   border-radius: 23%;
 }
 
-/* Titik Putih Bersinar Khas macOS Dock */
-body.os-mode-macos .dock-dot.active,
+/* Titik Putih Bersinar Khas macOS Dock (Hanya saat aplikasi benar-benar terbuka) */
+body.os-mode-macos .dock-dot.active {
+  width: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 body.os-mode-macos .dock-dot.running,
 body.os-mode-macos .dock-dot.running-live {
   width: 5px !important;

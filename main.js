@@ -902,6 +902,7 @@ ipcMain.on('launch-app', (event, appId) => {
 let cachedRunningApps = [];
 let lastRunningAppsCheck = 0;
 let isScanningRunningApps = false;
+const exeIconCache = new Map();
 
 const IGNORED_PROCESSES = new Set([
   'electron',
@@ -914,6 +915,8 @@ const IGNORED_PROCESSES = new Set([
   'searchapp',
   'startmenuexperiencehost',
   'widgets',
+  'widgetservice',
+  'webviewhost',
   'lockapp',
   'conhost',
   'svchost',
@@ -924,6 +927,11 @@ const IGNORED_PROCESSES = new Set([
   'sihost',
   'fontdrvhost',
   'securityhealthsystray',
+  'gamebar',
+  'gamebarftserver',
+  'nvidia share',
+  'nvidia overlay',
+  'steamwebhelper',
   'idle'
 ]);
 
@@ -978,11 +986,27 @@ ipcMain.handle('get-running-apps', async (event, forceRefresh = false) => {
   }
 
   const psScript = `
-    $procs = Get-Process | Where-Object {
-      ($_.MainWindowHandle -ne 0 -and $_.MainWindowTitle -ne '') -or
-      ($_.ProcessName -in @('WINWORD','EXCEL','POWERPNT','OUTLOOK','ONENOTE','chrome','msedge','firefox','brave','Code','Antigravity','Cursor','Windsurf','notepad','Spotify','WhatsApp','Telegram','Discord','Zoom','Teams','Postman','Figma','vlc','Taskmgr','WindowsTerminal') -and $_.MainWindowHandle -ne 0)
-    } | Select-Object Id, ProcessName, MainWindowTitle;
-    if ($procs) { $procs | ConvertTo-Json -Compress } else { '[]' }
+    $expWins = @()
+    try {
+      $sh = New-Object -ComObject Shell.Application
+      $expWins = @($sh.Windows() | Where-Object { $_.Visible -eq $true -and $_.LocationName })
+    } catch {}
+    $procs = @(Get-Process | Where-Object {
+      $_.MainWindowHandle -ne 0 -and $_.MainWindowTitle -and $_.MainWindowTitle.Trim() -ne '' -and $_.ProcessName -ne 'explorer'
+    } | Select-Object Id, ProcessName, MainWindowTitle, Path)
+    if ($expWins.Count -gt 0) {
+      $firstTitle = [string]$expWins[0].LocationName
+      $expProc = Get-Process -Name explorer -ErrorAction SilentlyContinue | Select-Object -First 1
+      $expId = if ($expProc) { $expProc.Id } else { 0 }
+      $procs += [PSCustomObject]@{
+        Id = $expId
+        ProcessName = 'explorer'
+        MainWindowTitle = $firstTitle
+        Path = "$env:WINDIR\\explorer.exe"
+        WindowCountOverride = $expWins.Count
+      }
+    }
+    if ($procs.Count -gt 0) { $procs | ConvertTo-Json -Compress } else { '[]' }
   `;
 
   return new Promise((resolve) => {
@@ -990,7 +1014,7 @@ ipcMain.handle('get-running-apps', async (event, forceRefresh = false) => {
       'powershell.exe',
       ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', psScript],
       { windowsHide: true, timeout: 4500 },
-      (err, stdout) => {
+      async (err, stdout) => {
         isScanningRunningApps = false;
         lastRunningAppsCheck = Date.now();
 
@@ -1012,8 +1036,23 @@ ipcMain.handle('get-running-apps', async (event, forceRefresh = false) => {
             if (IGNORED_PROCESSES.has(lowerName)) continue;
 
             const title = String(item.MainWindowTitle || '').trim();
-            // Abaikan shell desktop background explorer ("Program Manager" atau tanpa judul)
-            if (lowerName === 'explorer' && (!title || title === 'Program Manager')) continue;
+            if (!title || title === 'Program Manager' || title === 'Windows Input Experience') continue;
+
+            const exePath = item.Path ? String(item.Path) : '';
+            let iconDataUrl = '';
+            if (exePath) {
+              if (exeIconCache.has(exePath)) {
+                iconDataUrl = exeIconCache.get(exePath);
+              } else {
+                try {
+                  const nativeIcon = await app.getFileIcon(exePath, { size: 'large' });
+                  if (nativeIcon && !nativeIcon.isEmpty()) {
+                    iconDataUrl = nativeIcon.toDataURL();
+                    exeIconCache.set(exePath, iconDataUrl);
+                  }
+                } catch (_) {}
+              }
+            }
 
             const meta = KNOWN_APP_MAP[lowerName] || {
               appKey: lowerName,
@@ -1036,13 +1075,17 @@ ipcMain.handle('get-running-apps', async (event, forceRefresh = false) => {
                 color: meta.color,
                 category: meta.category,
                 pinnedDock: Boolean(meta.pinnedDock),
-                windowCount: 1
+                iconDataUrl,
+                windowCount: Number(item.WindowCountOverride) || 1
               });
             } else {
               existing.windowCount += 1;
               if (!existing.title && title) {
                 existing.title = title;
                 existing.pid = item.Id;
+              }
+              if (!existing.iconDataUrl && iconDataUrl) {
+                existing.iconDataUrl = iconDataUrl;
               }
             }
           }

@@ -3272,6 +3272,33 @@ async function focusOrLaunchNativeApp(appKey) {
   }
 }
 
+// Helper: Render Logo Aplikasi Asli (Prioritas 1: Ikon Native .exe Windows, Prioritas 2: SVG Resmi Brand)
+function getOfficialAppIconHtml(appItem) {
+  if (appItem && appItem.iconDataUrl) {
+    return `<img src="${appItem.iconDataUrl}" class="native-exe-icon-img" alt="${appItem.label || ''}" />`;
+  }
+  const key = (appItem?.appKey || '').toLowerCase();
+  if (key === 'word') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><rect x="13" y="6" width="28" height="36" rx="4" fill="#185ABD"/><rect x="5" y="13" width="20" height="22" rx="3.5" fill="#185ABD" stroke="#ffffff" stroke-width="1.3"/><path d="M9.5 18.5L12 29.5L15 21.5L18 29.5L20.5 18.5" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  }
+  if (key === 'excel') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><rect x="13" y="6" width="28" height="36" rx="4" fill="#107C41"/><rect x="5" y="13" width="20" height="22" rx="3.5" fill="#107C41" stroke="#ffffff" stroke-width="1.3"/><path d="M10.5 18.5L15 24L10.5 29.5M19.5 18.5L15 24L19.5 29.5" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"/></svg>`;
+  }
+  if (key === 'powerpoint') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><circle cx="28" cy="24" r="15" fill="#D24726"/><rect x="5" y="13" width="20" height="22" rx="3.5" fill="#C43E1C" stroke="#ffffff" stroke-width="1.3"/><path d="M11.5 29.5V18.5H16C17.8 18.5 19 19.6 19 21.5C19 23.4 17.8 24.5 16 24.5H11.5" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  }
+  if (key === 'chrome') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><circle cx="24" cy="24" r="20" fill="#ffffff"/><path d="M24 4C16.3 4 9.6 8.3 6.2 14.7L15.4 30.6L24 24V4Z" fill="#EA4335"/><path d="M6.2 14.7C4.8 17.5 4 20.6 4 24C4 35 13 44 24 44L33.2 28.1L24 24L6.2 14.7Z" fill="#34A853"/><path d="M24 4V24L33.2 28.1L24 44C35 44 44 35 44 24C44 13 35 4 24 4Z" fill="#FBBC05"/><circle cx="24" cy="24" r="9.5" fill="#ffffff"/><circle cx="24" cy="24" r="7.5" fill="#4285F4"/></svg>`;
+  }
+  if (key === 'vscode') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><path d="M35.2 5.2L17.4 21.8L8.8 15.1L5 17.1V30.9L8.8 32.9L17.4 26.2L35.2 42.8L43 39V9L35.2 5.2Z" fill="#007ACC"/><path d="M35.2 5.2L17.4 21.8L23.5 27.3L35.2 16.5V5.2Z" fill="#1F9CF0"/><path d="M35.2 5.2V42.8L43 39V9L35.2 5.2Z" fill="#29B6F6"/></svg>`;
+  }
+  if (key === 'explorer') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><path d="M5 12C5 9.79 6.79 8 9 8H19L23 12H39C41.21 12 43 13.79 43 16V36C43 38.21 41.21 40 39 40H9C6.79 40 5 38.21 5 36V12Z" fill="#d97706"/><path d="M5 18C5 16.34 6.34 15 8 15H40C41.66 15 43 16.34 43 18V36C43 38.21 41.21 40 39 40H9C6.79 40 5 38.21 5 36V18Z" fill="#fbbf24"/><rect x="16" y="24" width="16" height="4.5" rx="2.2" fill="#0284c7"/></svg>`;
+  }
+  return `<span>${appItem?.badge || '🪟'}</span>`;
+}
+
 function renderRunningAppsUI() {
   const count = liveRunningApps.length;
 
@@ -3287,15 +3314,27 @@ function renderRunningAppsUI() {
     dockSwitcherDot.classList.toggle('running-live', count > 0);
   }
 
-  // 2. Update Indikator Aplikasi Bawaan yang Dipin di Dock (Chrome & VS Code)
+  // 2. Update Indikator Aplikasi Bawaan yang Dipin di Dock (Chrome, VS Code, Explorer)
+  // HANYA menyala jika aplikasi tersebut benar-benar sedang terbuka!
   const chromeBtn = document.querySelector('#dock [data-native-app="chrome"]');
   const vscodeBtn = document.querySelector('#dock [data-native-app="vscode"]');
+  const explorerBtn = document.querySelector('#dock [data-custom-win="win-explorer"]');
   const chromeApp = liveRunningApps.find((a) => a.appKey === 'chrome');
   const vscodeApp = liveRunningApps.find((a) => a.appKey === 'vscode');
+  const explorerNativeApp = liveRunningApps.find((a) => a.appKey === 'explorer');
+  const customExpOpen = !document.getElementById('win-explorer')?.classList.contains('hidden');
 
   if (chromeBtn) {
     const dot = chromeBtn.querySelector('.dock-dot');
+    dot?.classList.remove('active');
     dot?.classList.toggle('running-live', Boolean(chromeApp));
+    if (chromeApp?.iconDataUrl) {
+      const iconBox = chromeBtn.querySelector('.dock-icon');
+      if (iconBox && !iconBox.dataset.nativeIconApplied) {
+        iconBox.innerHTML = `<img src="${chromeApp.iconDataUrl}" class="native-exe-icon-img" alt="Google Chrome" />`;
+        iconBox.dataset.nativeIconApplied = '1';
+      }
+    }
     chromeBtn.dataset.label = chromeApp
       ? `🟢 Google Chrome — ${chromeApp.title} (Klik untuk Buka)`
       : 'Google Chrome';
@@ -3303,16 +3342,32 @@ function renderRunningAppsUI() {
 
   if (vscodeBtn) {
     const dot = vscodeBtn.querySelector('.dock-dot');
+    dot?.classList.remove('active');
     dot?.classList.toggle('running-live', Boolean(vscodeApp));
+    if (vscodeApp?.iconDataUrl) {
+      const iconBox = vscodeBtn.querySelector('.dock-icon');
+      if (iconBox && !iconBox.dataset.nativeIconApplied) {
+        iconBox.innerHTML = `<img src="${vscodeApp.iconDataUrl}" class="native-exe-icon-img" alt="VS Code" />`;
+        iconBox.dataset.nativeIconApplied = '1';
+      }
+    }
     vscodeBtn.dataset.label = vscodeApp
       ? `🟢 VS Code — ${vscodeApp.title} (Klik untuk Buka)`
       : 'Visual Studio Code';
   }
 
+  if (explorerBtn) {
+    const dot = explorerBtn.querySelector('.dock-dot');
+    dot?.classList.remove('active');
+    if (!customExpOpen && !minimizedState['win-explorer']) {
+      dot?.classList.toggle('running-live', Boolean(explorerNativeApp));
+    }
+  }
+
   // 3. Render Aplikasi Lain yang Sedang Terbuka (MS Word, Excel, PowerPoint, Edge, Spotify, dll.) ke Bottom Dock
   if (runningDockItemsEl) {
     runningDockItemsEl.innerHTML = '';
-    const unpinnedRunning = liveRunningApps.filter((a) => !a.pinnedDock);
+    const unpinnedRunning = liveRunningApps.filter((a) => !a.pinnedDock && a.appKey !== 'explorer');
     if (runningDockSepEl) {
       runningDockSepEl.style.display = unpinnedRunning.length > 0 ? 'block' : 'none';
     }
@@ -3328,8 +3383,8 @@ function renderRunningAppsUI() {
 
       btn.innerHTML = `
         <div class="dock-icon">
-          <div class="running-dock-badge-icon" style="background: ${appItem.color || '#3b82f6'}">
-            ${appItem.badge || '🪟'}
+          <div class="running-dock-badge-icon" style="background: ${appItem.iconDataUrl ? 'rgba(15, 23, 42, 0.75)' : appItem.color || '#3b82f6'}">
+            ${getOfficialAppIconHtml(appItem)}
           </div>
           ${
             appItem.windowCount > 1
@@ -3401,11 +3456,11 @@ function renderRunningAppsUI() {
             <div class="ra-win-mock-lines">
               <span></span><span class="short"></span><span></span>
             </div>
-            <div class="ra-expose-badge" style="background: ${appItem.color || '#3b82f6'}">${appItem.badge || '🪟'}</div>
+            <div class="ra-expose-badge" style="background: ${appItem.iconDataUrl ? 'rgba(15, 23, 42, 0.85)' : appItem.color || '#3b82f6'}">${getOfficialAppIconHtml(appItem)}</div>
           </div>
         </div>
         <div class="ra-left" title="Klik untuk menampilkan ${appItem.label} ke depan layar">
-          <div class="ra-icon" style="background: ${appItem.color || '#3b82f6'}">${appItem.badge || '🪟'}</div>
+          <div class="ra-icon" style="background: ${appItem.iconDataUrl ? 'rgba(15, 23, 42, 0.85)' : appItem.color || '#3b82f6'}">${getOfficialAppIconHtml(appItem)}</div>
           <div class="ra-meta">
             <span class="ra-title">${appItem.title || appItem.label}</span>
             <span class="ra-sub">${appItem.label} • ${appItem.category} (${appItem.windowCount} jendela)</span>
