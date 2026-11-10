@@ -5110,4 +5110,105 @@ body.os-mode-macos.app-passthrough-mode #dock {
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.45) !important;
 }
 
+/* =========================================================
+   FILE EXPLORER PRO ENHANCEMENTS (LIST VIEW, SORT, INLINE EDITOR, CLIPBOARD)
+   ========================================================= */
+.exp-sort-select {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 8px;
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+}
+
+.exp-sort-select option {
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+.file-item-card.cut-pending {
+  opacity: 0.5;
+  border-style: dashed !important;
+  border-color: var(--accent-primary) !important;
+}
+
+/* List View Mode di File Explorer */
+.exp-files-grid.list-view {
+  grid-template-columns: 1fr !important;
+  gap: 5px !important;
+  align-content: start;
+}
+
+.exp-files-grid.list-view .file-item-card {
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  padding: 7px 12px !important;
+  gap: 12px !important;
+}
+
+.exp-files-grid.list-view .file-ic {
+  font-size: 22px !important;
+  margin-bottom: 0 !important;
+  flex-shrink: 0;
+}
+
+.exp-files-grid.list-view .file-thumb-wrap {
+  width: 34px !important;
+  height: 34px !important;
+  margin-bottom: 0 !important;
+  flex-shrink: 0;
+}
+
+.exp-files-grid.list-view .file-name {
+  flex: 1;
+  text-align: left !important;
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px !important;
+}
+
+.exp-files-grid.list-view .file-sub {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 10.5px !important;
+}
+
+/* Inline Text Editor di Quick Look Preview */
+.ql-text-editor {
+  width: 100%;
+  min-height: 175px;
+  max-height: 240px;
+  background: rgba(2, 6, 23, 0.68);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 11.5px;
+  line-height: 1.45;
+  padding: 10px;
+  resize: vertical;
+  outline: none;
+}
+
+.ql-text-editor:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+#exp-context-menu {
+  position: absolute !important;
+  min-width: 220px;
+  max-height: 360px;
+  overflow-y: auto;
+  z-index: 999;
+}
+
+
 

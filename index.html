@@ -1122,18 +1122,20 @@
       <div class="win-actions-right">
         <button class="snap-btn" data-snap-win="win-explorer" data-snap-dir="left" title="Aero Snap Kiri (50%)">⫷</button>
         <button class="snap-btn" data-snap-win="win-explorer" data-snap-dir="right" title="Aero Snap Kanan (50%)">⫸</button>
-        <button class="pill-action-btn" id="exp-new-folder-btn" title="Buat Folder Baru">+ Folder Baru</button>
+        <button class="pill-action-btn" id="exp-new-folder-btn" title="Buat Folder Baru">+ Folder</button>
+        <button class="pill-action-btn" id="exp-new-file-btn" title="Buat File Baru (.txt/.js/.md)">+ File</button>
+        <button class="pill-action-btn" id="exp-open-term-btn" title="Buka Terminal Pro di Folder Ini">🐚 Terminal</button>
         <button class="pill-action-btn" id="exp-open-native" title="Buka di Windows Explorer asli">↗ Native</button>
       </div>
     </div>
 
-    <!-- Toolbar Navigasi Lengkap (Back, Forward, Up, Refresh, Address Bar, Search) -->
+    <!-- Toolbar Navigasi Lengkap (Back, Forward, Up, Refresh, Address Bar, Sort, View Mode, Search) -->
     <div class="exp-toolbar">
       <div class="nav-btns">
-        <button class="nav-icon-btn" id="exp-back-btn" title="Kembali (Back)">⬅</button>
-        <button class="nav-icon-btn" id="exp-fwd-btn" title="Maju (Forward)">➡</button>
-        <button class="nav-icon-btn" id="exp-up-btn" title="Naik 1 Folder">⬆</button>
-        <button class="nav-icon-btn" id="exp-refresh-btn" title="Muat Ulang">⟳</button>
+        <button class="nav-icon-btn" id="exp-back-btn" title="Kembali (Alt+Kiri)">⬅</button>
+        <button class="nav-icon-btn" id="exp-fwd-btn" title="Maju (Alt+Kanan)">➡</button>
+        <button class="nav-icon-btn" id="exp-up-btn" title="Naik 1 Folder (Backspace)">⬆</button>
+        <button class="nav-icon-btn" id="exp-refresh-btn" title="Muat Ulang (F5)">⟳</button>
       </div>
 
       <div class="exp-address-bar">
@@ -1142,12 +1144,21 @@
         <button class="addr-go-btn" id="exp-go-btn">Buka</button>
       </div>
 
+      <select id="exp-sort-select" class="rm-font-select exp-sort-select" title="Urutkan File & Folder">
+        <option value="name">Urut: Nama (A-Z)</option>
+        <option value="date">Urut: Terbaru</option>
+        <option value="size">Urut: Ukuran</option>
+        <option value="type">Urut: Tipe</option>
+      </select>
+
+      <button class="nav-icon-btn" id="exp-view-toggle-btn" title="Ganti Tampilan Grid / Detail List">⊞</button>
+
       <div class="exp-search-box">
         <input type="text" id="exp-filter-input" placeholder="Cari di folder..." />
       </div>
     </div>
 
-    <!-- Inline Input Bar untuk Buat Folder Baru / Rename -->
+    <!-- Inline Input Bar untuk Buat Folder Baru / Buat File / Rename -->
     <div id="exp-inline-prompt" class="exp-inline-prompt hidden">
       <span id="exp-prompt-label">Nama Folder Baru:</span>
       <input type="text" id="exp-prompt-input" autocomplete="off" />
@@ -1159,7 +1170,7 @@
     <div class="exp-body" id="exp-body-layout">
       <aside class="exp-sidebar" id="exp-bookmarks"></aside>
 
-      <main class="exp-main">
+      <main class="exp-main" id="exp-main-area">
         <div class="exp-files-grid" id="exp-files-grid"></div>
       </main>
 
@@ -1177,18 +1188,28 @@
     <!-- Status Bar Bawah -->
     <div class="exp-statusbar">
       <span id="exp-item-count">0 item</span>
-      <span id="exp-status-hint">Klik 1x pilih + tekan Spasi untuk Quick Look • Klik kanan untuk opsi • Tarik pojok untuk Resize</span>
+      <span id="exp-status-hint">Klik 1x: Preview • Klik 2x: Buka • Klik Kanan: Menu Lengkap (Copy/Cut/Paste/Rename/Hapus)</span>
     </div>
 
-    <!-- Context Menu Klik Kanan di Explorer -->
+    <!-- Context Menu Klik Kanan Lengkap di Explorer -->
     <div id="exp-context-menu" class="acrylic-surface exp-context-menu hidden">
+      <button data-ctx="open">📂 Buka File / Folder (Enter)</button>
       <button data-ctx="preview">👁️ Quick Look Preview (Spasi)</button>
-      <button data-ctx="open">📂 Buka File / Folder</button>
-      <button data-ctx="rename">✏️ Ganti Nama (Rename)</button>
-      <button data-ctx="copypath">📋 Salin Path Lengkap</button>
+      <button data-ctx="shownative">🪟 Tampilkan di Windows Explorer</button>
+      <button data-ctx="terminal">🐚 Buka Lokasi di Terminal Pro</button>
       <div class="ctx-sep"></div>
+      <button data-ctx="copy">📑 Salin (Copy • Ctrl+C)</button>
+      <button data-ctx="cut">✂️ Potong (Cut • Ctrl+X)</button>
+      <button data-ctx="paste" id="ctx-paste-btn">📋 Tempel di Sini (Paste • Ctrl+V)</button>
+      <button data-ctx="duplicate">📄 Duplikat Item (Ctrl+D)</button>
+      <div class="ctx-sep"></div>
+      <button data-ctx="rename">✏️ Ganti Nama (Rename • F2)</button>
+      <button data-ctx="copypath">🔗 Salin Path Lengkap</button>
       <button data-ctx="newfolder">➕ Buat Folder Baru</button>
-      <button data-ctx="trash" class="danger-text">🗑️ Hapus ke Recycle Bin</button>
+      <button data-ctx="newfile">📝 Buat File Baru (.txt/.js)</button>
+      <button data-ctx="refresh">🔄 Muat Ulang Folder</button>
+      <div class="ctx-sep"></div>
+      <button data-ctx="trash" class="danger-text">🗑️ Hapus ke Recycle Bin (Del)</button>
     </div>
 
     <div class="win-resize-handle" data-resize-win="win-explorer" title="Tarik untuk mengubah ukuran jendela"></div>

@@ -630,16 +630,19 @@ ipcMain.handle('get-user-Bookmarks', () => {
     { name: 'Downloads', icon: 'downloads', path: path.join(home, 'Downloads') },
     { name: 'Documents', icon: 'documents', path: path.join(home, 'Documents') },
     { name: 'Pictures', icon: 'pictures', path: path.join(home, 'Pictures') },
+    { name: 'Videos', icon: 'videos', path: path.join(home, 'Videos') },
+    { name: 'Music', icon: 'music', path: path.join(home, 'Music') },
     { name: 'Workspace', icon: 'code', path: process.cwd() },
     { name: 'Local Disk (C:)', icon: 'drive', path: 'C:\\' },
-    { name: 'Data Disk (D:)', icon: 'drive', path: 'D:\\' }
+    { name: 'Data Disk (D:)', icon: 'drive', path: 'D:\\' },
+    { name: 'Data Disk (E:)', icon: 'drive', path: 'E:\\' }
   ];
   return bookmarks.filter((b) => fs.existsSync(b.path));
 });
 
 ipcMain.handle('read-directory', async (event, dirPath) => {
   try {
-    const targetPath = dirPath || os.homedir();
+    const targetPath = path.resolve(dirPath || os.homedir());
     const entries = await fs.promises.readdir(targetPath, { withFileTypes: true });
     const items = [];
 
@@ -651,10 +654,12 @@ ipcMain.handle('read-directory', async (event, dirPath) => {
       const fullPath = path.join(targetPath, entry.name);
       let size = 0;
       let mtime = null;
+      let mtimeMs = 0;
       try {
         const stat = await fs.promises.stat(fullPath);
         size = stat.size;
         mtime = stat.mtime ? stat.mtime.toISOString() : null;
+        mtimeMs = stat.mtimeMs || 0;
       } catch (_) {}
 
       const ext = entry.isDirectory() ? 'folder' : path.extname(entry.name).toLowerCase();
@@ -668,7 +673,8 @@ ipcMain.handle('read-directory', async (event, dirPath) => {
         isImage,
         imageUrl: isImage ? pathToFileURL(fullPath).href : '',
         size,
-        mtime
+        mtime,
+        mtimeMs
       });
     }
 
@@ -681,7 +687,7 @@ ipcMain.handle('read-directory', async (event, dirPath) => {
       ok: true,
       currentPath: targetPath,
       parentPath: path.dirname(targetPath),
-      items: items.slice(0, 150)
+      items: items.slice(0, 300)
     };
   } catch (err) {
     return {
@@ -755,12 +761,36 @@ ipcMain.handle('preview-file', async (event, filePath) => {
   }
 });
 
-// Operasi File di Custom Explorer: Buat Folder, Rename, Hapus ke Recycle Bin, Copy Path
+// Operasi File di Custom Explorer: Buat Folder, Buat File, Simpan Teks, Copy/Cut/Paste, Duplicate, Rename, Hapus ke Recycle Bin
 ipcMain.handle('explorer-create-folder', async (event, parentDir, folderName) => {
   try {
-    const target = path.join(parentDir, folderName);
+    const safeName = String(folderName || '').trim().replace(/[<>:"/\\|?*]/g, '_');
+    if (!safeName) return { ok: false, error: 'Nama folder tidak boleh kosong' };
+    const target = path.join(parentDir, safeName);
     await fs.promises.mkdir(target, { recursive: true });
-    return { ok: true, path: target };
+    return { ok: true, path: target, name: safeName };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('explorer-create-file', async (event, parentDir, fileName, content = '') => {
+  try {
+    let safeName = String(fileName || '').trim().replace(/[<>:"/\\|?*]/g, '_');
+    if (!safeName) return { ok: false, error: 'Nama file tidak boleh kosong' };
+    if (!path.extname(safeName)) safeName += '.txt';
+    const target = path.join(parentDir, safeName);
+    await fs.promises.writeFile(target, String(content || ''), 'utf-8');
+    return { ok: true, path: target, name: safeName };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('explorer-save-text-file', async (event, filePath, content) => {
+  try {
+    await fs.promises.writeFile(filePath, String(content ?? ''), 'utf-8');
+    return { ok: true };
   } catch (err) {
     return { ok: false, error: err.message };
   }
@@ -768,9 +798,49 @@ ipcMain.handle('explorer-create-folder', async (event, parentDir, folderName) =>
 
 ipcMain.handle('explorer-rename', async (event, oldPath, newName) => {
   try {
-    const newPath = path.join(path.dirname(oldPath), newName);
+    const safeName = String(newName || '').trim().replace(/[<>:"/\\|?*]/g, '_');
+    if (!safeName) return { ok: false, error: 'Nama baru tidak boleh kosong' };
+    const newPath = path.join(path.dirname(oldPath), safeName);
     await fs.promises.rename(oldPath, newPath);
-    return { ok: true, path: newPath };
+    return { ok: true, path: newPath, name: safeName };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('explorer-paste-item', async (event, payload = {}) => {
+  try {
+    const { sourcePath, targetDir, mode } = payload;
+    if (!sourcePath || !targetDir || !fs.existsSync(sourcePath)) {
+      return { ok: false, error: 'File sumber tidak ditemukan' };
+    }
+    const baseName = path.basename(sourcePath);
+    const ext = path.extname(baseName);
+    const stem = path.basename(baseName, ext);
+    let destPath = path.join(targetDir, baseName);
+
+    if (mode === 'cut' && path.resolve(sourcePath) === path.resolve(destPath)) {
+      return { ok: true, path: destPath, name: baseName };
+    }
+
+    let counter = 1;
+    while (fs.existsSync(destPath)) {
+      const nextName = counter === 1 ? `${stem} - Copy${ext}` : `${stem} - Copy (${counter})${ext}`;
+      destPath = path.join(targetDir, nextName);
+      counter += 1;
+    }
+
+    if (mode === 'cut') {
+      try {
+        await fs.promises.rename(sourcePath, destPath);
+      } catch (_) {
+        await fs.promises.cp(sourcePath, destPath, { recursive: true });
+        await fs.promises.rm(sourcePath, { recursive: true, force: true });
+      }
+    } else {
+      await fs.promises.cp(sourcePath, destPath, { recursive: true });
+    }
+    return { ok: true, path: destPath, name: path.basename(destPath) };
   } catch (err) {
     return { ok: false, error: err.message };
   }
@@ -781,8 +851,23 @@ ipcMain.handle('explorer-trash', async (event, targetPath) => {
     await shell.trashItem(targetPath);
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: err.message };
+    try {
+      await fs.promises.rm(targetPath, { recursive: true, force: true });
+      return { ok: true };
+    } catch (err2) {
+      return { ok: false, error: err2.message || err.message };
+    }
   }
+});
+
+ipcMain.handle('explorer-show-in-folder', async (event, targetPath) => {
+  if (!targetPath) return { ok: false };
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    mainWindow.blur();
+  }
+  shell.showItemInFolder(targetPath);
+  return { ok: true };
 });
 
 ipcMain.on('copy-to-clipboard', (event, text) => {
@@ -836,8 +921,13 @@ ipcMain.on('open-external-url', (event, url) => {
 });
 
 ipcMain.handle('open-path', async (event, targetPath) => {
-  if (!targetPath) return;
-  await shell.openPath(targetPath);
+  if (!targetPath) return { ok: false };
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    mainWindow.blur();
+  }
+  const errStr = await shell.openPath(targetPath);
+  return { ok: !errStr, error: errStr || '' };
 });
 
 ipcMain.handle('run-terminal-cmd', (event, cmdString, cwdPath) => {
