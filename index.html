@@ -1424,28 +1424,121 @@
       </div>
 
       <div class="settings-section">
-        <h4>🎨 Pilih Warna Kaca Glassmorphism (Tersimpan Permanen)</h4>
+        <div class="section-header-row">
+          <h4>🎨 Warna Kaca Glassmorphism &amp; Efek Kustom (Real-Time Preview)</h4>
+          <button class="pill-action-btn" id="reset-glass-btn" title="Kembalikan pengaturan blur, transparansi &amp; aksen ke bawaan">↺ Reset Kaca</button>
+        </div>
+
         <div class="theme-cards-grid">
           <button class="theme-card-btn active" data-set-theme="theme-mica-dark">
-            <span class="swatch swatch-dark"></span>
-            <span>Dark Acrylic</span>
+            <div class="theme-mini-preview prev-dark">
+              <div class="prev-top"><span class="prev-dots"><i></i><i></i><i></i></span><span class="prev-badge">✓</span></div>
+              <div class="prev-body"><span class="prev-bar-lg"></span><span class="prev-bar-sm"></span></div>
+            </div>
+            <span class="theme-card-name">Dark Acrylic</span>
+            <span class="theme-card-sub">Klasik &amp; Elegan</span>
           </button>
+
           <button class="theme-card-btn" data-set-theme="theme-aurora">
-            <span class="swatch swatch-aurora"></span>
-            <span>Cyber Aurora</span>
+            <div class="theme-mini-preview prev-aurora">
+              <div class="prev-top"><span class="prev-dots"><i></i><i></i><i></i></span><span class="prev-badge">✓</span></div>
+              <div class="prev-body"><span class="prev-bar-lg"></span><span class="prev-bar-sm"></span></div>
+            </div>
+            <span class="theme-card-name">Cyber Aurora</span>
+            <span class="theme-card-sub">Neon Futuristik</span>
           </button>
+
           <button class="theme-card-btn" data-set-theme="theme-mica-light">
-            <span class="swatch swatch-light"></span>
-            <span>Light Mica</span>
+            <div class="theme-mini-preview prev-light">
+              <div class="prev-top"><span class="prev-dots"><i></i><i></i><i></i></span><span class="prev-badge">✓</span></div>
+              <div class="prev-body"><span class="prev-bar-lg"></span><span class="prev-bar-sm"></span></div>
+            </div>
+            <span class="theme-card-name">Light Mica</span>
+            <span class="theme-card-sub">Kristal Cerah</span>
           </button>
+
           <button class="theme-card-btn" data-set-theme="theme-sonoma">
-            <span class="swatch swatch-sonoma"></span>
-            <span>macOS Sonoma</span>
+            <div class="theme-mini-preview prev-sonoma">
+              <div class="prev-top"><span class="prev-dots"><i></i><i></i><i></i></span><span class="prev-badge">✓</span></div>
+              <div class="prev-body"><span class="prev-bar-lg"></span><span class="prev-bar-sm"></span></div>
+            </div>
+            <span class="theme-card-name">Sonoma Frost</span>
+            <span class="theme-card-sub">Biru Dingin</span>
           </button>
+
           <button class="theme-card-btn" data-set-theme="theme-sunset">
-            <span class="swatch swatch-sunset"></span>
-            <span>Sunset Gold</span>
+            <div class="theme-mini-preview prev-sunset">
+              <div class="prev-top"><span class="prev-dots"><i></i><i></i><i></i></span><span class="prev-badge">✓</span></div>
+              <div class="prev-body"><span class="prev-bar-lg"></span><span class="prev-bar-sm"></span></div>
+            </div>
+            <span class="theme-card-name">Sunset Gold</span>
+            <span class="theme-card-sub">Amber Hangat</span>
           </button>
+
+          <button class="theme-card-btn" data-set-theme="theme-emerald">
+            <div class="theme-mini-preview prev-emerald">
+              <div class="prev-top"><span class="prev-dots"><i></i><i></i><i></i></span><span class="prev-badge">✓</span></div>
+              <div class="prev-body"><span class="prev-bar-lg"></span><span class="prev-bar-sm"></span></div>
+            </div>
+            <span class="theme-card-name">Emerald Forest</span>
+            <span class="theme-card-sub">Hijau Zamrud</span>
+          </button>
+
+          <button class="theme-card-btn" data-set-theme="theme-rose">
+            <div class="theme-mini-preview prev-rose">
+              <div class="prev-top"><span class="prev-dots"><i></i><i></i><i></i></span><span class="prev-badge">✓</span></div>
+              <div class="prev-body"><span class="prev-bar-lg"></span><span class="prev-bar-sm"></span></div>
+            </div>
+            <span class="theme-card-name">Rose Quartz</span>
+            <span class="theme-card-sub">Merah Mawar</span>
+          </button>
+
+          <button class="theme-card-btn" data-set-theme="theme-obsidian">
+            <div class="theme-mini-preview prev-obsidian">
+              <div class="prev-top"><span class="prev-dots"><i></i><i></i><i></i></span><span class="prev-badge">✓</span></div>
+              <div class="prev-body"><span class="prev-bar-lg"></span><span class="prev-bar-sm"></span></div>
+            </div>
+            <span class="theme-card-name">AMOLED Black</span>
+            <span class="theme-card-sub">Kontras Pekat</span>
+          </button>
+        </div>
+
+        <!-- Kustomisasi Real-Time Blur, Transparansi & Warna Aksen -->
+        <div class="glass-customizer-panel">
+          <div class="glass-ctrl-row">
+            <div class="glass-ctrl-label">
+              <span>🌫️ Kekuatan Efek Blur Kaca (Backdrop Blur)</span>
+              <span class="glass-val-pill" id="glass-blur-val">18px</span>
+            </div>
+            <input type="range" id="glass-blur-slider" min="4" max="42" value="18" />
+          </div>
+
+          <div class="glass-ctrl-row">
+            <div class="glass-ctrl-label">
+              <span>🪟 Tingkat Kepekatan Kaca (Opacity)</span>
+              <span class="glass-val-pill" id="glass-opacity-val">88%</span>
+            </div>
+            <input type="range" id="glass-opacity-slider" min="45" max="98" value="88" />
+          </div>
+
+          <div class="glass-ctrl-row accent-picker-row">
+            <div class="glass-ctrl-label">
+              <span>✨ Warna Aksen Sorotan (Accent Color)</span>
+            </div>
+            <div class="accent-dots-wrap">
+              <button class="accent-preset-dot" data-accent="#38bdf8" style="background:#38bdf8" title="Sky Cyan"></button>
+              <button class="accent-preset-dot" data-accent="#818cf8" style="background:#818cf8" title="Indigo"></button>
+              <button class="accent-preset-dot" data-accent="#22d3ee" style="background:#22d3ee" title="Cyber Aqua"></button>
+              <button class="accent-preset-dot" data-accent="#34d399" style="background:#34d399" title="Emerald"></button>
+              <button class="accent-preset-dot" data-accent="#fb923c" style="background:#fb923c" title="Sunset Orange"></button>
+              <button class="accent-preset-dot" data-accent="#f472b6" style="background:#f472b6" title="Rose Pink"></button>
+              <button class="accent-preset-dot" data-accent="#a855f7" style="background:#a855f7" title="Purple"></button>
+              <label class="custom-color-label" title="Pilih Warna Aksen Bebas">
+                <input type="color" id="settings-accent-picker" value="#38bdf8" />
+                <span>🎨 Kustom</span>
+              </label>
+            </div>
+          </div>
         </div>
       </div>
 

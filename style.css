@@ -1,9 +1,17 @@
 /* =========================================================
-   5 TEMA GLASSMORPHISM (Dark Acrylic, Light Mica, Aurora, Sonoma, Sunset)
+   8 TEMA GLASSMORPHISM + KUSTOMISASI BLUR, OPACITY & AKSEN
    ========================================================= */
 :root {
-  --surface-bg: linear-gradient(145deg, rgba(16, 21, 36, 0.86), rgba(9, 13, 24, 0.91));
-  --surface-expanded: linear-gradient(155deg, rgba(14, 19, 33, 0.95), rgba(8, 11, 20, 0.97));
+  --glass-blur: 18px;
+  --glass-alpha: 0.86;
+  --glass-alpha-deep: 0.92;
+  --bg-rgb-1: 16, 21, 36;
+  --bg-rgb-2: 9, 13, 24;
+  --exp-rgb-1: 14, 19, 33;
+  --exp-rgb-2: 8, 11, 20;
+
+  --surface-bg: linear-gradient(145deg, rgba(var(--bg-rgb-1), var(--glass-alpha)), rgba(var(--bg-rgb-2), var(--glass-alpha-deep)));
+  --surface-expanded: linear-gradient(155deg, rgba(var(--exp-rgb-1), 0.95), rgba(var(--exp-rgb-2), 0.97));
   --border-outer: rgba(255, 255, 255, 0.24);
   --border-inner: rgba(255, 255, 255, 0.13);
   --card-bg: rgba(255, 255, 255, 0.07);
@@ -16,22 +24,26 @@
 }
 
 body.theme-mica-light {
-  --surface-bg: linear-gradient(145deg, rgba(244, 247, 254, 0.88), rgba(225, 233, 248, 0.92));
-  --surface-expanded: linear-gradient(155deg, rgba(248, 250, 255, 0.96), rgba(232, 240, 254, 0.98));
+  --bg-rgb-1: 244, 247, 254;
+  --bg-rgb-2: 225, 233, 248;
+  --exp-rgb-1: 248, 250, 255;
+  --exp-rgb-2: 232, 240, 254;
   --border-outer: rgba(255, 255, 255, 0.9);
-  --border-inner: rgba(15, 23, 42, 0.11);
+  --border-inner: rgba(15, 23, 42, 0.12);
   --card-bg: rgba(15, 23, 42, 0.06);
   --card-hover: rgba(15, 23, 42, 0.12);
   --text-primary: #0f172a;
-  --text-secondary: rgba(30, 41, 59, 0.72);
+  --text-secondary: rgba(30, 41, 59, 0.74);
   --accent-primary: #0284c7;
   --accent-secondary: #4f46e5;
-  --shadow-elevation: 0 22px 50px rgba(15, 23, 42, 0.24), 0 4px 14px rgba(15, 23, 42, 0.12);
+  --shadow-elevation: 0 22px 50px rgba(15, 23, 42, 0.22), 0 4px 14px rgba(15, 23, 42, 0.12);
 }
 
 body.theme-aurora {
-  --surface-bg: linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(30, 27, 75, 0.9), rgba(13, 42, 56, 0.9));
-  --surface-expanded: linear-gradient(145deg, rgba(13, 20, 38, 0.95), rgba(28, 25, 70, 0.97));
+  --bg-rgb-1: 15, 23, 42;
+  --bg-rgb-2: 30, 27, 75;
+  --exp-rgb-1: 13, 20, 38;
+  --exp-rgb-2: 28, 25, 70;
   --border-outer: rgba(103, 232, 249, 0.44);
   --border-inner: rgba(167, 139, 250, 0.24);
   --accent-primary: #22d3ee;
@@ -39,8 +51,10 @@ body.theme-aurora {
 }
 
 body.theme-sonoma {
-  --surface-bg: linear-gradient(145deg, rgba(20, 35, 52, 0.86), rgba(15, 24, 38, 0.91));
-  --surface-expanded: linear-gradient(155deg, rgba(18, 32, 48, 0.95), rgba(12, 20, 34, 0.97));
+  --bg-rgb-1: 20, 35, 52;
+  --bg-rgb-2: 15, 24, 38;
+  --exp-rgb-1: 18, 32, 48;
+  --exp-rgb-2: 12, 20, 34;
   --border-outer: rgba(147, 197, 253, 0.36);
   --border-inner: rgba(147, 197, 253, 0.18);
   --accent-primary: #60a5fa;
@@ -48,12 +62,49 @@ body.theme-sonoma {
 }
 
 body.theme-sunset {
-  --surface-bg: linear-gradient(145deg, rgba(42, 20, 35, 0.87), rgba(26, 15, 28, 0.92));
-  --surface-expanded: linear-gradient(155deg, rgba(38, 17, 32, 0.95), rgba(22, 12, 24, 0.97));
+  --bg-rgb-1: 42, 20, 35;
+  --bg-rgb-2: 26, 15, 28;
+  --exp-rgb-1: 38, 17, 32;
+  --exp-rgb-2: 22, 12, 24;
   --border-outer: rgba(251, 146, 60, 0.38);
   --border-inner: rgba(244, 114, 182, 0.22);
   --accent-primary: #fb923c;
   --accent-secondary: #f472b6;
+}
+
+body.theme-emerald {
+  --bg-rgb-1: 10, 36, 30;
+  --bg-rgb-2: 6, 22, 19;
+  --exp-rgb-1: 8, 30, 25;
+  --exp-rgb-2: 4, 18, 15;
+  --border-outer: rgba(52, 211, 153, 0.4);
+  --border-inner: rgba(16, 185, 129, 0.2);
+  --accent-primary: #34d399;
+  --accent-secondary: #10b981;
+}
+
+body.theme-rose {
+  --bg-rgb-1: 44, 15, 32;
+  --bg-rgb-2: 26, 9, 20;
+  --exp-rgb-1: 38, 12, 28;
+  --exp-rgb-2: 22, 7, 17;
+  --border-outer: rgba(244, 114, 182, 0.42);
+  --border-inner: rgba(244, 63, 94, 0.22);
+  --accent-primary: #f472b6;
+  --accent-secondary: #fb7185;
+}
+
+body.theme-obsidian {
+  --bg-rgb-1: 5, 5, 9;
+  --bg-rgb-2: 0, 0, 2;
+  --exp-rgb-1: 4, 4, 7;
+  --exp-rgb-2: 0, 0, 0;
+  --border-outer: rgba(255, 255, 255, 0.16);
+  --border-inner: rgba(255, 255, 255, 0.08);
+  --card-bg: rgba(255, 255, 255, 0.045);
+  --card-hover: rgba(255, 255, 255, 0.1);
+  --accent-primary: #38bdf8;
+  --accent-secondary: #94a3b8;
 }
 
 * {
@@ -115,8 +166,8 @@ body.font-serif {
 
 .acrylic-surface {
   background: var(--surface-bg);
-  backdrop-filter: blur(16px) saturate(175%);
-  -webkit-backdrop-filter: blur(16px) saturate(175%);
+  backdrop-filter: blur(var(--glass-blur, 18px)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 18px)) saturate(180%);
   border: 1px solid var(--border-outer);
   box-shadow:
     var(--shadow-elevation),
@@ -1617,39 +1668,257 @@ body.font-serif {
 
 .settings-section h4 { font-size: 13px; margin-bottom: 10px; color: var(--accent-primary); }
 
+.section-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.section-header-row h4 {
+  margin-bottom: 0;
+}
+
 .theme-cards-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
 }
 
 .theme-card-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
-  padding: 10px 6px;
+  gap: 5px;
+  padding: 8px 7px 9px 7px;
   border-radius: 14px;
-  border: 1px solid var(--border-inner);
+  border: 1.5px solid var(--border-inner);
   background: var(--card-bg);
   color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.theme-card-btn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.36);
+  background: var(--card-hover);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
+.theme-card-btn.active {
+  border-color: var(--accent-primary);
+  background: var(--card-hover);
+  box-shadow:
+    0 0 0 1px var(--accent-primary),
+    0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+.theme-mini-preview {
+  width: 100%;
+  height: 48px;
+  border-radius: 9px;
+  padding: 5px 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  position: relative;
+  overflow: hidden;
+}
+
+.prev-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.prev-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.prev-dots i {
+  width: 4.5px;
+  height: 4.5px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.prev-dots i:nth-child(1) { background: #ff5f57; }
+.prev-dots i:nth-child(2) { background: #febc2e; }
+.prev-dots i:nth-child(3) { background: #28c840; }
+
+.prev-badge {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  color: #0b1120;
+  font-size: 9px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: all 0.2s ease;
+}
+
+.theme-card-btn.active .prev-badge {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.prev-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.prev-bar-lg {
+  width: 72%;
+  height: 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.prev-bar-sm {
+  width: 44%;
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.prev-light .prev-bar-lg { background: rgba(15, 23, 42, 0.45); }
+.prev-light .prev-bar-sm { background: rgba(15, 23, 42, 0.24); }
+.prev-light { border-color: rgba(15, 23, 42, 0.16); }
+
+.prev-dark     { background: linear-gradient(135deg, #0f172a, #1e293b 65%, #0284c7); }
+.prev-aurora   { background: linear-gradient(135deg, #0f172a, #312e81 55%, #0891b2, #9333ea); }
+.prev-light    { background: linear-gradient(135deg, #f8fafc, #e2e8f0 65%, #93c5fd); }
+.prev-sonoma   { background: linear-gradient(135deg, #102a43, #1e3a5f 60%, #10b981); }
+.prev-sunset   { background: linear-gradient(135deg, #3b0764, #7c2d12 60%, #fb923c); }
+.prev-emerald  { background: linear-gradient(135deg, #06281e, #065f46 60%, #34d399); }
+.prev-rose     { background: linear-gradient(135deg, #380b24, #831843 60%, #f472b6); }
+.prev-obsidian { background: linear-gradient(135deg, #030305, #111827 75%, #38bdf8); }
+
+.theme-card-name {
   font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+
+.theme-card-sub {
+  font-size: 9.5px;
+  color: var(--text-secondary);
+}
+
+/* Panel Kustomisasi Kaca (Blur, Opasitas, & Warna Aksen) */
+.glass-customizer-panel {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-inner);
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.glass-ctrl-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.glass-ctrl-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
   font-weight: 600;
+  color: var(--text-primary);
+}
+
+.glass-val-pill {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--accent-primary);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-inner);
+}
+
+.glass-ctrl-row input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent-primary);
   cursor: pointer;
 }
 
-.theme-card-btn.active,
-.theme-card-btn:hover {
+.accent-picker-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.accent-dots-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.accent-preset-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.accent-preset-dot:hover,
+.accent-preset-dot.active {
+  transform: scale(1.18);
+  border-color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.55);
+}
+
+.custom-color-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-inner);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.custom-color-label:hover {
   border-color: var(--accent-primary);
   background: var(--card-hover);
 }
 
-.swatch { width: 36px; height: 24px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.35); }
-.swatch-dark   { background: linear-gradient(135deg, #0f172a, #38bdf8); }
-.swatch-aurora { background: linear-gradient(135deg, #1e1b4b, #22d3ee, #a855f7); }
-.swatch-light  { background: linear-gradient(135deg, #f8fafc, #93c5fd); }
-.swatch-sonoma { background: linear-gradient(135deg, #0f2942, #34d399); }
-.swatch-sunset { background: linear-gradient(135deg, #3b0764, #fb923c); }
+.custom-color-label input[type='color'] {
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
 
 .setting-row {
   display: flex;
@@ -4526,10 +4795,12 @@ body.os-mode-win12 #top-island:not(:hover):not(.pinned) {
   min-width: auto;
   border-radius: 10px;
   padding: 4px 12px;
-  background: rgba(15, 23, 42, 0.88);
-  border: 1px solid rgba(56, 189, 248, 0.42);
+  background: var(--surface-bg);
+  backdrop-filter: blur(var(--glass-blur, 18px)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 18px)) saturate(180%);
+  border: 1px solid var(--border-outer);
   box-shadow:
-    0 8px 22px rgba(0, 0, 0, 0.5),
+    0 8px 22px rgba(0, 0, 0, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
@@ -4550,10 +4821,11 @@ body.os-mode-win12 #top-island.pinned .island-expanded {
   margin-top: 0 !important;
   padding: 14px !important;
   border-radius: 12px !important;
-  background: rgba(15, 23, 42, 0.95) !important;
-  backdrop-filter: blur(28px) saturate(180%) !important;
-  border: 1px solid rgba(56, 189, 248, 0.45) !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75) !important;
+  background: var(--surface-expanded) !important;
+  backdrop-filter: blur(var(--glass-blur, 28px)) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 28px)) saturate(180%) !important;
+  border: 1px solid var(--border-outer) !important;
+  box-shadow: var(--shadow-elevation) !important;
   opacity: 1 !important;
   pointer-events: auto !important;
   z-index: 2100 !important;
@@ -4573,11 +4845,12 @@ body.os-mode-win12:not(.app-passthrough-mode) #dock {
   border-radius: 12px;
   gap: 5px;
   align-items: center;
-  background: rgba(15, 23, 42, 0.92);
-  border: 1px solid rgba(56, 189, 248, 0.42);
+  background: var(--surface-bg);
+  backdrop-filter: blur(var(--glass-blur, 18px)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 18px)) saturate(180%);
+  border: 1px solid var(--border-outer);
   box-shadow:
-    0 16px 38px rgba(0, 0, 0, 0.68),
-    0 0 24px rgba(56, 189, 248, 0.14),
+    var(--shadow-elevation),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
@@ -4595,9 +4868,9 @@ body.os-mode-win12:not(.app-passthrough-mode) .win12-taskbar-search {
   padding: 0 14px;
   margin: 0 auto 0 6px;
   border-radius: 999px;
-  background: rgba(30, 41, 59, 0.9);
-  border: 1px solid rgba(56, 189, 248, 0.32);
-  color: #cbd5e1;
+  background: var(--card-bg);
+  border: 1px solid var(--border-inner);
+  color: var(--text-primary);
   font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
@@ -4605,9 +4878,9 @@ body.os-mode-win12:not(.app-passthrough-mode) .win12-taskbar-search {
 }
 
 body.os-mode-win12:not(.app-passthrough-mode) .win12-taskbar-search:hover {
-  border-color: #38bdf8;
-  color: #ffffff;
-  background: rgba(56, 189, 248, 0.18);
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+  background: var(--card-hover);
 }
 
 /* Zona Kanan Taskbar Windows 12: System Tray + Jam 2 Baris di Ujung Kanan */
@@ -4618,14 +4891,14 @@ body.os-mode-win12:not(.app-passthrough-mode) .win12-taskbar-tray {
   height: 38px;
   padding: 0 12px 0 14px;
   margin-left: auto;
-  border-left: 1px solid rgba(148, 163, 184, 0.25);
+  border-left: 1px solid var(--border-inner);
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s ease;
 }
 
 body.os-mode-win12:not(.app-passthrough-mode) .win12-taskbar-tray:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--card-hover);
 }
 
 .win12-tray-icons {
@@ -4638,7 +4911,7 @@ body.os-mode-win12:not(.app-passthrough-mode) .win12-taskbar-tray:hover {
 }
 
 .win12-tray-icons:hover {
-  background: rgba(56, 189, 248, 0.18);
+  background: var(--card-hover);
 }
 
 .win12-tray-clock {
@@ -4651,12 +4924,12 @@ body.os-mode-win12:not(.app-passthrough-mode) .win12-taskbar-tray:hover {
 .win12-tray-clock strong {
   font-size: 11.5px;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--text-primary);
 }
 
 .win12-tray-clock span {
   font-size: 9.5px;
-  color: #94a3b8;
+  color: var(--text-secondary);
 }
 
 body.os-mode-win12:not(.app-passthrough-mode) .dock-item {
@@ -4669,7 +4942,7 @@ body.os-mode-win12:not(.app-passthrough-mode) .dock-item {
 }
 
 body.os-mode-win12:not(.app-passthrough-mode) .dock-item:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--card-hover);
   transform: none !important;
 }
 
@@ -4689,8 +4962,8 @@ body.os-mode-win12 .dock-dot.running-live {
   height: 3.5px !important;
   border-radius: 999px !important;
   bottom: -2px !important;
-  background: #38bdf8 !important;
-  box-shadow: 0 0 10px #38bdf8 !important;
+  background: var(--accent-primary) !important;
+  box-shadow: 0 0 10px var(--accent-primary) !important;
 }
 
 body.os-mode-win12 .dock-dot.minimized {
@@ -4714,14 +4987,16 @@ body.os-mode-win12 .app-window.maximized {
 body.os-mode-win12 .custom-os-window,
 body.os-mode-win12 .app-window {
   border-radius: 10px !important;
-  border: 1px solid rgba(56, 189, 248, 0.35) !important;
-  background: rgba(15, 23, 42, 0.94) !important;
+  border: 1px solid var(--border-outer) !important;
+  background: var(--surface-bg) !important;
+  backdrop-filter: blur(var(--glass-blur, 18px)) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 18px)) saturate(180%) !important;
 }
 
 body.os-mode-win12 .win-titlebar {
   padding: 8px 10px 8px 14px;
-  background: rgba(2, 6, 23, 0.55);
-  border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border-inner);
 }
 
 body.os-mode-win12 .win-titlebar .win-tabs {
@@ -4756,7 +5031,7 @@ body.os-mode-win12 .tl-btn {
   border-radius: 6px !important;
   background: transparent !important;
   box-shadow: none !important;
-  color: #cbd5e1 !important;
+  color: var(--text-primary) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -4777,8 +5052,8 @@ body.os-mode-win12 .tl-close::after {
 
 body.os-mode-win12 .tl-min:hover,
 body.os-mode-win12 .tl-max:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
-  color: #ffffff !important;
+  background: var(--card-hover) !important;
+  color: var(--text-primary) !important;
 }
 
 body.os-mode-win12 .tl-close:hover {
@@ -4791,8 +5066,10 @@ body.os-mode-win12 #win12-start-menu {
   top: auto !important;
   bottom: 72px !important;
   border-radius: 12px !important;
-  background: rgba(15, 23, 42, 0.95) !important;
-  border: 1px solid rgba(56, 189, 248, 0.42) !important;
+  background: var(--surface-expanded) !important;
+  backdrop-filter: blur(var(--glass-blur, 22px)) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 22px)) saturate(180%) !important;
+  border: 1px solid var(--border-outer) !important;
 }
 
 body.os-mode-win12 #win-calendar {
@@ -4807,9 +5084,11 @@ body.os-mode-win12 #win-calendar {
 /* 5. Widget Desktop Gaya Windows 12 Fluent Bento Cards */
 body.os-mode-win12 .rm-skin {
   border-radius: 10px !important;
-  background: rgba(15, 23, 42, 0.88) !important;
-  border: 1px solid rgba(56, 189, 248, 0.3) !important;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.52) !important;
+  background: var(--surface-bg) !important;
+  backdrop-filter: blur(var(--glass-blur, 18px)) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 18px)) saturate(180%) !important;
+  border: 1px solid var(--border-outer) !important;
+  box-shadow: var(--shadow-elevation) !important;
 }
 
 /* ---------------------------------------------------------
@@ -4844,11 +5123,11 @@ body.os-mode-macos #top-island.pinned {
   border-top: none !important;
   border-left: none !important;
   border-right: none !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.16) !important;
-  background: rgba(15, 23, 42, 0.54) !important;
-  backdrop-filter: blur(32px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(32px) saturate(200%) !important;
-  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.22) !important;
+  border-bottom: 1px solid var(--border-inner) !important;
+  background: var(--surface-bg) !important;
+  backdrop-filter: blur(var(--glass-blur, 28px)) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 28px)) saturate(200%) !important;
+  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.2) !important;
   overflow: visible !important;
   cursor: default !important;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif !important;
@@ -4878,7 +5157,7 @@ body.os-mode-macos #top-island .macos-cc-btn {
   min-width: 24px !important;
   padding: 0 6px !important;
   border-radius: 5px !important;
-  color: #ffffff !important;
+  color: var(--text-primary) !important;
   font-size: 12px !important;
   font-weight: 500 !important;
   transform: none !important;
@@ -4889,7 +5168,7 @@ body.os-mode-macos #top-island .audio-pill:hover,
 body.os-mode-macos #top-island .theme-cycle-btn:hover,
 body.os-mode-macos #top-island .macos-cc-btn:hover,
 body.os-mode-macos #top-island .macos-menubar-clock:hover {
-  background: rgba(255, 255, 255, 0.18) !important;
+  background: var(--card-hover) !important;
 }
 
 body.os-mode-macos .macos-cc-btn {
@@ -4909,7 +5188,7 @@ body.os-mode-macos .macos-menubar-clock {
   border-radius: 5px;
   font-size: 12.5px;
   font-weight: 500;
-  color: #ffffff;
+  color: var(--text-primary);
   cursor: pointer;
   transition: background 0.14s ease;
 }
@@ -4935,11 +5214,11 @@ body.os-mode-macos #top-island.pinned .island-expanded {
   margin-top: 0 !important;
   padding: 14px !important;
   border-radius: 22px !important;
-  background: rgba(15, 23, 42, 0.84) !important;
-  backdrop-filter: blur(34px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(34px) saturate(200%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.28) !important;
-  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.65) !important;
+  background: var(--surface-expanded) !important;
+  backdrop-filter: blur(var(--glass-blur, 30px)) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 30px)) saturate(200%) !important;
+  border: 1px solid var(--border-outer) !important;
+  box-shadow: var(--shadow-elevation) !important;
   opacity: 1 !important;
   pointer-events: auto !important;
   z-index: 2100 !important;
@@ -4952,22 +5231,23 @@ body.os-mode-macos #win-calendar {
   left: auto !important;
   transform: none !important;
   border-radius: 24px !important;
-  border: 1px solid rgba(255, 255, 255, 0.32) !important;
+  border: 1px solid var(--border-outer) !important;
 }
 
 /* Jendela Aplikasi macOS: Traffic Lights (× − +), Judul Tengah Bersih & Tanpa Tombol Snap Windows */
 body.os-mode-macos .custom-os-window,
 body.os-mode-macos .app-window {
   border-radius: 20px !important;
-  border: 1px solid rgba(255, 255, 255, 0.3) !important;
-  box-shadow:
-    0 28px 68px rgba(0, 0, 0, 0.65),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+  border: 1px solid var(--border-outer) !important;
+  background: var(--surface-bg) !important;
+  backdrop-filter: blur(var(--glass-blur, 22px)) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 22px)) saturate(190%) !important;
+  box-shadow: var(--shadow-elevation), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
 }
 
 body.os-mode-macos .win-titlebar {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(15, 23, 42, 0.4));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border-inner);
 }
 
 body.os-mode-macos .win-titlebar .snap-btn {
@@ -4979,7 +5259,7 @@ body.os-mode-macos .win-titlebar .win-tab {
   border: none !important;
   font-size: 13px !important;
   font-weight: 700 !important;
-  color: #f8fafc !important;
+  color: var(--text-primary) !important;
 }
 
 body.os-mode-macos .traffic-lights .tl-btn {
@@ -5013,24 +5293,29 @@ body.os-mode-macos #win12-start-menu {
   max-width: 94vw !important;
   padding: 26px 32px !important;
   border-radius: 30px !important;
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.16), rgba(15, 23, 42, 0.72)) !important;
-  backdrop-filter: blur(42px) saturate(210%) !important;
-  -webkit-backdrop-filter: blur(42px) saturate(210%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  background: var(--surface-expanded) !important;
+  backdrop-filter: blur(var(--glass-blur, 34px)) saturate(210%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 34px)) saturate(210%) !important;
+  border: 1px solid var(--border-outer) !important;
 }
 
 body.os-mode-macos #win12-start-menu .start-search-wrap {
-  width: 280px;
-  margin: 0 auto 22px auto;
+  width: 320px;
+  margin: 0 auto 14px auto;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: var(--card-bg);
+  border: 1px solid var(--border-inner);
 }
 
-body.os-mode-macos #win12-start-menu .start-section-header,
+body.os-mode-macos #win12-start-menu .start-section-header .section-title,
 body.os-mode-macos #win12-start-menu .start-recent-grid,
 body.os-mode-macos #win12-start-menu .start-app-tag {
   display: none !important;
+}
+
+body.os-mode-macos #win12-start-menu .start-section-header {
+  justify-content: center !important;
+  margin-bottom: 14px !important;
 }
 
 body.os-mode-macos #win12-start-menu .start-apps-grid {
@@ -5054,26 +5339,23 @@ body.os-mode-macos #win12-start-menu .start-app-icon {
   width: 56px !important;
   height: 56px !important;
   border-radius: 23% !important;
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.42) !important;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35) !important;
 }
 
 body.os-mode-macos #win12-start-menu .start-app-name {
   font-size: 12px !important;
   font-weight: 600 !important;
-  color: #ffffff !important;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.65);
+  color: var(--text-primary) !important;
 }
 
 /* Widget Desktop Gaya macOS Sonoma Bento Widgets */
 body.os-mode-macos .rm-skin:not(#rm-skin-clock) {
   border-radius: 26px !important;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.17), rgba(15, 23, 42, 0.58)) !important;
-  backdrop-filter: blur(36px) saturate(210%) !important;
-  -webkit-backdrop-filter: blur(36px) saturate(210%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.34) !important;
-  box-shadow:
-    0 20px 44px rgba(0, 0, 0, 0.45),
-    inset 0 1.5px 1px rgba(255, 255, 255, 0.45) !important;
+  background: var(--surface-bg) !important;
+  backdrop-filter: blur(var(--glass-blur, 30px)) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 30px)) saturate(200%) !important;
+  border: 1px solid var(--border-outer) !important;
+  box-shadow: var(--shadow-elevation), inset 0 1.5px 1px rgba(255, 255, 255, 0.35) !important;
 }
 
 /* Ikon Pertama di Dock Bawah Berubah Jadi Wajah Finder macOS */
@@ -5092,12 +5374,10 @@ body.os-mode-macos .icon-win12 {
 body.os-mode-macos:not(.app-passthrough-mode) #dock {
   border-radius: 24px;
   padding: 9px 15px 12px;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.25) 0%,
-    rgba(15, 23, 42, 0.52) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: var(--surface-bg);
+  backdrop-filter: blur(var(--glass-blur, 26px)) saturate(190%);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 26px)) saturate(190%);
+  border: 1px solid var(--border-outer);
   box-shadow:
     0 22px 48px rgba(0, 0, 0, 0.58),
     inset 0 1.5px 1px rgba(255, 255, 255, 0.65),

@@ -8,6 +8,8 @@ const STORAGE_KEY = 'winmac_os_config_v2';
 const defaultConfig = {
   osMode: 'os-mode-hybrid',
   theme: 'theme-mica-dark',
+  glassBlur: 18,
+  glassOpacity: 88,
   dockScale: 158,
   alwaysOnTop: true,
   autoHideDock: false,
@@ -903,24 +905,106 @@ const themes = [
   'theme-aurora',
   'theme-mica-light',
   'theme-sonoma',
-  'theme-sunset'
+  'theme-sunset',
+  'theme-emerald',
+  'theme-rose',
+  'theme-obsidian'
 ];
 let currentThemeIdx = 0;
 
 function applyTheme(themeName, persist = true) {
+  const validTheme = themes.includes(themeName) ? themeName : 'theme-mica-dark';
   themes.forEach((t) => document.body.classList.remove(t));
-  document.body.classList.add(themeName);
-  currentThemeIdx = Math.max(0, themes.indexOf(themeName));
+  document.body.classList.add(validTheme);
+  currentThemeIdx = Math.max(0, themes.indexOf(validTheme));
 
   document.querySelectorAll('[data-set-theme]').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.setTheme === themeName);
+    btn.classList.toggle('active', btn.dataset.setTheme === validTheme);
   });
 
   if (persist) {
-    appConfig.theme = themeName;
+    appConfig.theme = validTheme;
+    // Reset aksen kustom saat memilih preset tema kaca agar warna aksen bawaan tema ikut tampil
+    appConfig.customAccent = '';
+    document.documentElement.style.removeProperty('--accent-primary');
+    syncAccentPickerUI();
     saveConfig();
   }
 }
+
+function syncAccentPickerUI() {
+  const activeAccent = appConfig.customAccent || '';
+  document.querySelectorAll('.accent-preset-dot').forEach((dot) => {
+    dot.classList.toggle('active', dot.dataset.accent?.toLowerCase() === activeAccent.toLowerCase());
+  });
+  const settingsAccent = document.getElementById('settings-accent-picker');
+  const studioAccent = document.getElementById('custom-accent-picker');
+  if (activeAccent) {
+    if (settingsAccent) settingsAccent.value = activeAccent;
+    if (studioAccent) studioAccent.value = activeAccent;
+  }
+}
+
+function applyGlassCustomization(persist = false) {
+  const blurPx = Number.isFinite(Number(appConfig.glassBlur)) ? Number(appConfig.glassBlur) : 18;
+  const opacityPct = Number.isFinite(Number(appConfig.glassOpacity)) ? Number(appConfig.glassOpacity) : 88;
+  const alpha = (opacityPct / 100).toFixed(2);
+  const alphaDeep = Math.min(0.99, opacityPct / 100 + 0.05).toFixed(2);
+
+  document.documentElement.style.setProperty('--glass-blur', `${blurPx}px`);
+  document.documentElement.style.setProperty('--glass-alpha', alpha);
+  document.documentElement.style.setProperty('--glass-alpha-deep', alphaDeep);
+
+  const blurSlider = document.getElementById('glass-blur-slider');
+  const blurVal = document.getElementById('glass-blur-val');
+  const opSlider = document.getElementById('glass-opacity-slider');
+  const opVal = document.getElementById('glass-opacity-val');
+
+  if (blurSlider) blurSlider.value = blurPx;
+  if (blurVal) blurVal.textContent = `${blurPx}px`;
+  if (opSlider) opSlider.value = opacityPct;
+  if (opVal) opVal.textContent = `${opacityPct}%`;
+
+  if (appConfig.customAccent) {
+    document.documentElement.style.setProperty('--accent-primary', appConfig.customAccent);
+  } else {
+    document.documentElement.style.removeProperty('--accent-primary');
+  }
+  syncAccentPickerUI();
+
+  if (persist) saveConfig();
+}
+
+document.getElementById('glass-blur-slider')?.addEventListener('input', (e) => {
+  appConfig.glassBlur = Number(e.target.value);
+  applyGlassCustomization(true);
+});
+
+document.getElementById('glass-opacity-slider')?.addEventListener('input', (e) => {
+  appConfig.glassOpacity = Number(e.target.value);
+  applyGlassCustomization(true);
+});
+
+document.querySelectorAll('.accent-preset-dot').forEach((dot) => {
+  dot.addEventListener('click', () => {
+    appConfig.customAccent = dot.dataset.accent;
+    applyGlassCustomization(true);
+  });
+});
+
+document.getElementById('settings-accent-picker')?.addEventListener('input', (e) => {
+  appConfig.customAccent = e.target.value;
+  applyGlassCustomization(true);
+});
+
+document.getElementById('reset-glass-btn')?.addEventListener('click', () => {
+  appConfig.glassBlur = 18;
+  appConfig.glassOpacity = 88;
+  appConfig.customAccent = '';
+  applyTheme('theme-mica-dark', false);
+  appConfig.theme = 'theme-mica-dark';
+  applyGlassCustomization(true);
+});
 
 themeToggleBtn.addEventListener('click', (e) => {
   e.stopPropagation();
@@ -933,6 +1017,9 @@ document.querySelectorAll('[data-set-theme]').forEach((btn) => {
     applyTheme(btn.dataset.setTheme);
   });
 });
+
+// Terapkan kustomisasi kaca yang tersimpan saat startup
+applyGlassCustomization(false);
 
 // Pilihan 3 Mode Tema OS Utama: Tema Sekarang (os-mode-hybrid), Windows 12 (os-mode-win12), macOS (os-mode-macos)
 const osModes = ['os-mode-hybrid', 'os-mode-win12', 'os-mode-macos'];
@@ -2997,6 +3084,7 @@ function applyCustomStudioStyle() {
     document.documentElement.style.setProperty('--accent-primary', appConfig.customAccent);
     if (accentPicker) accentPicker.value = appConfig.customAccent;
   }
+  if (typeof syncAccentPickerUI === 'function') syncAccentPickerUI();
   document.body.classList.remove('font-mono', 'font-serif');
   if (appConfig.fontStyle === 'mono') document.body.classList.add('font-mono');
   if (appConfig.fontStyle === 'serif') document.body.classList.add('font-serif');
