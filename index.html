@@ -154,6 +154,7 @@
       <span class="hud-title" id="hud-app-title">Membuka Aplikasi...</span>
       <span class="hud-sub" id="hud-app-sub">WinMac OS Spring Engine</span>
     </div>
+    <div class="hud-progress-track"><div class="hud-progress-fill" id="hud-progress-fill"></div></div>
   </div>
 
   <!-- =========================================================
@@ -410,10 +411,18 @@
       <input
         type="text"
         id="spotlight-input"
-        placeholder="Ketik matematika (250*14%), perintah (wallpaper, hide, lock), atau g <cari google>..."
+        placeholder="Ketik matematika (250*14%), konversi (10 usd to idr), perintah, atau g <google>..."
         autocomplete="off"
       />
+      <button class="spotlight-clear-btn hidden" id="spotlight-clear-btn" title="Bersihkan Pencarian">✕</button>
       <span class="kbd-hint">Alt+K</span>
+    </div>
+    <div class="spotlight-quick-chips">
+      <button class="spotlight-chip" data-spot-preset="15 usd to idr" title="Konversi Kurs Cepat">💱 Kurs USD→IDR</button>
+      <button class="spotlight-chip" data-spot-preset="250000 * 12%" title="Kalkulator Kilat">🧮 Hitung %</button>
+      <button class="spotlight-chip" data-spot-preset="f " title="Cari File Lokal di PC">📂 Cari File</button>
+      <button class="spotlight-chip" data-spot-preset="yt lofi coding music" title="Cari di YouTube">▶️ YouTube</button>
+      <span class="spot-nav-hint">↑↓ Pilih • Enter Buka</span>
     </div>
     <div id="spotlight-math-res" class="spotlight-math-res hidden"></div>
     <div id="spotlight-results" class="spotlight-results"></div>
@@ -659,6 +668,11 @@
           </svg>
         </button>
 
+        <!-- Tombol Panduan Pintasan Keyboard (F1) -->
+        <button class="theme-cycle-btn" id="top-shortcuts-btn" title="Pintasan Keyboard & Panduan Fitur (F1)">
+          ❓
+        </button>
+
         <!-- Tombol Pusat Notifikasi & Agenda (Alt+N) -->
         <button class="theme-cycle-btn notif-bell-btn" id="top-notif-btn" title="Pusat Notifikasi & Pengingat (Alt+N)">
           🔔
@@ -882,6 +896,7 @@
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
       <input type="text" id="start-search-input" placeholder="Cari aplikasi, dokumen, pengaturan (Alt+Space)..." autocomplete="off" />
+      <button class="spotlight-clear-btn hidden" id="start-search-clear" title="Bersihkan Pencarian">✕</button>
       <span class="kbd-hint">Alt+Space</span>
     </div>
 
@@ -1072,7 +1087,7 @@
         <div class="recent-ic">⚡</div>
         <div class="recent-meta">
           <span class="recent-title">Proyek WinMac Desktop OS</span>
-          <span class="recent-sub">d:\Belajar\xampp\htdocs\winmac-dock</span>
+          <span class="recent-sub" id="start-workspace-path">WinMac Desktop OS Workspace</span>
         </div>
       </div>
 
@@ -1105,7 +1120,7 @@
       <div class="user-profile-pill">
         <div class="user-avatar">👤</div>
         <div class="user-details">
-          <span class="user-name" id="start-username">petruk punokawan</span>
+          <span class="user-name" id="start-username">User</span>
           <span class="user-role">Windows 12 × macOS Pro Suite</span>
         </div>
       </div>
@@ -1175,6 +1190,9 @@
         <input type="text" id="exp-filter-input" placeholder="Cari di folder..." />
       </div>
     </div>
+
+    <!-- Breadcrumbs Path Interaktif (Klik bagian folder untuk melompat cepat) -->
+    <div id="exp-breadcrumbs" class="exp-breadcrumbs" aria-label="Navigasi Path Folder"></div>
 
     <!-- Inline Input Bar untuk Buat Folder Baru / Buat File / Rename -->
     <div id="exp-inline-prompt" class="exp-inline-prompt hidden">
@@ -1257,20 +1275,34 @@
     <div class="notes-layout">
       <!-- Kolom Kiri: Sticky Notes Bebas -->
       <div class="sticky-pane">
-        <div class="pane-label">📝 Catatan Cepat (Auto-Save)</div>
-        <textarea id="sticky-textarea" placeholder="Tulis ide, catatan rapat, atau snippet kode di sini..."></textarea>
+        <div class="notes-pane-hdr">
+          <div class="pane-label">📝 Catatan Cepat (Auto-Save)</div>
+          <div class="notes-meta-ctrls">
+            <span class="notes-word-count" id="notes-word-count">0 kata</span>
+            <button class="pill-action-btn" id="notes-preview-toggle" title="Tampilkan / Sembunyikan Preview Markdown">👁️ Preview</button>
+          </div>
+        </div>
+        <textarea id="sticky-textarea" placeholder="Tulis ide, catatan rapat, Markdown (# Heading, **tebal**, `kode`), atau snippet di sini..."></textarea>
+        <div id="sticky-markdown-preview" class="sticky-md-preview hidden"></div>
       </div>
 
       <!-- Kolom Kanan: To-Do List -->
       <div class="todo-pane">
-        <div class="pane-label">✅ Daftar Tugas Hari Ini</div>
+        <div class="notes-pane-hdr">
+          <div class="pane-label">✅ Daftar Tugas Hari Ini</div>
+          <button class="todo-clear-done-btn" id="todo-clear-done-btn" title="Hapus semua tugas yang sudah selesai">🧹 Bersihkan Selesai</button>
+        </div>
+        <div class="todo-progress-wrap">
+          <div class="todo-progress-track"><div class="todo-progress-fill" id="todo-progress-fill" style="width:0%"></div></div>
+          <span class="todo-progress-label" id="todo-progress-label">0% Selesai</span>
+        </div>
         <div class="todo-filter-pills">
           <button class="todo-pill active" data-todo-filter="all">Semua (<span id="todo-count-all">0</span>)</button>
           <button class="todo-pill" data-todo-filter="active">Aktif (<span id="todo-count-active">0</span>)</button>
           <button class="todo-pill" data-todo-filter="done">Selesai (<span id="todo-count-done">0</span>)</button>
         </div>
         <div class="todo-input-row">
-          <input type="text" id="todo-input" placeholder="Tambah tugas baru..." autocomplete="off" />
+          <input type="text" id="todo-input" placeholder="Tambah tugas baru (klik 2x item untuk edit)..." autocomplete="off" />
           <button class="addr-go-btn" id="todo-add-btn">+ Tambah</button>
         </div>
         <div class="todo-list" id="todo-list"></div>
@@ -1299,8 +1331,9 @@
       </div>
 
       <div class="win-actions-right">
-        <span class="term-hist-hint" title="Gunakan tombol Panah Atas / Bawah (↑ / ↓) untuk riwayat perintah">↑↓ History</span>
-        <button class="pill-action-btn" id="term-clear-btn" title="Bersihkan Output Terminal">🗑️ Clear</button>
+        <span class="term-hist-hint" title="Panah Atas/Bawah (↑/↓) Riwayat • Tab Autocomplete • Ctrl+L Clear">Tab Auto • ↑↓</span>
+        <button class="pill-action-btn" id="term-copy-btn" title="Salin Semua Output Terminal">📋 Salin</button>
+        <button class="pill-action-btn" id="term-clear-btn" title="Bersihkan Output Terminal (Ctrl+L)">🗑️ Clear</button>
         <button class="snap-btn" data-snap-win="win-terminal" data-snap-dir="left" title="Aero Snap Kiri">⫷</button>
         <button class="snap-btn" data-snap-win="win-terminal" data-snap-dir="right" title="Aero Snap Kanan">⫸</button>
         <button class="pill-action-btn" id="term-open-native">↗ Native Terminal</button>
@@ -1310,24 +1343,27 @@
     <div class="term-quick-bar">
       <span class="quick-lbl">Perintah Cepat:</span>
       <button class="term-chip" data-cmd="dir">dir</button>
+      <button class="term-chip" data-cmd="cd ..">cd ..</button>
       <button class="term-chip" data-cmd="git status">git status</button>
+      <button class="term-chip" data-cmd="git log --oneline -5">git log</button>
       <button class="term-chip" data-cmd="ipconfig">ipconfig</button>
       <button class="term-chip" data-cmd="node -v">node -v</button>
-      <button class="term-chip" data-cmd="npm -v">npm -v</button>
       <button class="term-chip" data-cmd="whoami">whoami</button>
       <button class="term-chip" data-cmd="systeminfo">systeminfo</button>
+      <button class="term-chip" data-cmd="help">help</button>
       <button class="term-chip" data-cmd="cls">cls</button>
     </div>
 
     <div class="term-output" id="term-output">
       <div class="term-line accent">WinMac OS Glass Terminal [Version 12.0.2026]</div>
-      <div class="term-line muted">Ketik perintah Windows (misal: dir, git status, node -v) lalu tekan Enter. Navigasi riwayat dengan tombol ↑ dan ↓.</div>
+      <div class="term-line muted">Ketik perintah Windows (misal: dir, cd folder, git status, node -v, help) lalu Enter. Tekan Tab untuk autocomplete atau ↑/↓ untuk riwayat.</div>
     </div>
 
     <div class="term-input-row">
       <span class="term-prompt">PS WinMac&gt;</span>
       <span class="term-cwd-badge" id="term-cwd-badge" title="Folder Kerja Aktif">📁 ~</span>
-      <input type="text" id="term-input" placeholder="Ketik perintah (tekan ↑ untuk riwayat)..." autocomplete="off" />
+      <input type="text" id="term-input" placeholder="Ketik perintah (Tab: autocomplete, ↑/↓: riwayat, Ctrl+L: bersihkan)..." autocomplete="off" />
+      <span class="term-suggest-hint hidden" id="term-suggest-hint"></span>
       <button class="addr-go-btn" id="term-send-btn">Run</button>
     </div>
 
@@ -1345,12 +1381,33 @@
         <button class="tl-btn tl-max" data-max-win="win-calculator" title="Perbesar / Normal (Maximize)"></button>
       </div>
       <span class="calc-header-title">🧮 Glass Calculator</span>
-      <button class="pill-action-btn" data-native-app="calculator">↗ Native</button>
+      <div class="calc-hdr-actions">
+        <button class="calc-mini-btn" id="calc-history-btn" title="Riwayat Perhitungan">🕘</button>
+        <button class="calc-mini-btn" id="calc-copy-btn" title="Salin Hasil ke Clipboard">📋</button>
+        <button class="pill-action-btn" data-native-app="calculator">↗ Native</button>
+      </div>
     </div>
 
     <div class="calc-screen">
       <div class="calc-expr" id="calc-expr">0</div>
       <div class="calc-result" id="calc-result">0</div>
+      <div class="calc-live-preview hidden" id="calc-live-preview"></div>
+    </div>
+
+    <div id="calc-history-drawer" class="calc-history-drawer hidden">
+      <div class="calc-hist-hdr">
+        <span>🕘 Riwayat Hitung (Klik untuk pakai lagi)</span>
+        <button class="calc-hist-clear" id="calc-history-clear-btn">Hapus</button>
+      </div>
+      <div id="calc-history-list" class="calc-history-list"></div>
+    </div>
+
+    <div class="calc-sci-row">
+      <button class="calc-sci-btn" data-key="(">(</button>
+      <button class="calc-sci-btn" data-key=")">)</button>
+      <button class="calc-sci-btn" data-key="NEG">±</button>
+      <button class="calc-sci-btn" data-key="SQRT">√x</button>
+      <button class="calc-sci-btn" data-key="SQ">x²</button>
     </div>
 
     <div class="calc-pad">
@@ -1571,6 +1628,22 @@
 
         <div class="setting-row">
           <div>
+            <div class="setting-title">🍅 Pomodoro Focus Timer</div>
+            <div class="setting-sub">Timer fokus 25m / 5m lengkap dengan pengingat & streak sesi</div>
+          </div>
+          <input type="checkbox" id="rm-toggle-pomodoro" class="win-switch" checked />
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">📋 Smart Clipboard History</div>
+            <div class="setting-sub">Rekam otomatis 12 teks Ctrl+C terakhir untuk disalin ulang 1-klik</div>
+          </div>
+          <input type="checkbox" id="rm-toggle-clipboard" class="win-switch" checked />
+        </div>
+
+        <div class="setting-row">
+          <div>
             <div class="setting-title">🔒 Kunci Semua Skin Rainmeter (Mode Click-Through)</div>
             <div class="setting-sub">Jika aktif, skin menyatu dengan wallpaper dan tidak tergeser saat diklik</div>
           </div>
@@ -1630,6 +1703,14 @@
 
         <div class="setting-row">
           <div>
+            <div class="setting-title">✨ Mode Animasi Hemat / Kurangi Gerakan (Reduced Motion)</div>
+            <div class="setting-sub">Matikan efek bounce, shimmer, & transisi gerak cepat untuk kenyamanan mata & performa ekstra ringan</div>
+          </div>
+          <input type="checkbox" id="reduced-motion-toggle" class="win-switch" />
+        </div>
+
+        <div class="setting-row">
+          <div>
             <div class="setting-title">📐 Hot Corners ala macOS (Pojok Layar Pintar)</div>
             <div class="setting-sub">Arahkan kursor ke 4 pojok layar: Kiri-Atas (Start), Kanan-Atas (Notifikasi), Kiri-Bawah (Switcher), Kanan-Bawah (Desktop)</div>
           </div>
@@ -1660,7 +1741,10 @@
       </div>
 
       <div class="settings-section">
-        <h4>⌨️ Pintasan Keyboard Global & Spesifikasi</h4>
+        <div class="section-header-row">
+          <h4>⌨️ Pintasan Keyboard Global & Spesifikasi</h4>
+          <button class="pill-action-btn" id="open-shortcuts-from-settings-btn">❓ Panduan Pintasan (F1)</button>
+        </div>
         <div class="specs-card" id="specs-card">
           Memuat informasi perangkat keras...
         </div>
@@ -1941,11 +2025,7 @@
 
   <!-- Strip Taskbar Custom WinMac OS Saat Mode Layar Aplikasi Aktif (Menutup Taskbar Bawaan Windows 100%) -->
   <div id="taskbar-cover-strip" class="interactive-widget">
-    <div class="tb-wing-left">
-      <button class="tb-pill-btn primary" id="tb-back-desktop-btn" title="Kembali ke Desktop WinMac &amp; Widget (Alt+D)">🖥️ Desktop WinMac</button>
-      <button class="tb-pill-btn" id="tb-open-switcher-btn" title="Aplikasi Sedang Terbuka (Alt+W)">🪟 <span id="tb-active-app-label">Mode Aplikasi</span></button>
-      <button class="tb-pill-btn" id="tb-pin-widgets-btn" title="Tampilkan / Sembunyikan Widget Desktop di atas Aplikasi">📌 Widget</button>
-    </div>
+    <div class="tb-wing-left" aria-hidden="true"></div>
     <div class="tb-wing-right">
       <button class="tb-icon-btn" id="tb-screenshot-btn" title="Screenshot & Editor Coret-Coret (Alt+S)">📸</button>
       <button class="tb-icon-btn" id="tb-notif-btn" title="Pusat Notifikasi & Pengingat (Alt+N)">🔔</button>
@@ -2088,7 +2168,14 @@
       </button>
     </div>
 
-    <div class="drawer-sub-lbl">🟢 Jendela Aplikasi yang Sedang Berjalan di Laptop Kamu</div>
+    <div class="drawer-sub-lbl taskview-running-hdr">
+      <span>🟢 Jendela Aplikasi yang Sedang Berjalan di Laptop Kamu</span>
+      <span class="taskview-count-pill" id="switcher-filter-count">0 Jendela</span>
+    </div>
+    <div class="taskview-filter-bar">
+      <input type="text" id="switcher-search-input" placeholder="Cari aplikasi, judul dokumen Word/Excel, atau tab Chrome..." autocomplete="off" />
+      <button class="pill-action-btn" id="switcher-min-all-btn" title="Minimize Semua Jendela & Kembali ke Desktop">🗕 Minimize Semua</button>
+    </div>
     <div id="running-apps-list" class="running-apps-list">
       <div class="running-empty">Memindai aplikasi yang sedang terbuka...</div>
     </div>
@@ -2252,6 +2339,26 @@
   </div>
 
   <!-- =========================================================
+       12B. MULTI-WINDOW PICKER POPOVER (#dock-win-picker)
+       ========================================================= -->
+  <div id="dock-win-picker" class="acrylic-surface interactive-widget custom-os-window hidden" role="dialog" aria-label="Pilih Jendela Aplikasi">
+    <div class="rm-drawer-header win-picker-header">
+      <div class="win-picker-title-wrap">
+        <span id="win-picker-icon" class="win-picker-icon"></span>
+        <div>
+          <div id="win-picker-title" class="win-picker-title">Pilih Jendela</div>
+          <div id="win-picker-sub" class="win-picker-sub">0 jendela terbuka</div>
+        </div>
+      </div>
+      <div class="win-picker-head-actions">
+        <button class="pill-action-btn" id="win-picker-launch-btn" title="Buka Jendela Baru">+ Jendela Baru</button>
+        <button class="tl-btn tl-close" id="close-win-picker-btn" title="Tutup"></button>
+      </div>
+    </div>
+    <div id="dock-win-picker-list" class="dock-win-picker-list"></div>
+  </div>
+
+  <!-- =========================================================
        13. SCREENSHOT & SCREEN ANNOTATION STUDIO (#win-screenshot, Alt+S)
        ========================================================= -->
   <div id="win-screenshot" class="acrylic-surface interactive-widget custom-os-window app-window hidden" data-draggable="true">
@@ -2299,6 +2406,62 @@
   <div class="hot-corner-zone hc-br interactive-widget" data-hc="br" title="Hot Corner: Catatan Cepat (Quick Notes)"></div>
 
   <!-- =========================================================
+       14B. PANDUAN PINTASAN & FITUR INTERAKTIF (#win-shortcuts, F1)
+       ========================================================= -->
+  <div id="win-shortcuts" class="acrylic-surface interactive-widget custom-os-window hidden" data-draggable="true">
+    <div class="rm-drawer-header">
+      <span>⌨️ Pusat Pintasan Keyboard & Fitur Cepat</span>
+      <button class="tl-btn tl-close" data-close-win="win-shortcuts" title="Tutup (Esc)"></button>
+    </div>
+    <p class="shortcuts-lead">Klik kartu atau tombol <strong>Jalankan</strong> untuk langsung mencoba fitur.</p>
+    <div class="shortcuts-grid">
+      <button class="shortcut-card" data-run-shortcut="start">
+        <div class="shortcut-top"><span class="shortcut-kbd">Alt + Space</span><span class="shortcut-run">▶ Buka</span></div>
+        <div class="shortcut-name">🪟 Start Menu / Launchpad</div>
+        <div class="shortcut-desc">Cari & buka semua aplikasi A–Z terpasang di Windows</div>
+      </button>
+      <button class="shortcut-card" data-run-shortcut="spotlight">
+        <div class="shortcut-top"><span class="shortcut-kbd">Alt + K</span><span class="shortcut-run">▶ Buka</span></div>
+        <div class="shortcut-name">⚡ Spotlight Command</div>
+        <div class="shortcut-desc">Hitung matematika, kurs USD→IDR, cari file lokal, & perintah cepat</div>
+      </button>
+      <button class="shortcut-card" data-run-shortcut="switcher">
+        <div class="shortcut-top"><span class="shortcut-kbd">Alt + W</span><span class="shortcut-run">▶ Buka</span></div>
+        <div class="shortcut-name">🧭 Live Task Switcher</div>
+        <div class="shortcut-desc">Kelola semua jendela aktif termasuk multi-window Chrome & Office</div>
+      </button>
+      <button class="shortcut-card" data-run-shortcut="desktop">
+        <div class="shortcut-top"><span class="shortcut-kbd">Alt + D</span><span class="shortcut-run">▶ Buka</span></div>
+        <div class="shortcut-name">🖥️ Tampilkan Desktop / Aplikasi</div>
+        <div class="shortcut-desc">Otomatis kembali saat semua app diminimize atau toggle manual</div>
+      </button>
+      <button class="shortcut-card" data-run-shortcut="explorer">
+        <div class="shortcut-top"><span class="shortcut-kbd">Alt + E</span><span class="shortcut-run">▶ Buka</span></div>
+        <div class="shortcut-name">📁 Explorer × Finder Pro</div>
+        <div class="shortcut-desc">Breadcrumbs interaktif, Quick Look Spasi, F2 rename, & Tab terminal</div>
+      </button>
+      <button class="shortcut-card" data-run-shortcut="notifications">
+        <div class="shortcut-top"><span class="shortcut-kbd">Alt + N</span><span class="shortcut-run">▶ Buka</span></div>
+        <div class="shortcut-name">🔔 Notifikasi & Alarm Agenda</div>
+        <div class="shortcut-desc">Mode Do Not Disturb, catatan pengingat waktu & feed sistem</div>
+      </button>
+      <button class="shortcut-card" data-run-shortcut="screenshot">
+        <div class="shortcut-top"><span class="shortcut-kbd">Alt + S</span><span class="shortcut-run">▶ Buka</span></div>
+        <div class="shortcut-name">📸 Screenshot Studio</div>
+        <div class="shortcut-desc">Tangkap layar, anotasi pena warna-warni, & salin langsung</div>
+      </button>
+      <button class="shortcut-card" data-run-shortcut="lockscreen">
+        <div class="shortcut-top"><span class="shortcut-kbd">Alt + L</span><span class="shortcut-run">▶ Kunci</span></div>
+        <div class="shortcut-name">🔒 Lock Screen Glass</div>
+        <div class="shortcut-desc">Tampilan layar kunci estetik dengan jam, cuaca, & baterai</div>
+      </button>
+    </div>
+    <div class="shortcuts-tips-bar">
+      <span>💡 Tips: Klik 2x titlebar untuk Maximize • Calculator mendukung keyboard fisik • Terminal mendukung Tab Autocomplete & cd</span>
+    </div>
+  </div>
+
+  <!-- =========================================================
        15. AESTHETIC LOCK SCREEN & SCREENSAVER MODE (Point 4)
        ========================================================= -->
   <div id="win-lockscreen" class="lockscreen-overlay interactive-widget hidden">
@@ -2316,7 +2479,7 @@
 
       <div class="lockscreen-user-card">
         <div class="lockscreen-avatar">👤</div>
-        <div class="lockscreen-username" id="lockscreen-username">petruk punokawan</div>
+        <div class="lockscreen-username" id="lockscreen-username">User</div>
         <div class="lockscreen-userrole">WinMac Desktop OS Pro Suite</div>
       </div>
 

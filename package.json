@@ -30,9 +30,11 @@
     ],
     "files": [
       "main.js",
+      "preload.js",
       "index.html",
       "style.css",
       "app.js",
+      "winmac.ico",
       "package.json"
     ],
     "win": {

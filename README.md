@@ -29,26 +29,30 @@ Aplikasi **Desktop Customization & Overlay Shell** mandiri yang super ringan unt
 ### 5. 🌦️ 5 Rainmeter-Style Desktop Widgets
 Semua widget memiliki tombol **Lipat (`—`)**, **Sembunyikan (`✕`)**, *Magnetic Grid Snapping* (`8px`), serta menu klik kanan untuk mengatur **Transparansi**, **Ukuran (Scale)**, dan **Lock (`Click-Through`)**:
 1. **🕒 Chrono / Mond Desktop Clock**: Tipografi hari besar, jam lengkap hingga detik, cuaca *live*, dan *quote* harian.
-2. **⚡ SysMonitor Pro**: Grafik *sparkline* beban CPU *real-time*, penggunaan RAM, kapasitas *drive* `C:\` & `D:\`, serta kecepatan *Download/Upload*.
+2. **⚡ SysMonitor Pro**: Grafik *sparkline* beban CPU *real-time*, penggunaan RAM, kapasitas *drive* `C:\` & `D:\`, baterai, *ping latency*, serta kecepatan *Download/Upload*.
 3. **🎵 Audio Spectrum Visualizer**: 24-bar spektrum frekuensi *real-time* + *WebAudio Lofi Synth* bawaan.
 4. **🍅 Pomodoro Focus Timer**: Lingkaran hitung mundur **25m Fokus / 5m Rehat** dengan bunyi lonceng *WebAudio* dan pencatat *streak* harian.
 5. **📋 Smart Clipboard History**: Merekam otomatis 12 teks terakhir yang di-*copy* (`Ctrl+C`) untuk disalin ulang dengan 1 klik.
 
-### 6. 🖼️ 13 Mode Background, Live Video Wallpaper & Smart Eco-Battery
+### 6. 🖼️ 13 Mode Background, 3 Mode Tema OS, 8 Tema Kaca & Smart Eco-Battery
+- **3 Mode Tema OS Utama**: Beralih instan antara **WinMac Hybrid** (Dynamic Island + Floating Dock), **Windows 12 Fluent** (Taskbar Kapsul & System Tray kanan), dan **Apple macOS Sonoma** (Top Menu Bar penuh ` Finder` + Launchpad + 3D Glass Dock).
+- **8 Tema Glassmorphism + Real-Time Customizer**: *Dark Acrylic*, *Cyber Aurora*, *Light Mica*, *Sonoma Frost*, *Sunset Gold*, *Emerald Forest*, *Rose Quartz*, dan *AMOLED Black*, dilengkapi slider **Blur**, **Opacity**, dan **Custom Accent Color Picker**.
 - **13 Mode Background**: **🕐 Otomatis Pagi/Siang/Sore/Malam** (berganti sendiri mengikuti jam), *macOS Sonoma Horizon*, *Windows 12 Midnight Bloom*, *macOS Big Sur Waves*, *Aurora Borealis*, *Galaxy Nebula*, *Ocean Sunset*, *Misty Pine Forest*, *Cyberpunk Synthwave*, *Mount Fuji Twilight*, **📂 Gambar Kustom PC**, **🎬 Video Live Wallpaper (`.mp4`/`.webm`)**, atau **🪟 Transparan Asli**.
 - Semua background dibuat murni dengan CSS/SVG (0 MB gambar). Animasinya (aurora bergerak, bintang berkelip, kabut hutan, kilau laut) hanya memakai `transform`/`opacity` yang dirender GPU, dan **otomatis berhenti** saat kamu sedang di Mode Layar Aplikasi atau Eco Battery aktif.
-- **5 Efek Partikel (`<canvas>` 28 FPS Ultra-Ringan)**: *Fireflies (Kunang-kunang Neon)*, *Starfield*, *Snowfall*, *Cyber Matrix Rain*.
+- **5 Pilihan Efek Partikel (`<canvas>` Ultra-Ringan)**: *Fireflies (Kunang-kunang Neon)*, *Starfield*, *Snowfall*, *Cyber Matrix Rain*, dan *Mati*.
 - **🔋 Auto-Eco Battery & Gaming Saver**: Otomatis menjeda animasi partikel & video wallpaper saat baterai laptop `< 25%` (tanpa charger), saat CPU `> 70%`, atau saat sedang fokus di dalam aplikasi kerja.
 
-### 7. 🚀 8 Fitur Produktivitas Ekstra (Pro Suite Update)
+### 7. 🚀 Fitur Produktivitas & Utilitas Pro Suite
 1. **🔔 Notification Center & Dynamic Island Toast (`Alt + N`)**: Menampilkan notifikasi *real-time* di Dynamic Island lengkap dengan riwayat aktivitas, catatan cepat, dan mode **🌙 Do Not Disturb (DND)**.
 2. **🎵 Kontrol Media Sistem Windows Asli**: Mengontrol *Play/Pause*, *Next Track*, dan *Prev Track* untuk **Spotify, YouTube di Browser, & VLC** secara langsung serta mendeteksi judul lagu/video yang sedang diputar.
-3. **⏰ Kalender + Agenda & Alarm Pengingat**: Jadwalkan pengingat harian dengan jam (`HH:MM`) di widget Kalender yang otomatis membunyikan alarm & menampilkan notifikasi saat waktunya tiba.
-4. **🔋 Detail Baterai & Ping Latency Live**: Indikator persentase baterai, status pengisian (`⚡ AC` / estimasi sisa waktu), dan *ping latency* di Top Dynamic Island & SysMonitor Pro.
-5. **📐 Hot Corners ala macOS**: Arahkan kursor ke 4 pojok layar untuk aksi instan (Kiri-Atas: Start Menu, Kanan-Atas: Notifikasi, Kiri-Bawah: Task Switcher, Kanan-Bawah: Desktop/App Mode).
+3. **⏰ Kalender + Pencarian Kota Cuaca + Agenda Alarm**: Cari cuaca kota mana saja (Open-Meteo Geocoding) dan jadwalkan pengingat harian (`HH:MM`) dengan bunyi alarm & notifikasi otomatis.
+4. **🔋 Detail Baterai & Ping Latency Live**: Indikator persentase baterai, status pengisian (`⚡ AC` / estimasi sisa waktu), dan *ping latency* di Top Dynamic Island, SysMonitor Pro, & Lock Screen.
+5. **📐 Hot Corners ala macOS**: Arahkan kursor ke 4 pojok layar untuk aksi instan (Kiri-Atas: Start Menu, Kanan-Atas: Notifikasi, Kiri-Bawah: Task Switcher, Kanan-Bawah: Catatan Cepat / Quick Notes).
 6. **🗂️ Quick App Stack Folder di Dock**: Popover grup aplikasi cepat bergaya macOS App Stack di Bottom Dock.
 7. **⚡ Spotlight Super Pintar (`Alt + K`)**: Mendukung **konversi mata uang & satuan** (`10 usd to idr`, `100 km to mile`, `32 c to f`), **pencarian file lokal di laptop** (`f <nama file>`), pembuka website langsung (`github.com`), dan kalkulator.
 8. **📸 Screenshot & Editor Coret-Coret Studio (`Alt + S`)**: Tangkap layar HD instan, beri coretan/tanda dengan pena warna neon, lalu **Copy ke Clipboard (`Ctrl+V`)** atau **Simpan PNG** ke folder `Pictures/WinMac-Screenshots`.
+9. **🔍 Start Menu Auto-Scan Aplikasi (A–Z) & Aesthetic Lock Screen**: Memindai otomatis aplikasi Windows terpasang secara alfabetis dengan ikon asli, plus mode layar kunci (*Lock Screen*) lengkap dengan jam besar, cuaca, dan status baterai.
+10. **📁 Custom Explorer Pro, Terminal History & Notes Export**: File Explorer mendukung *Grid/List View*, pengurutan, *Copy/Cut/Paste/Duplicate/Rename/Trash*, serta *Quick Look Inline Text Editor*; Terminal Pro mendukung riwayat perintah (`↑`/`↓`) & indikator folder kerja; dan Notes mendukung filter To-Do (*Semua/Aktif/Selesai*) serta ekspor ke file `.md`.
 
 ---
 
@@ -90,7 +94,8 @@ Semua widget memiliki tombol **Lipat (`—`)**, **Sembunyikan (`✕`)**, *Magnet
 - `WinMac Desktop OS.exe` — Aplikasi utama Windows GUI Launcher (tanpa CMD, mendukung Run as Admin & Auto-Startup).
 - `winmac.ico` — Ikon resmi aplikasi & System Tray.
 - `main.js` — Main process Electron (Overlay `screen-saver`, Win32 Window Switcher, IPC File System, Audio/Brightness OS, Auto-Startup & Global Shortcuts).
-- `index.html` — Struktur UI untuk Wallpaper Layer, Video Wallpaper, 5 Rainmeter Skins, Top Dynamic Island, Custom Taskbar Strip, dan Floating Dock.
-- `style.css` — Desain 5 Tema Glassmorphism, animasi *Spring/Genie*, dan *scenic* 4K backgrounds.
+- `preload.js` — Context Isolation bridge yang mengamankan komunikasi IPC antara `main.js` dan `app.js`.
+- `index.html` — Struktur UI untuk Wallpaper Layer, Video Wallpaper, 5 Rainmeter Skins, Top Dynamic Island, Custom Taskbar Strip, Floating Dock, & Lock Screen.
+- `style.css` — Desain **8 Tema Glassmorphism** + kustomisasi blur/opasitas, **3 Mode Tema OS** (WinMac Hybrid / Windows 12 / macOS), animasi *Spring/Genie*, dan *scenic* 4K backgrounds.
 - `app.js` — Logika interaktif, *Live Running Apps Detector*, *Spatial WebAudio SFX*, *Battery Eco Saver*, dan *Particle Canvas Engine*.
-- `package.json` — Konfigurasi dependensi Electron.
+- `package.json` — Konfigurasi dependensi Electron & target build.

@@ -1,4 +1,20 @@
-const { ipcRenderer } = require('electron');
+const ipcRenderer = window.electronIPC;
+
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getLocalDateKey(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 
 // =========================================================
 // 1. PENYIMPANAN STATE PERMANEN (localStorage Config)
@@ -22,11 +38,13 @@ const defaultConfig = {
   uiSoundEffects: true,
   autoEcoBattery: true,
   hotCorners: true,
+  reducedMotion: false,
   dndMode: false,
   mediaControlWindows: true,
   customAccent: '',
   fontStyle: 'sans',
   pomoStreak: 0,
+  calcHistory: [],
   notifications: [
     {
       id: 1,
@@ -42,7 +60,7 @@ const defaultConfig = {
   clipboardHistory: [
     'npm start',
     'Alt + K (Spotlight Command) | Alt + Space (Start Menu)',
-    'd:\\Belajar\\xampp\\htdocs\\winmac-dock'
+    'Alt + E (File Explorer) | Alt + W (Task Switcher)'
   ],
   rainmeterSkins: {
     clock: { visible: true, collapsed: false, opacity: 95, scale: 100, locked: false },
@@ -70,6 +88,7 @@ function loadConfig() {
     return {
       ...defaultConfig,
       ...parsed,
+      calcHistory: Array.isArray(parsed.calcHistory) ? parsed.calcHistory : [],
       rainmeterSkins: {
         ...defaultConfig.rainmeterSkins,
         ...(parsed.rainmeterSkins || {})
@@ -174,10 +193,31 @@ document.querySelectorAll('.interactive-widget').forEach(bindInteractiveWidgetEv
 // =========================================================
 // 3. WINDOW MANAGER, AERO SNAP, SPATIAL SFX & DOCK INDICATORS
 // =========================================================
-let topZIndex = 1350;
+const WINDOW_Z_BASE = 1700;
+let topZIndex = WINDOW_Z_BASE;
 const minimizedState = {};
 let uiAudioCtx = null;
 let isEcoBatteryPaused = false;
+
+/**
+ * Bring a custom window above the top bar/dock (1500) while keeping system overlays (2100+) higher.
+ */
+function bringWindowToFront(winEl) {
+  if (!winEl) return;
+  if (topZIndex >= 2020) {
+    const ordered = Array.from(document.querySelectorAll('.custom-os-window:not(.hidden)'))
+      .sort((a, b) => (parseInt(a.style.zIndex || '0', 10) || 0) - (parseInt(b.style.zIndex || '0', 10) || 0));
+    topZIndex = WINDOW_Z_BASE;
+    ordered.forEach((el) => {
+      if (el !== winEl) {
+        topZIndex += 1;
+        el.style.zIndex = topZIndex;
+      }
+    });
+  }
+  topZIndex += 1;
+  winEl.style.zIndex = topZIndex;
+}
 
 function playUiSound(type = 'open') {
   if (appConfig.uiSoundEffects === false) return;
@@ -256,6 +296,33 @@ function updateDockDotState(winId, state) {
   }
 }
 
+function applyGenieOriginToWindow(winEl, winId) {
+  if (!winEl) return;
+  const dockBtn = getDockButtonForWindow(winId);
+  if (!dockBtn) {
+    winEl.style.setProperty('--genie-x', '0px');
+    winEl.style.setProperty('--genie-y', '220px');
+    winEl.style.setProperty('--open-y', '26px');
+    return;
+  }
+  const winRect = winEl.getBoundingClientRect();
+  const btnRect = dockBtn.getBoundingClientRect();
+  if (!winRect.width || !btnRect.width) {
+    winEl.style.setProperty('--genie-x', '0px');
+    winEl.style.setProperty('--genie-y', '220px');
+    winEl.style.setProperty('--open-y', '26px');
+    return;
+  }
+  const dx = Math.round(btnRect.left + btnRect.width / 2 - (winRect.left + winRect.width / 2));
+  const dy = Math.round(btnRect.top + btnRect.height / 2 - (winRect.top + winRect.height / 2));
+  const clampedDx = Math.max(-480, Math.min(480, dx));
+  const clampedDy = Math.max(80, Math.min(540, dy));
+  const openY = Math.min(72, Math.max(20, Math.round(clampedDy * 0.25)));
+  winEl.style.setProperty('--genie-x', `${clampedDx}px`);
+  winEl.style.setProperty('--genie-y', `${clampedDy}px`);
+  winEl.style.setProperty('--open-y', `${openY}px`);
+}
+
 function openCustomWindow(winId) {
   const winEl = document.getElementById(winId);
   if (!winEl) return;
@@ -271,12 +338,16 @@ function openCustomWindow(winId) {
 
   minimizedState[winId] = false;
   winEl.classList.remove('hidden', 'win-anim-minimize', 'win-anim-close', 'win-anim-open');
+  applyGenieOriginToWindow(winEl, winId);
   void winEl.offsetWidth;
   winEl.classList.add('win-anim-open');
+  winAnimTimers[winId] = setTimeout(() => {
+    winEl.classList.remove('win-anim-open');
+    delete winAnimTimers[winId];
+  }, 380);
   playUiSound('open');
 
-  topZIndex += 1;
-  winEl.style.zIndex = topZIndex;
+  bringWindowToFront(winEl);
 
   // Pastikan overlay mendapatkan fokus keyboard agar input (Search, Spotlight, Terminal, Notes) langsung bisa diketik
   currentIgnoreMouseState = false;
@@ -286,6 +357,10 @@ function openCustomWindow(winId) {
 
   if (winId === 'win-explorer' && !currentExplorerPath) {
     initExplorer();
+  } else if (winId === 'win-terminal' && typeof updateTerminalCwdDisplay === 'function') {
+    updateTerminalCwdDisplay(currentTerminalPath || currentExplorerPath);
+  } else if (winId === 'win-task-switcher' && typeof refreshRunningApps === 'function') {
+    refreshRunningApps(true);
   }
 }
 
@@ -301,7 +376,8 @@ function minimizeCustomWindow(winId) {
   minimizedState[winId] = true;
   updateDockDotState(winId, 'minimized');
 
-  // Animasi Genie Swoosh ke arah Bottom Dock + Efek Pulse pada Ikon Dock
+  // Animasi Genie Swoosh ke arah Ikon Dock Spesifik + Efek Pulse pada Ikon Dock
+  applyGenieOriginToWindow(winEl, winId);
   winEl.classList.remove('win-anim-open', 'win-anim-close');
   winEl.classList.add('win-anim-minimize');
   playUiSound('minimize');
@@ -368,9 +444,8 @@ ipcRenderer.on('shortcut-trigger', (event, action) => {
     setTimeout(() => document.getElementById('spotlight-input')?.focus(), 60);
   } else if (action === 'toggle-task-switcher') {
     toggleCustomWindow('win-task-switcher');
-    refreshRunningApps(true);
   } else if (action === 'toggle-desktop-mode') {
-    setAppPassthroughMode(!isAppPassthroughMode);
+    setAppPassthroughMode(!isAppPassthroughMode, '', { reason: 'manual' });
   } else if (action === 'toggle-notifications') {
     toggleCustomWindow('win-notifications');
     if (typeof markNotificationsRead === 'function') markNotificationsRead();
@@ -412,8 +487,7 @@ function toggleMaximizeWindow(winId) {
       transform: winEl.style.transform
     };
     winEl.classList.add('maximized');
-    topZIndex += 1;
-    winEl.style.zIndex = topZIndex;
+    bringWindowToFront(winEl);
   } else {
     winEl.classList.remove('maximized');
     const prev = savedWinRects[winId];
@@ -469,7 +543,7 @@ document.addEventListener('click', (e) => {
 // Double-Click pada Titlebar Jendela untuk Maximize / Restore seperti Windows & macOS asli
 document.querySelectorAll('.custom-os-window .win-titlebar').forEach((bar) => {
   bar.addEventListener('dblclick', (e) => {
-    if (e.target.closest('button') || e.target.closest('input')) return;
+    if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
     const winEl = bar.closest('.custom-os-window');
     if (winEl && winEl.id && winEl.querySelector('.tl-max')) {
       toggleMaximizeWindow(winEl.id);
@@ -496,8 +570,7 @@ document.querySelectorAll('[data-snap-win]').forEach((btn) => {
 
 document.querySelectorAll('.custom-os-window').forEach((winEl) => {
   winEl.addEventListener('pointerdown', () => {
-    topZIndex += 1;
-    winEl.style.zIndex = topZIndex;
+    bringWindowToFront(winEl);
   });
 });
 
@@ -505,8 +578,12 @@ document.querySelectorAll('[data-native-app]').forEach((btn) => {
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     const appKey = btn.dataset.nativeApp;
-    focusOrLaunchNativeApp(appKey);
+    const dockAnchor =
+      btn.closest('#dock') ||
+      document.querySelector(`#dock [data-native-app="${appKey}"]`) ||
+      document.querySelector(`#dock [data-running-app-key="${appKey}"]`);
     document.getElementById('win12-start-menu')?.classList.add('hidden');
+    focusOrLaunchNativeApp(appKey, dockAnchor || null);
   });
 });
 
@@ -702,10 +779,14 @@ async function updateSystemStats() {
     if (specsCardEl) {
       specsCardEl.innerHTML = `
         <div><strong>Pintasan Global:</strong> <code>Alt + Space</code> (Start Menu) • <code>Alt + E</code> (File Explorer) • <code>Spasi</code> (Quick Look)</div>
-        <div><strong>Prosesor:</strong> ${stats.cpuModel} (${stats.cores} Logical Cores @ ${stats.cpuGhz || '3.2'} GHz)</div>
-        <div><strong>Memori & Disk C:</strong> RAM ${stats.usedGb}/${stats.totalGb} GB (${stats.ram}%) • Disk C: ${stats.diskC?.usedGb || 0}/${stats.diskC?.totalGb || 0} GB</div>
-        <div><strong>Sistem Operasi:</strong> ${stats.platform} • User: ${stats.hostname}</div>
+        <div><strong>Prosesor:</strong> ${escapeHtml(stats.cpuModel)} (${stats.cores} Logical Cores @ ${escapeHtml(stats.cpuGhz || '3.2')} GHz)</div>
+        <div><strong>Memori & Disk C:</strong> RAM ${escapeHtml(stats.usedGb)}/${escapeHtml(stats.totalGb)} GB (${stats.ram}%) • Disk C: ${stats.diskC?.usedGb || 0}/${stats.diskC?.totalGb || 0} GB</div>
+        <div><strong>Sistem Operasi:</strong> ${escapeHtml(stats.platform)} • User: ${escapeHtml(stats.hostname)}</div>
       `;
+    }
+    const startWorkspacePathEl = document.getElementById('start-workspace-path');
+    if (startWorkspacePathEl && stats.workspacePath) {
+      startWorkspacePathEl.textContent = stats.workspacePath;
     }
   } catch (err) {
     console.error('Gagal mengambil statistik sistem:', err);
@@ -815,11 +896,29 @@ document.getElementById('weather-city-input')?.addEventListener('keydown', (e) =
 
 document.getElementById('refresh-weather-btn')?.addEventListener('click', fetchLiveWeather);
 
+async function updatePingLatency() {
+  const rmPingVal = document.getElementById('rm-ping-val');
+  if (!rmPingVal) return;
+  try {
+    const res = await ipcRenderer.invoke('get-ping-latency');
+    if (res && res.ok && Number.isFinite(res.ms)) {
+      const quality = res.ms <= 40 ? 'Stabil' : res.ms <= 110 ? 'Normal' : 'Lambat';
+      rmPingVal.textContent = `${res.ms} ms • ${quality}`;
+    } else {
+      rmPingVal.textContent = 'Offline';
+    }
+  } catch (_) {
+    rmPingVal.textContent = 'Offline';
+  }
+}
+
 updateClock();
 updateSystemStats();
 fetchLiveWeather();
+updatePingLatency();
 setInterval(updateClock, 1000);
 setInterval(updateSystemStats, 3000);
+setInterval(updatePingLatency, 15000);
 setInterval(fetchLiveWeather, 600000);
 
 // Kalender Bulanan Interaktif
@@ -1029,8 +1128,14 @@ function applyOsMode(modeName, persist = true) {
   osModes.forEach((m) => document.body.classList.remove(m));
   document.body.classList.add(validMode);
 
-  // Pastikan Menu Bar tidak terkunci terbuka saat pindah mode
-  document.getElementById('top-island')?.classList.remove('pinned');
+  // Pastikan Menu Bar tidak terkunci terbuka dan langsung terpusat tanpa transisi geser antar-mode
+  const topIslandEl = document.getElementById('top-island');
+  if (topIslandEl) {
+    topIslandEl.classList.remove('pinned');
+    topIslandEl.style.transition = 'none';
+    void topIslandEl.offsetWidth;
+    topIslandEl.style.transition = '';
+  }
 
   // Pastikan Dock / Taskbar selalu reset tepat di tengah saat berpindah mode OS
   const dockWrapEl = document.getElementById('bottom-dock-wrapper');
@@ -1102,13 +1207,13 @@ function applyOsMode(modeName, persist = true) {
     appConfig.osMode = validMode;
     saveConfig();
     playUiSound('open');
-    if (typeof showAppLaunchHud === 'function') {
+    if (typeof triggerLaunchHud === 'function') {
       if (validMode === 'os-mode-win12') {
-        showAppLaunchHud('🪟', 'Tema Windows 12 Aktif', 'Taskbar 3-Zona Fluent, Tombol Jendela Kanan & Start Menu Bawah');
+        triggerLaunchHud('🪟', 'Tema Windows 12 Aktif', 'Taskbar 3-Zona Fluent, Tombol Jendela Kanan & Start Menu Bawah');
       } else if (validMode === 'os-mode-macos') {
-        showAppLaunchHud('🍎', 'Tema Apple macOS Aktif', 'Top Menu Bar, Launchpad 6-Kolom, Traffic Lights & 3D Glass Dock');
+        triggerLaunchHud('🍎', 'Tema Apple macOS Aktif', 'Top Menu Bar, Launchpad 6-Kolom, Traffic Lights & 3D Glass Dock');
       } else {
-        showAppLaunchHud('🌌', 'Tema WinMac Hybrid Aktif', 'Dynamic Island Atas + Neon Glass Dock + Rainmeter Cyber');
+        triggerLaunchHud('🌌', 'Tema WinMac Hybrid Aktif', 'Dynamic Island Atas + Neon Glass Dock + Rainmeter Cyber');
       }
     }
   }
@@ -1165,7 +1270,6 @@ document.querySelectorAll('[data-mac-menu]').forEach((item) => {
       setTimeout(() => document.getElementById('spotlight-input')?.focus(), 60);
     } else if (act === 'window') {
       toggleCustomWindow('win-task-switcher');
-      refreshRunningApps(true);
     } else if (act === 'help') {
       openCustomWindow('win-settings');
     }
@@ -1277,10 +1381,8 @@ startAppCards.forEach((card) => {
   card.addEventListener('click', () => {
     if (card.dataset.customWin) {
       openCustomWindow(card.dataset.customWin);
-    } else if (card.dataset.nativeApp) {
-      ipcRenderer.send('launch-app', card.dataset.nativeApp);
-      document.getElementById('win12-start-menu')?.classList.add('hidden');
     }
+    // Kartu [data-native-app] sudah ditangani secara terpadu oleh listener global focusOrLaunchNativeApp()
   });
 });
 
@@ -1340,14 +1442,15 @@ function renderInstalledApps(apps) {
       row.className = 'start-app-row';
       row.dataset.path = app.path;
       row.dataset.name = app.name.toLowerCase();
+      const safeAppName = escapeHtml(app.name);
       row.innerHTML = `
         ${
           app.iconDataUrl
-            ? `<img class="start-app-row-icon" src="${app.iconDataUrl}" alt="${app.name}" />`
+            ? `<img class="start-app-row-icon" src="${escapeHtml(app.iconDataUrl)}" alt="${safeAppName}" />`
             : `<div class="start-app-row-icon">🪟</div>`
         }
         <div class="start-app-row-info">
-          <span class="start-app-row-name">${app.name}</span>
+          <span class="start-app-row-name">${safeAppName}</span>
           <span class="start-app-row-sub">Aplikasi Windows</span>
         </div>
       `;
@@ -1409,7 +1512,33 @@ function filterStartApps() {
   }
 }
 
-startSearchInput?.addEventListener('input', filterStartApps);
+const startSearchClearBtn = document.getElementById('start-search-clear');
+startSearchInput?.addEventListener('input', () => {
+  if (startSearchClearBtn) {
+    startSearchClearBtn.classList.toggle('hidden', !(startSearchInput.value || '').length);
+  }
+  filterStartApps();
+});
+startSearchClearBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!startSearchInput) return;
+  startSearchInput.value = '';
+  startSearchClearBtn.classList.add('hidden');
+  filterStartApps();
+  startSearchInput.focus();
+});
+startSearchInput?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const firstAllApp = document.querySelector('#start-all-apps-list .start-all-app-row');
+    const firstPinned = Array.from(document.querySelectorAll('#start-apps-grid .start-app-card')).find(
+      (c) => c.style.display !== 'none'
+    );
+    const targetCard = activeCategory === 'all-installed' ? firstAllApp || firstPinned : firstPinned || firstAllApp;
+    if (targetCard) targetCard.click();
+  } else if (e.key === 'Escape') {
+    closeCustomWindow('win12-start-menu');
+  }
+});
 
 catPills.forEach((pill) => {
   pill.addEventListener('click', () => {
@@ -1439,6 +1568,7 @@ document.querySelectorAll('[data-open-folder]').forEach((card) => {
 // 7. CUSTOM FILE EXPLORER + HISTORY + QUICK LOOK + CONTEXT MENU
 // =========================================================
 let currentExplorerPath = '';
+let currentTerminalPath = '';
 let currentParentPath = '';
 let currentDirItems = [];
 let selectedFileItem = null;
@@ -1539,7 +1669,11 @@ function formatBytes(bytes) {
 function openExternalFileFromExplorer(targetPath, labelName = 'File') {
   if (!targetPath) return;
   if (typeof setAppPassthroughMode === 'function') {
-    setAppPassthroughMode(true, `Membuka: ${labelName}`);
+    setAppPassthroughMode(true, `Membuka: ${labelName}`, {
+      reason: 'app',
+      isColdLaunch: true,
+      waitForRestore: true
+    });
   }
   ipcRenderer.invoke('open-path', targetPath);
 }
@@ -1547,7 +1681,11 @@ function openExternalFileFromExplorer(targetPath, labelName = 'File') {
 function showItemInNativeExplorer(targetPath) {
   if (!targetPath) return;
   if (typeof setAppPassthroughMode === 'function') {
-    setAppPassthroughMode(true, 'Windows Explorer');
+    setAppPassthroughMode(true, 'Windows Explorer', {
+      reason: 'app',
+      isColdLaunch: true,
+      waitForRestore: true
+    });
   }
   ipcRenderer.invoke('explorer-show-in-folder', targetPath);
 }
@@ -1555,8 +1693,9 @@ function showItemInNativeExplorer(targetPath) {
 function openTerminalAtExplorerPath(dirPath) {
   const targetDir = dirPath || currentExplorerPath;
   if (!targetDir) return;
-  currentExplorerPath = targetDir;
-  openWindow('win-terminal');
+  currentTerminalPath = targetDir;
+  openCustomWindow('win-terminal');
+  updateTerminalCwdDisplay(targetDir);
   const termOut = document.getElementById('term-output');
   if (termOut) {
     const line = document.createElement('div');
@@ -1587,7 +1726,7 @@ async function initExplorer() {
     const btn = document.createElement('button');
     btn.className = 'bookmark-btn';
     btn.dataset.path = b.path;
-    btn.innerHTML = `<span>${iconMap[b.icon] || '📁'}</span><span>${b.name}</span>`;
+    btn.innerHTML = `<span>${iconMap[b.icon] || '📁'}</span><span>${escapeHtml(b.name)}</span>`;
     btn.addEventListener('click', () => {
       navigateExplorer(b.path);
     });
@@ -1652,10 +1791,57 @@ function getSortedAndFilteredExplorerItems() {
   return sorted;
 }
 
+function renderExplorerBreadcrumbs(dirPath) {
+  const container = document.getElementById('exp-breadcrumbs');
+  if (!container || !dirPath) return;
+  container.innerHTML = '';
+
+  const normalized = dirPath.replace(/[/\\]+$/, '');
+  const parts = normalized.split(/[/\\]/).filter(Boolean);
+  if (parts.length === 0) {
+    const btn = document.createElement('button');
+    btn.className = 'exp-crumb-btn active';
+    btn.textContent = dirPath;
+    container.appendChild(btn);
+    return;
+  }
+
+  let accumPath = '';
+  parts.forEach((seg, idx) => {
+    if (idx === 0) {
+      accumPath = /^[a-zA-Z]:$/.test(seg) ? `${seg}\\` : seg;
+    } else {
+      accumPath = accumPath.endsWith('\\') || accumPath.endsWith('/')
+        ? `${accumPath}${seg}`
+        : `${accumPath}\\${seg}`;
+    }
+    const targetForClick = accumPath;
+    const isLast = idx === parts.length - 1;
+
+    if (idx > 0) {
+      const sep = document.createElement('span');
+      sep.className = 'exp-crumb-sep';
+      sep.textContent = '›';
+      container.appendChild(sep);
+    }
+
+    const btn = document.createElement('button');
+    btn.className = `exp-crumb-btn${isLast ? ' active' : ''}`;
+    btn.title = targetForClick;
+    btn.textContent = idx === 0 ? `💽 ${seg}` : seg;
+    if (!isLast) {
+      btn.addEventListener('click', () => navigateExplorer(targetForClick));
+    }
+    container.appendChild(btn);
+  });
+
+  container.scrollLeft = container.scrollWidth;
+}
+
 async function loadDirectory(dirPath, selectPathAfterLoad = '') {
   const res = await ipcRenderer.invoke('read-directory', dirPath);
   if (!res.ok) {
-    expFilesGridEl.innerHTML = `<div style="grid-column:1/-1;padding:20px;color:#f87171;">⚠️ Gagal membuka direktori: ${res.error}</div>`;
+    expFilesGridEl.innerHTML = `<div style="grid-column:1/-1;padding:20px;color:#f87171;">⚠️ Gagal membuka direktori: ${escapeHtml(res.error)}</div>`;
     return;
   }
 
@@ -1667,6 +1853,7 @@ async function loadDirectory(dirPath, selectPathAfterLoad = '') {
   expPathInput.value = currentExplorerPath;
   const parts = currentExplorerPath.split(/[/\\]/).filter(Boolean);
   expTabTitleEl.textContent = parts[parts.length - 1] || currentExplorerPath;
+  renderExplorerBreadcrumbs(currentExplorerPath);
   updateExplorerNavButtonsState();
 
   renderExplorerItems(getSortedAndFilteredExplorerItems(), selectPathAfterLoad);
@@ -1693,15 +1880,16 @@ function renderExplorerItems(items, selectPathAfterLoad = '') {
     card.className = `file-item-card${isCutPending ? ' cut-pending' : ''}`;
     card.title = `${item.name}\nLokasi: ${item.path}${item.isDirectory ? '' : `\nUkuran: ${formatBytes(item.size)}`}`;
 
+    const safeItemName = escapeHtml(item.name);
     const iconOrThumbHtml =
       item.isImage && item.imageUrl
-        ? `<div class="file-thumb-wrap"><img class="file-thumb-img" src="${item.imageUrl}" loading="lazy" alt="${item.name}" /></div>`
+        ? `<div class="file-thumb-wrap"><img class="file-thumb-img" src="${escapeHtml(item.imageUrl)}" loading="lazy" alt="${safeItemName}" /></div>`
         : `<div class="file-ic">${getFileIcon(item)}</div>`;
 
     const dateStr = item.mtimeMs ? new Date(item.mtimeMs).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
     card.innerHTML = `
       ${iconOrThumbHtml}
-      <div class="file-name">${item.name}</div>
+      <div class="file-name">${safeItemName}</div>
       <div class="file-sub">${item.isDirectory ? 'Folder' : formatBytes(item.size)}${explorerViewMode === 'list' && dateStr ? ` • ${dateStr}` : ''}</div>
     `;
 
@@ -1790,7 +1978,7 @@ async function showQuickLookPreview(item) {
     previewBodyEl.innerHTML = `<div style="font-size:56px;">📁</div>`;
     previewMetaEl.innerHTML = `
       <div><strong>Tipe:</strong> Folder Direktori</div>
-      <div style="word-break:break-all;"><strong>Lokasi:</strong> ${item.path}</div>
+      <div style="word-break:break-all;"><strong>Lokasi:</strong> ${escapeHtml(item.path)}</div>
       <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
         <button class="addr-go-btn" id="ql-open-dir-btn" style="flex:1;">📂 Buka Folder</button>
         <button class="pill-action-btn" id="ql-term-dir-btn" style="flex:1;">🐚 Terminal</button>
@@ -1811,12 +1999,12 @@ async function showQuickLookPreview(item) {
 
   const res = await ipcRenderer.invoke('preview-file', item.path);
   if (!res.ok) {
-    previewBodyEl.innerHTML = `<div style="color:#f87171;font-size:11px;">Gagal memuat preview: ${res.error || ''}</div>`;
+    previewBodyEl.innerHTML = `<div style="color:#f87171;font-size:11px;">Gagal memuat preview: ${escapeHtml(res.error || '')}</div>`;
     return;
   }
 
   if (res.type === 'image') {
-    previewBodyEl.innerHTML = `<img src="${res.url}" alt="${item.name}" style="cursor:zoom-in" title="Klik untuk membuka di aplikasi foto Windows" />`;
+    previewBodyEl.innerHTML = `<img src="${escapeHtml(res.url)}" alt="${escapeHtml(item.name)}" style="cursor:zoom-in" title="Klik untuk membuka di aplikasi foto Windows" />`;
     previewBodyEl.querySelector('img')?.addEventListener('click', () => {
       openExternalFileFromExplorer(item.path, item.name);
     });
@@ -1834,8 +2022,8 @@ async function showQuickLookPreview(item) {
 
   previewMetaEl.innerHTML = `
     <div><strong>Ukuran:</strong> ${formatBytes(res.size)}</div>
-    <div><strong>Diubah:</strong> ${res.mtime}</div>
-    <div><strong>Ekstensi:</strong> ${item.ext || '-'}</div>
+    <div><strong>Diubah:</strong> ${escapeHtml(res.mtime)}</div>
+    <div><strong>Ekstensi:</strong> ${escapeHtml(item.ext || '-')}</div>
     <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
       ${
         res.type === 'text'
@@ -1964,7 +2152,7 @@ function triggerRenameItem(item = selectedFileItem) {
     if (newName === item.name) return;
     const res = await ipcRenderer.invoke('explorer-rename', item.path, newName);
     if (res.ok) {
-      loadDirectory(currentExplorerPath, res.newPath);
+      loadDirectory(currentExplorerPath, res.path);
     } else if (typeof pushNotification === 'function') {
       pushNotification('⚠️', 'Gagal Mengubah Nama', res.error || '', true);
     }
@@ -1990,17 +2178,16 @@ async function triggerDeleteItem(item = selectedFileItem) {
 
 async function triggerPasteClipboard() {
   if (!explorerClipboard.path || !currentExplorerPath) return;
-  const res = await ipcRenderer.invoke(
-    'explorer-paste-item',
-    explorerClipboard.path,
-    currentExplorerPath,
-    explorerClipboard.mode
-  );
+  const res = await ipcRenderer.invoke('explorer-paste-item', {
+    sourcePath: explorerClipboard.path,
+    targetDir: currentExplorerPath,
+    mode: explorerClipboard.mode
+  });
   if (res.ok) {
     if (explorerClipboard.mode === 'cut') {
       explorerClipboard = { path: '', mode: '' };
     }
-    loadDirectory(currentExplorerPath, res.destPath);
+    loadDirectory(currentExplorerPath, res.path);
   } else if (typeof pushNotification === 'function') {
     pushNotification('⚠️', 'Gagal Menempel Item', res.error || '', true);
   }
@@ -2008,9 +2195,15 @@ async function triggerPasteClipboard() {
 
 async function triggerDuplicateItem(item = selectedFileItem) {
   if (!item || !currentExplorerPath) return;
-  const res = await ipcRenderer.invoke('explorer-paste-item', item.path, currentExplorerPath, 'copy');
+  const res = await ipcRenderer.invoke('explorer-paste-item', {
+    sourcePath: item.path,
+    targetDir: currentExplorerPath,
+    mode: 'copy'
+  });
   if (res.ok) {
-    loadDirectory(currentExplorerPath, res.destPath);
+    loadDirectory(currentExplorerPath, res.path);
+  } else if (typeof pushNotification === 'function') {
+    pushNotification('⚠️', 'Gagal Menduplikat Item', res.error || '', true);
   }
 }
 
@@ -2183,16 +2376,50 @@ document.getElementById('exp-open-native')?.addEventListener('click', () => {
 // =========================================================
 const stickyTextarea = document.getElementById('sticky-textarea');
 const notesSavedBadge = document.getElementById('notes-saved-badge');
+const notesWordCountEl = document.getElementById('notes-word-count');
+const notesPreviewToggleBtn = document.getElementById('notes-preview-toggle');
+const stickyMarkdownPreview = document.getElementById('sticky-markdown-preview');
 const todoInput = document.getElementById('todo-input');
 const todoAddBtn = document.getElementById('todo-add-btn');
 const todoListEl = document.getElementById('todo-list');
+const todoProgressFill = document.getElementById('todo-progress-fill');
+const todoProgressLabel = document.getElementById('todo-progress-label');
 let currentTodoFilter = 'all';
+let isNotesPreviewMode = false;
+
+function updateNotesStatsAndPreview() {
+  if (!stickyTextarea) return;
+  const txt = stickyTextarea.value || '';
+  const words = txt.trim() ? txt.trim().split(/\s+/).length : 0;
+  if (notesWordCountEl) {
+    notesWordCountEl.textContent = `${words} kata • ${txt.length} kar`;
+  }
+  if (isNotesPreviewMode && stickyMarkdownPreview) {
+    const safeLines = escapeHtml(txt).split('\n').map((line) => {
+      if (line.startsWith('### ')) return `<h3>${line.slice(4)}</h3>`;
+      if (line.startsWith('## ')) return `<h2>${line.slice(3)}</h2>`;
+      if (line.startsWith('# ')) return `<h1>${line.slice(2)}</h1>`;
+      if (/^[-•*]\s+\[x\]\s+/i.test(line)) return `<div>✅ <s>${line.replace(/^[-•*]\s+\[x\]\s+/i, '')}</s></div>`;
+      if (/^[-•*]\s+\[\s?\]\s+/.test(line)) return `<div>⬜ ${line.replace(/^[-•*]\s+\[\s?\]\s+/, '')}</div>`;
+      if (/^[-•*]\s+/.test(line)) return `<ul><li>${line.replace(/^[-•*]\s+/, '')}</li></ul>`;
+      return line || '<br/>';
+    });
+    const rendered = safeLines
+      .join('\n')
+      .replace(/<\/ul>\n<ul>/g, '')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
+    stickyMarkdownPreview.innerHTML = rendered || '<span style="opacity:0.6">Catatan kosong.</span>';
+  }
+}
 
 if (stickyTextarea) {
   stickyTextarea.value = appConfig.stickyNote || '';
+  updateNotesStatsAndPreview();
   stickyTextarea.addEventListener('input', () => {
     appConfig.stickyNote = stickyTextarea.value;
     saveConfig();
+    updateNotesStatsAndPreview();
     if (notesSavedBadge) {
       notesSavedBadge.textContent = '💾 Menyimpan...';
       setTimeout(() => {
@@ -2202,6 +2429,15 @@ if (stickyTextarea) {
   });
 }
 
+notesPreviewToggleBtn?.addEventListener('click', () => {
+  isNotesPreviewMode = !isNotesPreviewMode;
+  notesPreviewToggleBtn.classList.toggle('active', isNotesPreviewMode);
+  notesPreviewToggleBtn.textContent = isNotesPreviewMode ? '✏️ Edit' : '👁️ Preview';
+  stickyTextarea?.classList.toggle('hidden', isNotesPreviewMode);
+  stickyMarkdownPreview?.classList.toggle('hidden', !isNotesPreviewMode);
+  updateNotesStatsAndPreview();
+});
+
 function renderTodos() {
   if (!todoListEl) return;
   todoListEl.innerHTML = '';
@@ -2209,6 +2445,10 @@ function renderTodos() {
   const total = appConfig.todos.length;
   const doneCount = appConfig.todos.filter((t) => t.done).length;
   const activeCount = total - doneCount;
+  const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+
+  if (todoProgressFill) todoProgressFill.style.width = `${pct}%`;
+  if (todoProgressLabel) todoProgressLabel.textContent = `${pct}% Selesai`;
 
   const countAll = document.getElementById('todo-count-all');
   const countActive = document.getElementById('todo-count-active');
@@ -2240,15 +2480,60 @@ function renderTodos() {
     row.innerHTML = `
       <div class="todo-left">
         <input type="checkbox" ${todo.done ? 'checked' : ''} />
-        <span>${todo.text}</span>
+        <span>${escapeHtml(todo.text)}</span>
       </div>
       <button class="todo-del-btn" title="Hapus">✕</button>
     `;
 
-    row.querySelector('.todo-left').addEventListener('click', () => {
+    const leftEl = row.querySelector('.todo-left');
+    const textSpan = leftEl?.querySelector('span');
+    let clickLockTimer = null;
+
+    leftEl?.querySelector('input')?.addEventListener('click', (e) => {
+      e.stopPropagation();
       todo.done = !todo.done;
       saveConfig();
       renderTodos();
+    });
+
+    leftEl?.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      clearTimeout(clickLockTimer);
+      clickLockTimer = setTimeout(() => {
+        todo.done = !todo.done;
+        saveConfig();
+        renderTodos();
+      }, 190);
+    });
+
+    textSpan?.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      clearTimeout(clickLockTimer);
+      const editInput = document.createElement('input');
+      editInput.type = 'text';
+      editInput.className = 'todo-edit-input';
+      editInput.value = todo.text;
+      textSpan.replaceWith(editInput);
+      editInput.focus();
+      editInput.select();
+
+      const commitEdit = () => {
+        const nextText = editInput.value.trim();
+        if (nextText) {
+          todo.text = nextText;
+          saveConfig();
+        }
+        renderTodos();
+      };
+      editInput.addEventListener('blur', commitEdit);
+      editInput.addEventListener('keydown', (ke) => {
+        if (ke.key === 'Enter') {
+          ke.preventDefault();
+          editInput.blur();
+        } else if (ke.key === 'Escape') {
+          renderTodos();
+        }
+      });
     });
 
     row.querySelector('.todo-del-btn').addEventListener('click', () => {
@@ -2260,6 +2545,16 @@ function renderTodos() {
     todoListEl.appendChild(row);
   });
 }
+
+document.getElementById('todo-clear-done-btn')?.addEventListener('click', () => {
+  const before = (appConfig.todos || []).length;
+  appConfig.todos = (appConfig.todos || []).filter((t) => !t.done);
+  if (appConfig.todos.length !== before) {
+    saveConfig();
+    renderTodos();
+    triggerLaunchHud('🧹', 'Tugas Selesai Dibersihkan', `${before - appConfig.todos.length} tugas dihapus`);
+  }
+});
 
 document.querySelectorAll('[data-todo-filter]').forEach((pill) => {
   pill.addEventListener('click', () => {
@@ -2326,8 +2621,42 @@ renderTodos();
 const termOutputEl = document.getElementById('term-output');
 const termInputEl = document.getElementById('term-input');
 const termSendBtn = document.getElementById('term-send-btn');
+const termSuggestHintEl = document.getElementById('term-suggest-hint');
 let termHistory = [];
 let termHistoryIndex = -1;
+
+const TERM_AUTOCOMPLETE_COMMANDS = [
+  'dir',
+  'cd ..',
+  'cls',
+  'clear',
+  'help',
+  'git status',
+  'git log --oneline -5',
+  'git branch',
+  'ipconfig',
+  'node -v',
+  'npm -v',
+  'whoami',
+  'systeminfo',
+  'tasklist'
+];
+
+function updateTerminalSuggestionHint(val) {
+  if (!termSuggestHintEl) return;
+  const typed = (val || '').trim().toLowerCase();
+  if (!typed) {
+    termSuggestHintEl.classList.add('hidden');
+    return;
+  }
+  const match = TERM_AUTOCOMPLETE_COMMANDS.find((c) => c.startsWith(typed) && c !== typed);
+  if (match) {
+    termSuggestHintEl.textContent = `Tab ⇥ ${match}`;
+    termSuggestHintEl.classList.remove('hidden');
+  } else {
+    termSuggestHintEl.classList.add('hidden');
+  }
+}
 
 function updateTerminalCwdDisplay(targetPath) {
   const cwdBadge = document.getElementById('term-cwd-badge');
@@ -2336,6 +2665,42 @@ function updateTerminalCwdDisplay(targetPath) {
   const folderName = p.split(/[/\\]/).filter(Boolean).pop() || 'Root';
   cwdBadge.textContent = `📁 ${folderName}`;
   cwdBadge.title = p;
+}
+
+function appendTerminalLine(text, cls = '') {
+  if (!termOutputEl) return;
+  const line = document.createElement('div');
+  line.className = `term-line${cls ? ` ${cls}` : ''}`;
+  line.textContent = text;
+  termOutputEl.appendChild(line);
+  termOutputEl.scrollTop = termOutputEl.scrollHeight;
+}
+
+async function resolveAndChangeTerminalDir(rawTarget) {
+  const baseDir = currentTerminalPath || currentExplorerPath || '';
+  const cleaned = rawTarget.replace(/^["']|["']$/g, '').trim();
+  let candidate = cleaned;
+
+  if (!cleaned || cleaned === '~') {
+    const bm = await ipcRenderer.invoke('get-user-Bookmarks');
+    candidate = bm?.[0]?.path || baseDir;
+  } else if (cleaned === '..') {
+    if (baseDir) {
+      const checkParent = await ipcRenderer.invoke('read-directory', baseDir);
+      candidate = checkParent?.parentPath || baseDir;
+    }
+  } else if (!/^[a-zA-Z]:[/\\]/.test(cleaned) && !cleaned.startsWith('\\\\') && baseDir) {
+    candidate = baseDir.endsWith('\\') || baseDir.endsWith('/') ? `${baseDir}${cleaned}` : `${baseDir}\\${cleaned}`;
+  }
+
+  const res = await ipcRenderer.invoke('read-directory', candidate);
+  if (res && res.ok && res.currentPath) {
+    currentTerminalPath = res.currentPath;
+    updateTerminalCwdDisplay(currentTerminalPath);
+    appendTerminalLine(`📂 Direktori aktif berpindah ke: ${currentTerminalPath}`, 'sys');
+  } else {
+    appendTerminalLine(`⚠️ Direktori tidak ditemukan atau tidak dapat diakses: ${candidate}`, 'err');
+  }
 }
 
 async function executeTerminalCommand(cmd) {
@@ -2347,6 +2712,7 @@ async function executeTerminalCommand(cmd) {
     termHistory.push(cleanCmd);
   }
   termHistoryIndex = termHistory.length;
+  updateTerminalSuggestionHint('');
 
   if (cleanCmd.toLowerCase() === 'cls' || cleanCmd.toLowerCase() === 'clear') {
     termOutputEl.innerHTML = '';
@@ -2354,28 +2720,51 @@ async function executeTerminalCommand(cmd) {
   }
 
   const promptText = document.querySelector('.term-prompt')?.textContent || 'PS WinMac>';
-  const cmdLine = document.createElement('div');
-  cmdLine.className = 'term-line cmd';
-  cmdLine.textContent = `${promptText} ${cleanCmd}`;
-  termOutputEl.appendChild(cmdLine);
+  appendTerminalLine(`${promptText} ${cleanCmd}`, 'cmd');
 
-  const res = await ipcRenderer.invoke('run-terminal-cmd', cleanCmd, currentExplorerPath);
-  const outLine = document.createElement('div');
-  outLine.className = `term-line ${res.isError ? 'err' : ''}`;
-  outLine.textContent = res.output;
-  termOutputEl.appendChild(outLine);
+  if (cleanCmd.toLowerCase() === 'help') {
+    appendTerminalLine(
+      'WinMac Glass Terminal Pro — Panduan Cepat:\n• cd <folder> / cd .. : Pindah direktori kerja aktif\n• Tab : Autocomplete perintah umum\n• ↑ / ↓ : Telusuri riwayat perintah sebelumnya\n• Ctrl+L / cls : Bersihkan layar terminal',
+      'sys'
+    );
+    return;
+  }
 
-  termOutputEl.scrollTop = termOutputEl.scrollHeight;
-  updateTerminalCwdDisplay(currentExplorerPath);
+  if (/^cd(\s+.*)?$/i.test(cleanCmd)) {
+    const arg = cleanCmd.slice(2).trim();
+    await resolveAndChangeTerminalDir(arg);
+    return;
+  }
+
+  const activeDir = currentTerminalPath || currentExplorerPath;
+  const res = await ipcRenderer.invoke('run-terminal-cmd', cleanCmd, activeDir);
+  appendTerminalLine(res.output, res.isError ? 'err' : '');
+  updateTerminalCwdDisplay(activeDir);
 }
 
 termSendBtn?.addEventListener('click', () => {
   executeTerminalCommand(termInputEl.value);
   termInputEl.value = '';
+  updateTerminalSuggestionHint('');
+});
+
+termInputEl?.addEventListener('input', (e) => {
+  updateTerminalSuggestionHint(e.target.value);
 });
 
 termInputEl?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
+  if (e.key === 'Tab') {
+    const typed = (termInputEl.value || '').trim().toLowerCase();
+    const match = TERM_AUTOCOMPLETE_COMMANDS.find((c) => c.startsWith(typed));
+    if (typed && match) {
+      e.preventDefault();
+      termInputEl.value = match;
+      updateTerminalSuggestionHint(match);
+    }
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'l') {
+    e.preventDefault();
+    if (termOutputEl) termOutputEl.innerHTML = '';
+  } else if (e.key === 'Enter') {
     executeTerminalCommand(termInputEl.value);
     termInputEl.value = '';
   } else if (e.key === 'ArrowUp') {
@@ -2387,6 +2776,7 @@ termInputEl?.addEventListener('keydown', (e) => {
       termHistoryIndex = 0;
     }
     termInputEl.value = termHistory[termHistoryIndex] || '';
+    updateTerminalSuggestionHint(termInputEl.value);
   } else if (e.key === 'ArrowDown') {
     e.preventDefault();
     if (termHistory.length === 0) return;
@@ -2397,6 +2787,7 @@ termInputEl?.addEventListener('keydown', (e) => {
       termHistoryIndex = termHistory.length;
       termInputEl.value = '';
     }
+    updateTerminalSuggestionHint(termInputEl.value);
   }
 });
 
@@ -2404,6 +2795,13 @@ document.querySelectorAll('.term-chip').forEach((chip) => {
   chip.addEventListener('click', () => {
     executeTerminalCommand(chip.dataset.cmd);
   });
+});
+
+document.getElementById('term-copy-btn')?.addEventListener('click', () => {
+  const txt = (termOutputEl?.innerText || '').trim();
+  if (!txt) return;
+  ipcRenderer.send('copy-to-clipboard', txt);
+  triggerLaunchHud('📋', 'Output Terminal Disalin', 'Tersimpan di Clipboard');
 });
 
 document.getElementById('term-clear-btn')?.addEventListener('click', () => {
@@ -2414,36 +2812,172 @@ document.getElementById('term-open-native')?.addEventListener('click', () => {
   ipcRenderer.send('launch-app', 'terminal');
 });
 
-// Kalkulator
+// Kalkulator Pro (Live Preview, Scientific Quick Keys, Riwayat & Keyboard Support)
 let calcExpression = '';
 const calcExprEl = document.getElementById('calc-expr');
 const calcResultEl = document.getElementById('calc-result');
+const calcLivePreviewEl = document.getElementById('calc-live-preview');
+const calcHistoryDrawer = document.getElementById('calc-history-drawer');
+const calcHistoryListEl = document.getElementById('calc-history-list');
+const calcHistoryBtn = document.getElementById('calc-history-btn');
 
-document.querySelectorAll('.calc-key').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const key = btn.dataset.key;
+function evaluateCalcFormula(rawExpr) {
+  const cleaned = (rawExpr || '')
+    .replace(/×/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/−/g, '-')
+    .replace(/%/g, '/100')
+    .replace(/[^0-9+\-*/.()]/g, '');
+  if (!cleaned) return null;
+  try {
+    const val = Function(`"use strict"; return (${cleaned})`)();
+    if (!Number.isFinite(val)) return null;
+    return Number(val.toFixed(6));
+  } catch (_) {
+    return null;
+  }
+}
 
-    if (key === 'C') {
-      calcExpression = '';
-      calcExprEl.textContent = '0';
-      calcResultEl.textContent = '0';
-    } else if (key === 'DEL') {
-      calcExpression = calcExpression.slice(0, -1);
-      calcExprEl.textContent = calcExpression || '0';
-    } else if (key === '=') {
-      try {
-        const sanitized = calcExpression.replace(/[^0-9+\-*/.%()]/g, '');
-        const val = Function(`"use strict"; return (${sanitized || 0})`)();
-        calcResultEl.textContent = Number.isFinite(val) ? Number(val.toFixed(6)) : 'Error';
-        calcExpression = String(calcResultEl.textContent);
-      } catch (_) {
-        calcResultEl.textContent = 'Error';
-      }
-    } else {
-      calcExpression += key;
-      calcExprEl.textContent = calcExpression;
-    }
+function updateCalcLivePreview() {
+  if (!calcLivePreviewEl) return;
+  if (!calcExpression || !/[+\-*/%]/.test(calcExpression)) {
+    calcLivePreviewEl.classList.add('hidden');
+    return;
+  }
+  const val = evaluateCalcFormula(calcExpression);
+  if (val !== null) {
+    calcLivePreviewEl.textContent = `= ${val}`;
+    calcLivePreviewEl.classList.remove('hidden');
+  } else {
+    calcLivePreviewEl.classList.add('hidden');
+  }
+}
+
+function renderCalcHistory() {
+  if (!calcHistoryListEl) return;
+  const list = appConfig.calcHistory || [];
+  calcHistoryListEl.innerHTML = '';
+  if (list.length === 0) {
+    calcHistoryListEl.innerHTML = `<div style="font-size:10.5px;color:var(--text-secondary);text-align:center;padding:4px;">Belum ada riwayat perhitungan.</div>`;
+    return;
+  }
+  list.forEach((item) => {
+    const btn = document.createElement('button');
+    btn.className = 'calc-hist-item';
+    btn.innerHTML = `<span style="opacity:0.75">${escapeHtml(item.expr)}</span><strong>= ${escapeHtml(String(item.res))}</strong>`;
+    btn.addEventListener('click', () => {
+      calcExpression = String(item.res);
+      if (calcExprEl) calcExprEl.textContent = item.expr;
+      if (calcResultEl) calcResultEl.textContent = String(item.res);
+      updateCalcLivePreview();
+    });
+    calcHistoryListEl.appendChild(btn);
   });
+}
+renderCalcHistory();
+
+function handleCalculatorKeyInput(key) {
+  if (key === 'C') {
+    calcExpression = '';
+    if (calcExprEl) calcExprEl.textContent = '0';
+    if (calcResultEl) calcResultEl.textContent = '0';
+  } else if (key === 'DEL') {
+    calcExpression = calcExpression.slice(0, -1);
+    if (calcExprEl) calcExprEl.textContent = calcExpression || '0';
+  } else if (key === 'NEG') {
+    const val = evaluateCalcFormula(calcExpression || calcResultEl?.textContent || '0');
+    if (val !== null) {
+      calcExpression = String(-val);
+      if (calcExprEl) calcExprEl.textContent = calcExpression;
+      if (calcResultEl) calcResultEl.textContent = calcExpression;
+    }
+  } else if (key === 'SQRT') {
+    const val = evaluateCalcFormula(calcExpression || calcResultEl?.textContent || '0');
+    if (val !== null && val >= 0) {
+      const sq = Number(Math.sqrt(val).toFixed(6));
+      if (calcExprEl) calcExprEl.textContent = `√(${val})`;
+      if (calcResultEl) calcResultEl.textContent = String(sq);
+      calcExpression = String(sq);
+    } else if (calcResultEl) {
+      calcResultEl.textContent = 'Error';
+      calcExpression = '';
+    }
+  } else if (key === 'SQ') {
+    const val = evaluateCalcFormula(calcExpression || calcResultEl?.textContent || '0');
+    if (val !== null) {
+      const sq = Number((val * val).toFixed(6));
+      if (calcExprEl) calcExprEl.textContent = `(${val})²`;
+      if (calcResultEl) calcResultEl.textContent = String(sq);
+      calcExpression = String(sq);
+    }
+  } else if (key === '=') {
+    const rounded = evaluateCalcFormula(calcExpression);
+    if (rounded !== null) {
+      const exprSnapshot = calcExpression || String(rounded);
+      if (calcResultEl) calcResultEl.textContent = String(rounded);
+      if (!Array.isArray(appConfig.calcHistory)) appConfig.calcHistory = [];
+      appConfig.calcHistory.unshift({ expr: exprSnapshot, res: rounded });
+      appConfig.calcHistory = appConfig.calcHistory.slice(0, 12);
+      saveConfig();
+      renderCalcHistory();
+      calcExpression = String(rounded);
+    } else {
+      if (calcResultEl) calcResultEl.textContent = 'Error';
+      calcExpression = '';
+    }
+  } else {
+    calcExpression += key;
+    if (calcExprEl) calcExprEl.textContent = calcExpression;
+  }
+  updateCalcLivePreview();
+}
+
+document.querySelectorAll('.calc-key, .calc-sci-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    handleCalculatorKeyInput(btn.dataset.key);
+  });
+});
+
+calcHistoryBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const isHidden = calcHistoryDrawer?.classList.toggle('hidden');
+  calcHistoryBtn.classList.toggle('active', !isHidden);
+});
+
+document.getElementById('calc-history-clear-btn')?.addEventListener('click', () => {
+  appConfig.calcHistory = [];
+  saveConfig();
+  renderCalcHistory();
+});
+
+document.getElementById('calc-copy-btn')?.addEventListener('click', () => {
+  const val = calcResultEl?.textContent || '0';
+  ipcRenderer.send('copy-to-clipboard', val);
+  triggerLaunchHud('🧮', `Hasil Disalin: ${val}`, 'Siap ditempel (Ctrl+V)');
+});
+
+window.addEventListener('keydown', (e) => {
+  const calcWin = document.getElementById('win-calculator');
+  if (!calcWin || calcWin.classList.contains('hidden')) return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  // Pastikan jendela modal lain yang menutup calculator tidak ikut ketik
+  const spotWin = document.getElementById('win-spotlight');
+  const startWin = document.getElementById('win12-start-menu');
+  if ((spotWin && !spotWin.classList.contains('hidden')) || (startWin && !startWin.classList.contains('hidden'))) return;
+
+  if (/^[0-9+\-*/.%()]$/.test(e.key)) {
+    e.preventDefault();
+    handleCalculatorKeyInput(e.key);
+  } else if (e.key === 'Enter' || e.key === '=') {
+    e.preventDefault();
+    handleCalculatorKeyInput('=');
+  } else if (e.key === 'Backspace') {
+    e.preventDefault();
+    handleCalculatorKeyInput('DEL');
+  } else if (e.key === 'Delete') {
+    e.preventDefault();
+    handleCalculatorKeyInput('C');
+  }
 });
 
 // =========================================================
@@ -2463,20 +2997,31 @@ function getAllDockItems() {
   return Array.from(document.querySelectorAll('.dock-item'));
 }
 
+const customDockIconTried = new Set();
+
 // Render shortcut aplikasi yang ditambahkan user ke Dock
 function renderCustomDockApps() {
   if (!customDockContainer) return;
   customDockContainer.innerHTML = '';
 
+  const pendingBackfill = [];
   (appConfig.customDockApps || []).forEach((appItem, idx) => {
     const btn = document.createElement('button');
     btn.className = 'dock-item';
     btn.dataset.label = `${appItem.name} (Klik Kanan: Hapus)`;
-    const initials = appItem.name.slice(0, 2).toUpperCase();
+    const initials = escapeHtml(appItem.name.slice(0, 2).toUpperCase());
+    const iconHtml = appItem.iconDataUrl
+      ? `<div class="dock-icon icon-custom-app has-native-icon"><img src="${escapeHtml(appItem.iconDataUrl)}" class="native-exe-icon-img" alt="${escapeHtml(appItem.name)}" /></div>`
+      : `<div class="dock-icon icon-custom-app">${initials}</div>`;
     btn.innerHTML = `
-      <div class="dock-icon icon-custom-app">${initials}</div>
+      ${iconHtml}
       <span class="dock-dot"></span>
     `;
+
+    if (!appItem.iconDataUrl && appItem.path && !customDockIconTried.has(appItem.path)) {
+      customDockIconTried.add(appItem.path);
+      pendingBackfill.push(appItem);
+    }
 
     btn.addEventListener('click', () => {
       btn.classList.remove('launching');
@@ -2496,6 +3041,26 @@ function renderCustomDockApps() {
 
     customDockContainer.appendChild(btn);
   });
+
+  if (pendingBackfill.length > 0) {
+    Promise.all(
+      pendingBackfill.map(async (item) => {
+        try {
+          const ico = await ipcRenderer.invoke('get-app-icon', item.path);
+          if (ico) {
+            item.iconDataUrl = ico;
+            return true;
+          }
+        } catch (_) {}
+        return false;
+      })
+    ).then((results) => {
+      if (results.some(Boolean)) {
+        saveConfig();
+        renderCustomDockApps();
+      }
+    });
+  }
 }
 
 renderCustomDockApps();
@@ -2510,27 +3075,41 @@ addDockAppBtn?.addEventListener('click', async () => {
   }
 });
 
-// Efek Gelombang Fisika Magnification Dock (Aktif di Mode macOS & WinMac Hybrid; nonaktif di Taskbar Windows 12)
+// Efek Gelombang Fisika Magnification Dock (60fps rAF, Aktif di Mode macOS & WinMac Hybrid; nonaktif di Taskbar Windows 12 / Reduced Motion)
+let dockMagRafId = null;
+let dockLastMouseX = null;
+
 dock.addEventListener('mousemove', (e) => {
-  if (document.body.classList.contains('os-mode-win12')) return;
-  const mouseX = e.clientX;
+  if (document.body.classList.contains('os-mode-win12') || appConfig.reducedMotion) return;
+  dockLastMouseX = e.clientX;
+  if (dockMagRafId) return;
 
-  getAllDockItems().forEach((item) => {
-    const rect = item.getBoundingClientRect();
-    const itemCenterX = rect.left + rect.width / 2;
-    const distance = Math.abs(mouseX - itemCenterX);
+  dockMagRafId = requestAnimationFrame(() => {
+    dockMagRafId = null;
+    if (dockLastMouseX === null) return;
+    const mouseX = dockLastMouseX;
+    getAllDockItems().forEach((item) => {
+      const rect = item.getBoundingClientRect();
+      const itemCenterX = rect.left + rect.width / 2;
+      const distance = Math.abs(mouseX - itemCenterX);
 
-    if (distance < EFFECT_RADIUS) {
-      const ratio = Math.cos((distance / EFFECT_RADIUS) * (Math.PI / 2));
-      const scale = 1 + (maxDockScale - 1) * Math.pow(ratio, 1.45);
-      item.style.setProperty('--scale', scale.toFixed(3));
-    } else {
-      item.style.setProperty('--scale', '1');
-    }
+      if (distance < EFFECT_RADIUS) {
+        const ratio = Math.cos((distance / EFFECT_RADIUS) * (Math.PI / 2));
+        const scale = 1 + (maxDockScale - 1) * Math.pow(ratio, 1.45);
+        item.style.setProperty('--scale', scale.toFixed(3));
+      } else {
+        item.style.setProperty('--scale', '1');
+      }
+    });
   });
 });
 
 dock.addEventListener('mouseleave', () => {
+  if (dockMagRafId) {
+    cancelAnimationFrame(dockMagRafId);
+    dockMagRafId = null;
+  }
+  dockLastMouseX = null;
   getAllDockItems().forEach((item) => {
     item.style.setProperty('--scale', '1');
   });
@@ -2633,6 +3212,24 @@ if (ecoBatteryToggle) {
   });
 }
 
+function applyReducedMotionState(enabled) {
+  document.body.classList.toggle('reduced-motion', Boolean(enabled));
+}
+applyReducedMotionState(Boolean(appConfig.reducedMotion));
+
+const reducedMotionToggle = document.getElementById('reduced-motion-toggle');
+if (reducedMotionToggle) {
+  reducedMotionToggle.checked = Boolean(appConfig.reducedMotion);
+  reducedMotionToggle.addEventListener('change', (e) => {
+    appConfig.reducedMotion = e.target.checked;
+    applyReducedMotionState(appConfig.reducedMotion);
+    saveConfig();
+    if (appConfig.reducedMotion) {
+      getAllDockItems().forEach((item) => item.style.setProperty('--scale', '1'));
+    }
+  });
+}
+
 // Smart Battery & Auto-Eco Power Saver Monitor (Chromium Battery API)
 let currentBatteryInfo = { level: 1, charging: true, dischargingTime: Infinity };
 
@@ -2671,6 +3268,18 @@ function evaluateEcoBatteryState() {
     }
     rmBatStatus.textContent = `${pct}% • ${timeHint}`;
   }
+
+  const lockBatEl = document.getElementById('lockscreen-battery');
+  if (lockBatEl) {
+    const batDetail = charging ? 'Mengisi Daya • Siap Digunakan' : 'Mode Baterai';
+    lockBatEl.textContent = `${charging ? '⚡' : '🔋'} ${pct}% ${batDetail}`;
+  }
+
+  const win12TrayBat = document.getElementById('win12-tray-bat');
+  if (win12TrayBat) {
+    win12TrayBat.textContent = charging ? '⚡' : pct <= 25 ? '🪫' : '🔋';
+    win12TrayBat.title = `Baterai ${pct}% (${charging ? 'Mengisi Daya' : 'Baterai'})`;
+  }
 }
 
 if (navigator.getBattery) {
@@ -2707,7 +3316,9 @@ const rmSkinMap = {
 const rmToggleCheckboxes = {
   clock: document.getElementById('rm-toggle-clock'),
   sysmon: document.getElementById('rm-toggle-sysmon'),
-  visualizer: document.getElementById('rm-toggle-visualizer')
+  visualizer: document.getElementById('rm-toggle-visualizer'),
+  pomodoro: document.getElementById('rm-toggle-pomodoro'),
+  clipboard: document.getElementById('rm-toggle-clipboard')
 };
 
 const rmLockAllToggle = document.getElementById('rm-lock-all-toggle');
@@ -3133,9 +3744,9 @@ function renderParticleTick() {
   pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
   if (mode === 'off') return;
 
-  // Smart Gaming / Battery Pause: jika CPU > 70% atau Auto-Eco Battery aktif, jeda partikel otomatis
+  // Smart Gaming / Battery / App Mode Pause: jeda partikel saat CPU > 70%, Auto-Eco Battery, atau Mode Layar Aplikasi aktif
   const latestCpu = cpuHistory[cpuHistory.length - 1] || 15;
-  if (latestCpu > 70 || isEcoBatteryPaused) return;
+  if (latestCpu > 70 || isEcoBatteryPaused || isAppPassthroughMode) return;
 
   const accent = appConfig.customAccent || '#38bdf8';
 
@@ -3486,18 +4097,38 @@ function evaluateUnitOrCurrencyConversion(raw) {
 }
 
 let spotlightFileSearchTimer = null;
+let spotlightActiveIndex = 0;
+const spotlightClearBtn = document.getElementById('spotlight-clear-btn');
+
+function syncSpotlightKeyboardSelection(nextIndex = 0) {
+  const items = Array.from(spotlightResults?.querySelectorAll('.spot-item') || []);
+  if (items.length === 0) {
+    spotlightActiveIndex = -1;
+    return;
+  }
+  spotlightActiveIndex = ((nextIndex % items.length) + items.length) % items.length;
+  items.forEach((el, idx) => {
+    const isAct = idx === spotlightActiveIndex;
+    el.classList.toggle('kbd-active', isAct);
+    if (isAct) el.scrollIntoView({ block: 'nearest' });
+  });
+}
 
 function renderSpotlight(query) {
   if (!spotlightResults) return;
   const q = (query || '').trim();
+  if (spotlightClearBtn) {
+    spotlightClearBtn.classList.toggle('hidden', !q.length);
+  }
   spotlightResults.innerHTML = '';
+  spotlightActiveIndex = 0;
 
   // 1. Cek Konversi Mata Uang / Satuan ("10 usd to idr", "100 km to mile", "30 c to f")
   const convResult = evaluateUnitOrCurrencyConversion(q);
   if (convResult) {
     spotlightMathRes?.classList.remove('hidden');
     spotlightMathRes.innerHTML = `
-      <span>${convResult}</span>
+      <span>${escapeHtml(convResult)}</span>
       <span class="kbd-hint">Klik untuk Copy</span>
     `;
     spotlightMathRes.onclick = () => {
@@ -3535,7 +4166,7 @@ function renderSpotlight(query) {
     const targetUrl = /^https?:\/\//i.test(rawDomain) ? rawDomain : `https://${rawDomain}`;
     const btn = document.createElement('button');
     btn.className = 'spot-item';
-    btn.innerHTML = `<span>🌍 Buka Website: ${targetUrl}</span><span>Enter ↵</span>`;
+    btn.innerHTML = `<span>🌍 Buka Website: ${escapeHtml(targetUrl)}</span><span>Enter ↵</span>`;
     btn.onclick = () => {
       ipcRenderer.send('open-external-url', targetUrl);
       closeCustomWindow('win-spotlight');
@@ -3548,7 +4179,7 @@ function renderSpotlight(query) {
     const term = q.slice(2).trim();
     const btn = document.createElement('button');
     btn.className = 'spot-item';
-    btn.innerHTML = `<span>🌐 Cari di Google: "${term}"</span><span>Enter ↵</span>`;
+    btn.innerHTML = `<span>🌐 Cari di Google: "${escapeHtml(term)}"</span><span>Enter ↵</span>`;
     btn.onclick = () => {
       ipcRenderer.send('open-external-url', `https://www.google.com/search?q=${encodeURIComponent(term)}`);
       closeCustomWindow('win-spotlight');
@@ -3558,7 +4189,7 @@ function renderSpotlight(query) {
     const term = q.slice(3).trim();
     const btn = document.createElement('button');
     btn.className = 'spot-item';
-    btn.innerHTML = `<span>▶️ Cari di YouTube: "${term}"</span><span>Enter ↵</span>`;
+    btn.innerHTML = `<span>▶️ Cari di YouTube: "${escapeHtml(term)}"</span><span>Enter ↵</span>`;
     btn.onclick = () => {
       ipcRenderer.send('open-external-url', `https://www.youtube.com/results?search_query=${encodeURIComponent(term)}`);
       closeCustomWindow('win-spotlight');
@@ -3573,7 +4204,7 @@ function renderSpotlight(query) {
     .forEach((cmd) => {
       const btn = document.createElement('button');
       btn.className = 'spot-item';
-      btn.innerHTML = `<span>${cmd.label}</span><span>Jalankan ↵</span>`;
+      btn.innerHTML = `<span>${escapeHtml(cmd.label)}</span><span>Jalankan ↵</span>`;
       btn.onclick = () => {
         cmd.run();
         closeCustomWindow('win-spotlight');
@@ -3585,28 +4216,50 @@ function renderSpotlight(query) {
   clearTimeout(spotlightFileSearchTimer);
   const fileQuery = lower.startsWith('f ') ? q.slice(2).trim() : q.length >= 3 ? q : '';
   if (fileQuery.length >= 2) {
+    const querySnapshot = q;
     spotlightFileSearchTimer = setTimeout(async () => {
       const files = await ipcRenderer.invoke('search-local-files', fileQuery);
+      if ((spotlightInput?.value || '').trim() !== querySnapshot) return;
       if (!files || !files.length) return;
       files.slice(0, 5).forEach((f) => {
         const btn = document.createElement('button');
         btn.className = 'spot-item';
-        btn.innerHTML = `<span>${f.isDirectory ? '📁' : '📄'} ${f.name} <small style="opacity:0.65">(${f.location})</small></span><span>Buka File ↵</span>`;
+        btn.innerHTML = `<span>${f.isDirectory ? '📁' : '📄'} ${escapeHtml(f.name)} <small style="opacity:0.65">(${escapeHtml(f.location)})</small></span><span>Buka File ↵</span>`;
         btn.onclick = () => {
           ipcRenderer.invoke('open-path', f.path);
           closeCustomWindow('win-spotlight');
         };
         spotlightResults.appendChild(btn);
       });
+      syncSpotlightKeyboardSelection(spotlightActiveIndex);
     }, 180);
   }
+  syncSpotlightKeyboardSelection(0);
 }
 
 document.getElementById('spotlight-trigger-btn')?.addEventListener('click', (e) => {
   e.stopPropagation();
   toggleCustomWindow('win-spotlight');
-  renderSpotlight('');
+  renderSpotlight(spotlightInput?.value || '');
   setTimeout(() => spotlightInput?.focus(), 60);
+});
+
+spotlightClearBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!spotlightInput) return;
+  spotlightInput.value = '';
+  renderSpotlight('');
+  spotlightInput.focus();
+});
+
+document.querySelectorAll('.spotlight-chip[data-spot-preset]').forEach((chip) => {
+  chip.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!spotlightInput) return;
+    spotlightInput.value = chip.dataset.spotPreset || '';
+    renderSpotlight(spotlightInput.value);
+    spotlightInput.focus();
+  });
 });
 
 spotlightInput?.addEventListener('input', (e) => {
@@ -3616,9 +4269,18 @@ spotlightInput?.addEventListener('input', (e) => {
 spotlightInput?.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeCustomWindow('win-spotlight');
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    syncSpotlightKeyboardSelection(spotlightActiveIndex + 1);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    syncSpotlightKeyboardSelection(spotlightActiveIndex - 1);
   } else if (e.key === 'Enter') {
-    const firstBtn = spotlightResults?.querySelector('.spot-item');
-    if (firstBtn) firstBtn.click();
+    e.preventDefault();
+    const activeBtn =
+      spotlightResults?.querySelector('.spot-item.kbd-active') ||
+      spotlightResults?.querySelector('.spot-item');
+    if (activeBtn) activeBtn.click();
   }
 });
 
@@ -3718,16 +4380,15 @@ function toggleVisualizerPlay() {
   startOrUpdateWebAudioSynth();
 }
 
+function stepSynthTrack(delta) {
+  currentTrackIdx = (currentTrackIdx + delta + synthTracks.length) % synthTracks.length;
+  updateTrackDisplay();
+  if (isWebAudioSoundOn && isVisualizerPlaying) startOrUpdateWebAudioSynth();
+}
+
 rmVisPlayBtn?.addEventListener('click', (e) => {
   e.stopPropagation();
   toggleVisualizerPlay();
-});
-
-rmVisNextBtn?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  currentTrackIdx = (currentTrackIdx + 1) % synthTracks.length;
-  updateTrackDisplay();
-  if (isWebAudioSoundOn && isVisualizerPlaying) startOrUpdateWebAudioSynth();
 });
 
 rmVisSoundBtn?.addEventListener('click', (e) => {
@@ -3742,7 +4403,12 @@ rmVisSoundBtn?.addEventListener('click', (e) => {
 let visPhase = 0;
 setInterval(() => {
   if (!visBarElements.length) return;
-  if (!appConfig.rainmeterSkins?.visualizer?.visible || appConfig.rainmeterSkins?.visualizer?.collapsed) {
+  if (
+    !appConfig.rainmeterSkins?.visualizer?.visible ||
+    appConfig.rainmeterSkins?.visualizer?.collapsed ||
+    isLockScreenActive ||
+    isAppPassthroughMode
+  ) {
     return;
   }
   if (!isVisualizerPlaying) {
@@ -3854,6 +4520,7 @@ document.querySelectorAll('.win-resize-handle').forEach((handle) => {
 
     isResizingWindow = true;
     activeResizeWin = winEl;
+    activeResizeWin.classList.add('is-resizing');
     resizeStartX = e.clientX;
     resizeStartY = e.clientY;
     resizeStartW = rect.width;
@@ -3863,6 +4530,7 @@ document.querySelectorAll('.win-resize-handle').forEach((handle) => {
   });
 });
 
+// Penyeret (Drag) semua elemen .interactive-widget[data-draggable="true"]
 document.querySelectorAll('.interactive-widget').forEach((widget) => {
   if (widget.dataset.draggable !== 'true') return;
 
@@ -3903,6 +4571,7 @@ document.querySelectorAll('.interactive-widget').forEach((widget) => {
     isDraggingWidget = true;
     wasDragged = false;
     activeWidget = widget;
+    activeWidget.classList.add('is-dragging');
 
     const rect = widget.getBoundingClientRect();
     startPointerX = e.clientX;
@@ -3981,6 +4650,7 @@ window.addEventListener('pointerup', () => {
   snapGuideY?.classList.add('hidden');
 
   if (isResizingWindow && activeResizeWin) {
+    activeResizeWin.classList.remove('is-resizing');
     if (activeResizeWin.id) {
       const rect = activeResizeWin.getBoundingClientRect();
       appConfig.windowSizes = appConfig.windowSizes || {};
@@ -3996,6 +4666,7 @@ window.addEventListener('pointerup', () => {
   }
 
   if (!isDraggingWidget || !activeWidget) return;
+  activeWidget.classList.remove('is-dragging');
 
   if (wasDragged && activeWidget.id) {
     const rect = activeWidget.getBoundingClientRect();
@@ -4033,8 +4704,12 @@ if (autoStartToggle) {
   autoStartToggle.checked = appConfig.autoStart !== false;
 }
 ipcRenderer.send('set-always-on-top', Boolean(appConfig.alwaysOnTop));
+ipcRenderer.send('set-autostart', appConfig.autoStart !== false);
 
 document.getElementById('install-shortcut-btn')?.addEventListener('click', async () => {
+  appConfig.autoStart = true;
+  if (autoStartToggle) autoStartToggle.checked = true;
+  saveConfig();
   await ipcRenderer.invoke('install-desktop-shortcuts');
   triggerLaunchHud('📌', 'Shortcut & Auto-Start Aktif!', 'Tersedia di Desktop & Startup Windows');
 });
@@ -4066,7 +4741,6 @@ const dockSwitcherDot = document.getElementById('dock-switcher-dot');
 const runningDockItemsEl = document.getElementById('running-dock-items');
 const runningDockSepEl = document.getElementById('running-dock-sep');
 const runningAppsListEl = document.getElementById('running-apps-list');
-const tbActiveAppLabel = document.getElementById('tb-active-app-label');
 const appLaunchHud = document.getElementById('app-launch-hud');
 const hudAppBadge = document.getElementById('hud-app-badge');
 const hudAppTitle = document.getElementById('hud-app-title');
@@ -4084,10 +4758,18 @@ function triggerLaunchHud(badge, title, sub = 'WinMac OS Spring Engine', color =
   if (hudAppTitle) hudAppTitle.textContent = title;
   if (hudAppSub) hudAppSub.textContent = sub;
 
+  const hudProgress = document.getElementById('hud-progress-fill');
+  if (hudProgress) {
+    hudProgress.classList.remove('running');
+    void hudProgress.offsetWidth;
+    hudProgress.classList.add('running');
+  }
+
   appLaunchHud.classList.remove('hidden');
   playUiSound('launch');
   hudHideTimer = setTimeout(() => {
     appLaunchHud.classList.add('hidden');
+    hudProgress?.classList.remove('running');
   }, 1150);
 }
 
@@ -4101,16 +4783,66 @@ function animateRainmeterSkinsCascade() {
   });
 }
 
-function setAppPassthroughMode(enable, activeLabel = '') {
+let passthroughWatchTimer = null;
+let passthroughSession = {
+  enteredAt: 0,
+  reason: 'app',
+  graceMs: 3200,
+  sawVisibleExternal: false,
+  manualEmptyPeek: false
+};
+
+function getVisibleExternalWindowCount(appsList = liveRunningApps) {
+  let visible = 0;
+  appsList.forEach((appItem) => {
+    const wins = getWindowsForAppEntry(appItem);
+    wins.forEach((w) => {
+      if (!w.isMinimized) visible += 1;
+    });
+  });
+  return visible;
+}
+
+function stopPassthroughWatcher() {
+  if (passthroughWatchTimer) {
+    clearInterval(passthroughWatchTimer);
+    passthroughWatchTimer = null;
+  }
+}
+
+function startPassthroughWatcher() {
+  stopPassthroughWatcher();
+  passthroughWatchTimer = setInterval(() => {
+    if (!isLockScreenActive && isAppPassthroughMode) {
+      refreshRunningApps(true);
+    }
+  }, 900);
+}
+
+function evaluateAutoRestoreDesktop(appsList = liveRunningApps) {
+  if (!isAppPassthroughMode) return;
+  const visibleCount = getVisibleExternalWindowCount(appsList);
+  if (visibleCount > 0) {
+    passthroughSession.sawVisibleExternal = true;
+    passthroughSession.manualEmptyPeek = false;
+    return;
+  }
+  if (passthroughSession.manualEmptyPeek) return;
+  if (!passthroughSession.sawVisibleExternal) {
+    if (Date.now() - passthroughSession.enteredAt < passthroughSession.graceMs) {
+      return;
+    }
+  }
+  setAppPassthroughMode(false);
+}
+
+function setAppPassthroughMode(enable, activeLabel = '', options = {}) {
   const prevMode = isAppPassthroughMode;
   isAppPassthroughMode = Boolean(enable);
   document.body.classList.toggle('app-passthrough-mode', isAppPassthroughMode);
 
   if (activeLabel) {
     currentFocusedAppLabel = activeLabel;
-  }
-  if (tbActiveAppLabel) {
-    tbActiveAppLabel.textContent = currentFocusedAppLabel;
   }
 
   if (topDesktopModeBtn) {
@@ -4133,7 +4865,23 @@ function setAppPassthroughMode(enable, activeLabel = '') {
   }
 
   if (isAppPassthroughMode) {
+    if (!prevMode || options.reason) {
+      const currentlyVisible = getVisibleExternalWindowCount();
+      const reason = options.reason || 'app';
+      const isColdLaunch = Boolean(options.isColdLaunch);
+      passthroughSession = {
+        enteredAt: Date.now(),
+        reason,
+        graceMs: isColdLaunch ? 3500 : 1400,
+        sawVisibleExternal: currentlyVisible > 0 && !options.waitForRestore,
+        manualEmptyPeek: reason === 'manual' && currentlyVisible === 0
+      };
+    }
+    startPassthroughWatcher();
+
     // Tutup semua popup overlay internal agar aplikasi seperti VS Code / MS Word / Chrome terlihat 100% jelas tanpa terhalang
+    activeWinPickerAppKey = '';
+    activeWinPickerAnchor = null;
     [
       'win12-start-menu',
       'win-task-switcher',
@@ -4141,32 +4889,283 @@ function setAppPassthroughMode(enable, activeLabel = '') {
       'win-spotlight',
       'win-notifications',
       'dock-stack-popover',
+      'dock-win-picker',
       'win-calendar',
       'win-explorer',
       'win-notes',
       'win-terminal',
       'win-calculator',
-      'win-settings'
+      'win-settings',
+      'win-shortcuts'
     ].forEach((id) => closeCustomWindow(id));
     setOverlayIgnoreMouse(true);
-  } else if (prevMode !== isAppPassthroughMode) {
-    triggerLaunchHud('🖥️', 'Kembali ke Desktop Pro', '4K Wallpaper & Rainmeter Suite Aktif');
-    animateRainmeterSkinsCascade();
+  } else {
+    stopPassthroughWatcher();
+    passthroughSession.sawVisibleExternal = false;
+    passthroughSession.manualEmptyPeek = false;
+    if (prevMode !== isAppPassthroughMode) {
+      triggerLaunchHud('🖥️', 'Kembali ke Desktop Pro', '4K Wallpaper & Rainmeter Suite Aktif');
+      animateRainmeterSkinsCascade();
+      syncOverlayMouseAtPoint(lastPointerPos.x, lastPointerPos.y);
+    }
   }
   syncVideoWallpaperPlayback();
 }
 
-async function focusRunningAppItem(appItem) {
-  if (!appItem) return;
-  appLaunchHud?.classList.add('hidden');
-  setAppPassthroughMode(true, `Aktif: ${appItem.label}`);
-  await ipcRenderer.invoke('focus-running-app', {
-    pid: appItem.pid,
-    processName: appItem.processName
+const LAUNCHABLE_APP_KEYS = new Set([
+  'explorer',
+  'chrome',
+  'vscode',
+  'terminal',
+  'calculator',
+  'notepad',
+  'excel',
+  'word',
+  'powerpoint',
+  'postman'
+]);
+
+const dockWinPickerEl = document.getElementById('dock-win-picker');
+const winPickerTitleEl = document.getElementById('win-picker-title');
+const winPickerSubEl = document.getElementById('win-picker-sub');
+const winPickerIconEl = document.getElementById('win-picker-icon');
+const winPickerListEl = document.getElementById('dock-win-picker-list');
+const winPickerLaunchBtn = document.getElementById('win-picker-launch-btn');
+const closeWinPickerBtn = document.getElementById('close-win-picker-btn');
+let activeWinPickerAppKey = '';
+let activeWinPickerAnchor = null;
+
+function getWindowsForAppEntry(appItem) {
+  if (!appItem) return [];
+  if (Array.isArray(appItem.windows) && appItem.windows.length > 0) {
+    return appItem.windows.map((w) => ({
+      hwnd: w.hwnd || '',
+      pid: w.pid || appItem.pid || 0,
+      processName: w.processName || appItem.processName || '',
+      appKey: appItem.appKey,
+      label: appItem.label,
+      title: w.title || appItem.title || appItem.label || '',
+      isMinimized: Boolean(w.isMinimized),
+      badge: appItem.badge,
+      color: appItem.color,
+      category: appItem.category,
+      iconDataUrl: appItem.iconDataUrl || '',
+      pinnedDock: Boolean(appItem.pinnedDock)
+    }));
+  }
+  return [
+    {
+      hwnd: appItem.hwnd || '',
+      pid: appItem.pid || 0,
+      processName: appItem.processName || '',
+      appKey: appItem.appKey,
+      label: appItem.label,
+      title: appItem.title || appItem.label || '',
+      isMinimized: Boolean(appItem.allMinimized),
+      badge: appItem.badge,
+      color: appItem.color,
+      category: appItem.category,
+      iconDataUrl: appItem.iconDataUrl || '',
+      pinnedDock: Boolean(appItem.pinnedDock)
+    }
+  ];
+}
+
+function getRunningWindowsForAppKey(appKey) {
+  if (!appKey) return { appEntry: null, windows: [] };
+  const matches = liveRunningApps.filter((a) => a.appKey === appKey);
+  if (matches.length === 0) return { appEntry: null, windows: [] };
+  const windows = matches.flatMap((a) => getWindowsForAppEntry(a));
+  return { appEntry: matches[0], windows };
+}
+
+function getTotalRunningWindowCount() {
+  return liveRunningApps.reduce((sum, appItem) => {
+    const count =
+      Array.isArray(appItem.windows) && appItem.windows.length > 0
+        ? appItem.windows.length
+        : Number(appItem.windowCount) || 1;
+    return sum + count;
+  }, 0);
+}
+
+function updatePinnedDockBadge(btn, winCount) {
+  if (!btn) return;
+  const iconBox = btn.querySelector('.dock-icon');
+  if (!iconBox) return;
+  let badge = iconBox.querySelector('.dock-count-badge');
+  if (winCount > 1) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'dock-count-badge';
+      iconBox.appendChild(badge);
+    }
+    badge.textContent = String(winCount);
+    badge.classList.remove('hidden');
+  } else if (badge) {
+    badge.classList.add('hidden');
+  }
+}
+
+function positionDockWindowPicker(anchorEl) {
+  if (!dockWinPickerEl) return;
+  const popW = dockWinPickerEl.offsetWidth || Math.min(390, Math.round(window.innerWidth * 0.92));
+  const rect = anchorEl && typeof anchorEl.getBoundingClientRect === 'function' ? anchorEl.getBoundingClientRect() : null;
+
+  dockWinPickerEl.style.transform = 'none';
+  if (rect && rect.width > 0 && rect.height > 0) {
+    const left = Math.max(14, Math.min(window.innerWidth - popW - 14, rect.left + rect.width / 2 - popW / 2));
+    dockWinPickerEl.style.left = `${Math.round(left)}px`;
+    if (rect.top > window.innerHeight * 0.52) {
+      const bottom = Math.max(88, Math.round(window.innerHeight - rect.top + 14));
+      dockWinPickerEl.style.bottom = `${bottom}px`;
+      dockWinPickerEl.style.top = 'auto';
+    } else {
+      const popH = dockWinPickerEl.offsetHeight || 280;
+      const top = Math.max(58, Math.min(window.innerHeight - popH - 24, rect.bottom + 8));
+      dockWinPickerEl.style.top = `${Math.round(top)}px`;
+      dockWinPickerEl.style.bottom = 'auto';
+    }
+  } else {
+    const left = Math.max(14, Math.round((window.innerWidth - popW) / 2));
+    dockWinPickerEl.style.left = `${left}px`;
+    dockWinPickerEl.style.bottom = '96px';
+    dockWinPickerEl.style.top = 'auto';
+  }
+}
+
+function renderDockWindowPickerRows(appEntry, windows) {
+  if (!winPickerListEl || !appEntry) return;
+  if (winPickerIconEl) {
+    winPickerIconEl.innerHTML = getOfficialAppIconHtml(appEntry);
+  }
+  if (winPickerTitleEl) {
+    winPickerTitleEl.textContent = appEntry.label || 'Pilih Jendela';
+  }
+  if (winPickerSubEl) {
+    winPickerSubEl.textContent = `${windows.length} jendela terbuka — klik untuk memilih`;
+  }
+  if (winPickerLaunchBtn) {
+    const canLaunch = LAUNCHABLE_APP_KEYS.has(appEntry.appKey);
+    winPickerLaunchBtn.classList.toggle('hidden', !canLaunch);
+    winPickerLaunchBtn.dataset.launchApp = appEntry.appKey || '';
+  }
+
+  winPickerListEl.innerHTML = '';
+  windows.forEach((winItem, idx) => {
+    const row = document.createElement('div');
+    row.className = 'win-picker-row';
+    const safeWinTitle = escapeHtml(winItem.title || `${appEntry.label || 'Jendela'} #${idx + 1}`);
+    const safeAppLabel = escapeHtml(appEntry.label || winItem.processName || 'App');
+    const minStateText = winItem.isMinimized ? ' • Diminimize' : '';
+    row.innerHTML = `
+      <button class="win-picker-select" type="button" title="${safeWinTitle}">
+        <span class="win-picker-idx">${idx + 1}</span>
+        <span class="win-picker-row-info">
+          <span class="win-picker-row-title">${safeWinTitle}</span>
+          <span class="win-picker-row-meta">${safeAppLabel} • PID ${Number(winItem.pid) || '-'}${minStateText}</span>
+        </span>
+      </button>
+      <div class="win-picker-row-actions">
+        <button class="ra-btn" type="button" data-picker-act="min" title="Minimize Jendela Ini">—</button>
+        <button class="ra-btn danger" type="button" data-picker-act="close" title="Tutup Jendela Ini">✕</button>
+      </div>
+    `;
+
+    row.querySelector('.win-picker-select')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      focusRunningAppItem(winItem);
+    });
+
+    row.querySelector('[data-picker-act="min"]')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await ipcRenderer.invoke('minimize-running-app', {
+        hwnd: winItem.hwnd || '',
+        pid: winItem.pid
+      });
+      closeDockWindowPicker();
+      setTimeout(() => refreshRunningApps(true), 250);
+    });
+
+    row.querySelector('[data-picker-act="close"]')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await ipcRenderer.invoke('close-running-app', {
+        hwnd: winItem.hwnd || '',
+        pid: winItem.pid
+      });
+      closeDockWindowPicker();
+      setTimeout(() => refreshRunningApps(true), 600);
+    });
+
+    winPickerListEl.appendChild(row);
   });
 }
 
-async function focusOrLaunchNativeApp(appKey) {
+function closeDockWindowPicker() {
+  activeWinPickerAppKey = '';
+  activeWinPickerAnchor = null;
+  closeCustomWindow('dock-win-picker');
+}
+
+function openDockWindowPicker(appEntry, windows, anchorEl = null) {
+  if (!dockWinPickerEl || !appEntry || !Array.isArray(windows) || windows.length === 0) {
+    if (windows && windows[0]) focusRunningAppItem(windows[0]);
+    return;
+  }
+
+  const isAlreadyOpenSame =
+    !dockWinPickerEl.classList.contains('hidden') &&
+    activeWinPickerAppKey === appEntry.appKey &&
+    activeWinPickerAnchor === anchorEl;
+
+  if (isAlreadyOpenSame) {
+    closeDockWindowPicker();
+    return;
+  }
+
+  activeWinPickerAppKey = appEntry.appKey;
+  activeWinPickerAnchor = anchorEl;
+  renderDockWindowPickerRows(appEntry, windows);
+  openCustomWindow('dock-win-picker');
+  positionDockWindowPicker(anchorEl);
+}
+
+closeWinPickerBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  closeDockWindowPicker();
+});
+
+winPickerLaunchBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const appKey = winPickerLaunchBtn.dataset.launchApp;
+  closeDockWindowPicker();
+  if (!appKey) return;
+  setAppPassthroughMode(true, `Membuka: ${appKey.toUpperCase()}`, {
+    reason: 'app',
+    isColdLaunch: true,
+    waitForRestore: true
+  });
+  ipcRenderer.send('launch-app', appKey);
+  setTimeout(() => refreshRunningApps(true), 1800);
+});
+
+async function focusRunningAppItem(winItem) {
+  if (!winItem) return;
+  closeDockWindowPicker();
+  appLaunchHud?.classList.add('hidden');
+  setAppPassthroughMode(true, `Aktif: ${winItem.label || winItem.title || 'Aplikasi'}`, {
+    reason: 'app',
+    waitForRestore: Boolean(winItem.isMinimized)
+  });
+  await ipcRenderer.invoke('focus-running-app', {
+    hwnd: winItem.hwnd || '',
+    pid: winItem.pid,
+    processName: winItem.processName
+  });
+  setTimeout(() => refreshRunningApps(true), 400);
+}
+
+async function focusOrLaunchNativeApp(appKey, anchorEl = null) {
   if (!appKey) return;
   if (appKey === 'lock') {
     ipcRenderer.send('launch-app', 'lock');
@@ -4174,14 +5173,32 @@ async function focusOrLaunchNativeApp(appKey) {
   }
 
   appLaunchHud?.classList.add('hidden');
-  const existing = liveRunningApps.find((a) => a.appKey === appKey);
-  setAppPassthroughMode(true, existing ? `Aktif: ${existing.label}` : `Membuka: ${appKey.toUpperCase()}`);
+  const { appEntry, windows } = getRunningWindowsForAppKey(appKey);
 
-  if (existing) {
+  if (windows.length > 1) {
+    openDockWindowPicker(appEntry, windows, anchorEl);
+    return;
+  }
+
+  closeDockWindowPicker();
+  const singleWin = windows[0] || null;
+  setAppPassthroughMode(
+    true,
+    singleWin ? `Aktif: ${singleWin.label || singleWin.title}` : `Membuka: ${appKey.toUpperCase()}`,
+    {
+      reason: 'app',
+      isColdLaunch: !singleWin,
+      waitForRestore: !singleWin || Boolean(singleWin.isMinimized)
+    }
+  );
+
+  if (singleWin) {
     await ipcRenderer.invoke('focus-running-app', {
-      pid: existing.pid,
-      processName: existing.processName
+      hwnd: singleWin.hwnd || '',
+      pid: singleWin.pid,
+      processName: singleWin.processName
     });
+    setTimeout(() => refreshRunningApps(true), 400);
   } else {
     ipcRenderer.send('launch-app', appKey);
     setTimeout(() => refreshRunningApps(true), 1800);
@@ -4191,7 +5208,7 @@ async function focusOrLaunchNativeApp(appKey) {
 // Helper: Render Logo Aplikasi Asli (Prioritas 1: Ikon Native .exe Windows, Prioritas 2: SVG Resmi Brand)
 function getOfficialAppIconHtml(appItem) {
   if (appItem && appItem.iconDataUrl) {
-    return `<img src="${appItem.iconDataUrl}" class="native-exe-icon-img" alt="${appItem.label || ''}" />`;
+    return `<img src="${escapeHtml(appItem.iconDataUrl)}" class="native-exe-icon-img" alt="${escapeHtml(appItem.label || '')}" />`;
   }
   const key = (appItem?.appKey || '').toLowerCase();
   if (key === 'word') {
@@ -4212,22 +5229,64 @@ function getOfficialAppIconHtml(appItem) {
   if (key === 'explorer') {
     return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><path d="M5 12C5 9.79 6.79 8 9 8H19L23 12H39C41.21 12 43 13.79 43 16V36C43 38.21 41.21 40 39 40H9C6.79 40 5 38.21 5 36V12Z" fill="#d97706"/><path d="M5 18C5 16.34 6.34 15 8 15H40C41.66 15 43 16.34 43 18V36C43 38.21 41.21 40 39 40H9C6.79 40 5 38.21 5 36V18Z" fill="#fbbf24"/><rect x="16" y="24" width="16" height="4.5" rx="2.2" fill="#0284c7"/></svg>`;
   }
-  return `<span>${appItem?.badge || '🪟'}</span>`;
+  if (key === 'firefox') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><circle cx="24" cy="24" r="19" fill="#FF7139"/><circle cx="24" cy="25" r="11" fill="#3B82F6"/><path d="M12 17C16 10 26 7 34 11C28 11 24 14 23 19C18 19 15 22 14 27C10 24 10 20 12 17Z" fill="#FACC15"/></svg>`;
+  }
+  if (key === 'edge') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><circle cx="24" cy="24" r="19" fill="#0284C7"/><path d="M9 24C9 15.7 15.7 9 24 9C33.4 9 40 15.6 40 23.5C40 27.6 36.7 30 33 30H20C20 34.4 24 38 29.5 38C33.5 38 36.8 36.4 39 34C36 39.2 30.4 43 24 43C15.7 43 9 36.3 9 24Z" fill="#38BDF8"/></svg>`;
+  }
+  if (key === 'postman') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><circle cx="24" cy="24" r="18" fill="#FF6C37"/><path d="M31 17L16 25.5L21.5 28L29.5 19.5L23.5 30L28 32.5L31 17Z" fill="#ffffff"/></svg>`;
+  }
+  if (key === 'discord') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><rect x="6" y="10" width="36" height="28" rx="9" fill="#5865F2"/><circle cx="18.5" cy="24" r="3.4" fill="#ffffff"/><circle cx="29.5" cy="24" r="3.4" fill="#ffffff"/></svg>`;
+  }
+  if (key === 'spotify') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><circle cx="24" cy="24" r="19" fill="#1DB954"/><path d="M14 19C20.5 17 28 17.6 34 20.8M15.5 24.8C20.8 23.2 26.8 23.8 31.8 26.5M17.2 30.4C21.2 29.2 25.6 29.7 29.5 31.7" stroke="#0f172a" stroke-width="2.8" stroke-linecap="round"/></svg>`;
+  }
+  if (key === 'whatsapp') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><circle cx="24" cy="24" r="18" fill="#25D366"/><path d="M18 16C18.5 15 19.5 15 20.5 16L22 18.5C22.4 19.2 22.1 20 21.5 20.5L20.5 21.5C21.6 23.6 23.4 25.4 25.5 26.5L26.5 25.5C27 24.9 27.8 24.6 28.5 25L31 26.5C32 27.1 32.2 28.2 31.5 29.2C30.4 30.8 28.5 31.6 26.6 31.2C21.2 29.9 17.1 25.8 15.8 20.4C15.4 18.5 16.2 16.9 18 16Z" fill="#ffffff"/></svg>`;
+  }
+  if (key === 'telegram') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><circle cx="24" cy="24" r="19" fill="#229ED9"/><path d="M33.5 15.5L13.5 23.2L19.5 25.4L29.5 18.8L22.2 26.4L28.8 31.5L33.5 15.5Z" fill="#ffffff"/></svg>`;
+  }
+  if (key === 'terminal' || key === 'powershell' || key === 'cmd') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><rect x="4" y="8" width="40" height="32" rx="6" fill="#0f172a" stroke="#475569" stroke-width="1.8"/><path d="M13 19L20 24.5L13 30" stroke="#38bdf8" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="23" y1="30" x2="34" y2="30" stroke="#e2e8f0" stroke-width="3.2" stroke-linecap="round"/></svg>`;
+  }
+  if (key === 'notepad') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><rect x="9" y="6" width="30" height="36" rx="5" fill="#e0f2fe"/><line x1="15" y1="16" x2="33" y2="16" stroke="#0284c7" stroke-width="3" stroke-linecap="round"/><line x1="15" y1="24" x2="33" y2="24" stroke="#0284c7" stroke-width="3" stroke-linecap="round"/><line x1="15" y1="32" x2="26" y2="32" stroke="#0284c7" stroke-width="3" stroke-linecap="round"/></svg>`;
+  }
+  if (key === 'calculator') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><rect x="9" y="5" width="30" height="38" rx="6" fill="#1e293b"/><rect x="13" y="9" width="22" height="8" rx="2.5" fill="#38bdf8"/><circle cx="16" cy="24" r="2.2" fill="#f8fafc"/><circle cx="24" cy="24" r="2.2" fill="#f8fafc"/><circle cx="32" cy="24" r="2.2" fill="#f59e0b"/><circle cx="16" cy="32" r="2.2" fill="#f8fafc"/><circle cx="24" cy="32" r="2.2" fill="#f8fafc"/><circle cx="32" cy="32" r="2.2" fill="#22c55e"/></svg>`;
+  }
+  if (key === 'laragon') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><circle cx="24" cy="24" r="19" fill="#0ea5e9"/><path d="M18 14V32H31" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  }
+  if (key === 'antigravity' || key === 'cursor' || key === 'windsurf') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><rect x="6" y="6" width="36" height="36" rx="10" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/><path d="M24 12L34 34H28.5L24 23.5L19.5 34H14L24 12Z" fill="#38bdf8"/></svg>`;
+  }
+  if (key === 'vlc') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><path d="M24 6L34 38H14L24 6Z" fill="#F97316"/><path d="M18 22H30M16 30H32" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round"/></svg>`;
+  }
+  if (key === 'acrobat') {
+    return `<svg viewBox="0 0 48 48" width="24" height="24" fill="none"><rect x="8" y="6" width="32" height="36" rx="6" fill="#DC2626"/><text x="24" y="29" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="sans-serif">PDF</text></svg>`;
+  }
+  return `<span>${escapeHtml(appItem?.badge || '🪟')}</span>`;
 }
 
 function renderRunningAppsUI() {
-  const count = liveRunningApps.length;
+  const totalWindows = getTotalRunningWindowCount();
 
   // 1. Update Pill di Top Bar & Badge di Dock
   if (topRunningLabel) {
-    topRunningLabel.textContent = count > 0 ? `${count} Aplikasi Aktif` : '0 Aplikasi';
+    topRunningLabel.textContent = totalWindows > 0 ? `${totalWindows} Jendela Aktif` : '0 Jendela';
   }
   if (dockRunningBadge) {
-    dockRunningBadge.textContent = String(count);
-    dockRunningBadge.classList.toggle('hidden', count === 0);
+    dockRunningBadge.textContent = String(totalWindows);
+    dockRunningBadge.classList.toggle('hidden', totalWindows === 0);
   }
   if (dockSwitcherDot) {
-    dockSwitcherDot.classList.toggle('running-live', count > 0);
+    dockSwitcherDot.classList.toggle('running-live', totalWindows > 0);
   }
 
   // 2. Update Indikator Aplikasi Bawaan yang Dipin di Dock (Chrome, VS Code, Explorer)
@@ -4235,48 +5294,66 @@ function renderRunningAppsUI() {
   const chromeBtn = document.querySelector('#dock [data-native-app="chrome"]');
   const vscodeBtn = document.querySelector('#dock [data-native-app="vscode"]');
   const explorerBtn = document.querySelector('#dock [data-custom-win="win-explorer"]');
-  const chromeApp = liveRunningApps.find((a) => a.appKey === 'chrome');
-  const vscodeApp = liveRunningApps.find((a) => a.appKey === 'vscode');
-  const explorerNativeApp = liveRunningApps.find((a) => a.appKey === 'explorer');
+  const { appEntry: chromeApp, windows: chromeWins } = getRunningWindowsForAppKey('chrome');
+  const { appEntry: vscodeApp, windows: vscodeWins } = getRunningWindowsForAppKey('vscode');
+  const { windows: explorerWins } = getRunningWindowsForAppKey('explorer');
   const customExpOpen = !document.getElementById('win-explorer')?.classList.contains('hidden');
 
   if (chromeBtn) {
     const dot = chromeBtn.querySelector('.dock-dot');
     dot?.classList.remove('active');
-    dot?.classList.toggle('running-live', Boolean(chromeApp));
+    dot?.classList.toggle('running-live', chromeWins.length > 0);
     if (chromeApp?.iconDataUrl) {
       const iconBox = chromeBtn.querySelector('.dock-icon');
       if (iconBox && !iconBox.dataset.nativeIconApplied) {
-        iconBox.innerHTML = `<img src="${chromeApp.iconDataUrl}" class="native-exe-icon-img" alt="Google Chrome" />`;
+        iconBox.innerHTML = `<img src="${escapeHtml(chromeApp.iconDataUrl)}" class="native-exe-icon-img" alt="Google Chrome" />`;
         iconBox.dataset.nativeIconApplied = '1';
       }
     }
-    chromeBtn.dataset.label = chromeApp
-      ? `🟢 Google Chrome — ${chromeApp.title} (Klik untuk Buka)`
-      : 'Google Chrome';
+    updatePinnedDockBadge(chromeBtn, chromeWins.length);
+    chromeBtn.dataset.label =
+      chromeWins.length > 1
+        ? `🟢 Google Chrome (${chromeWins.length} jendela — Klik untuk Pilih)`
+        : chromeWins.length === 1
+          ? `🟢 Google Chrome — ${chromeWins[0].title} (Klik untuk Buka)`
+          : 'Google Chrome';
   }
 
   if (vscodeBtn) {
     const dot = vscodeBtn.querySelector('.dock-dot');
     dot?.classList.remove('active');
-    dot?.classList.toggle('running-live', Boolean(vscodeApp));
+    dot?.classList.toggle('running-live', vscodeWins.length > 0);
     if (vscodeApp?.iconDataUrl) {
       const iconBox = vscodeBtn.querySelector('.dock-icon');
       if (iconBox && !iconBox.dataset.nativeIconApplied) {
-        iconBox.innerHTML = `<img src="${vscodeApp.iconDataUrl}" class="native-exe-icon-img" alt="VS Code" />`;
+        iconBox.innerHTML = `<img src="${escapeHtml(vscodeApp.iconDataUrl)}" class="native-exe-icon-img" alt="VS Code" />`;
         iconBox.dataset.nativeIconApplied = '1';
       }
     }
-    vscodeBtn.dataset.label = vscodeApp
-      ? `🟢 VS Code — ${vscodeApp.title} (Klik untuk Buka)`
-      : 'Visual Studio Code';
+    updatePinnedDockBadge(vscodeBtn, vscodeWins.length);
+    vscodeBtn.dataset.label =
+      vscodeWins.length > 1
+        ? `🟢 VS Code (${vscodeWins.length} jendela — Klik untuk Pilih)`
+        : vscodeWins.length === 1
+          ? `🟢 VS Code — ${vscodeWins[0].title} (Klik untuk Buka)`
+          : 'Visual Studio Code';
   }
 
   if (explorerBtn) {
     const dot = explorerBtn.querySelector('.dock-dot');
     dot?.classList.remove('active');
-    if (!customExpOpen && !minimizedState['win-explorer']) {
-      dot?.classList.toggle('running-live', Boolean(explorerNativeApp));
+    if (customExpOpen || minimizedState['win-explorer']) {
+      dot?.classList.remove('running-live');
+    } else {
+      dot?.classList.toggle('running-live', explorerWins.length > 0);
+    }
+    updatePinnedDockBadge(explorerBtn, explorerWins.length);
+    if (explorerWins.length > 1) {
+      explorerBtn.dataset.label = `File Explorer (${explorerWins.length} jendela Windows • Klik Kanan: Pilih)`;
+    } else if (explorerWins.length === 1) {
+      explorerBtn.dataset.label = `File Explorer (Alt+E) • Windows: ${explorerWins[0].title}`;
+    } else {
+      explorerBtn.dataset.label = 'File Explorer (Alt+E)';
     }
   }
 
@@ -4289,24 +5366,26 @@ function renderRunningAppsUI() {
     }
 
     unpinnedRunning.forEach((appItem) => {
+      const winList = getWindowsForAppEntry(appItem);
+      const winCount = Math.max(winList.length, Number(appItem.windowCount) || 1);
       const btn = document.createElement('button');
       btn.className = 'dock-item running-dynamic-item';
+      btn.dataset.runningAppKey = appItem.appKey || '';
       const shortTitle =
         appItem.title && appItem.title.length > 36
           ? appItem.title.slice(0, 36) + '...'
           : appItem.title || appItem.label;
-      btn.dataset.label = `🟢 ${appItem.label} — ${shortTitle}`;
+      btn.dataset.label =
+        winCount > 1
+          ? `🟢 ${appItem.label} (${winCount} jendela — Klik untuk Pilih)`
+          : `🟢 ${appItem.label} — ${shortTitle}`;
 
       btn.innerHTML = `
         <div class="dock-icon">
           <div class="running-dock-badge-icon" style="background: ${appItem.iconDataUrl ? 'rgba(15, 23, 42, 0.75)' : appItem.color || '#3b82f6'}">
             ${getOfficialAppIconHtml(appItem)}
           </div>
-          ${
-            appItem.windowCount > 1
-              ? `<span class="dock-count-badge">${appItem.windowCount}</span>`
-              : ''
-          }
+          ${winCount > 1 ? `<span class="dock-count-badge">${winCount}</span>` : ''}
         </div>
         <span class="dock-dot running-live"></span>
       `;
@@ -4316,14 +5395,27 @@ function renderRunningAppsUI() {
         btn.classList.remove('launching');
         void btn.offsetWidth;
         btn.classList.add('launching');
-        focusRunningAppItem(appItem);
+        if (winList.length > 1) {
+          openDockWindowPicker(appItem, winList, btn);
+        } else {
+          focusRunningAppItem(winList[0] || appItem);
+        }
       });
 
-      // Klik Kanan pada ikon aplikasi berjalan di Dock untuk Minimize cepat
+      // Klik Kanan pada ikon aplikasi berjalan: pilih jendela jika > 1, atau Minimize cepat
       btn.addEventListener('contextmenu', async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        await ipcRenderer.invoke('minimize-running-app', { pid: appItem.pid });
+        if (winList.length > 1) {
+          openDockWindowPicker(appItem, winList, btn);
+        } else {
+          const singleWin = winList[0] || appItem;
+          await ipcRenderer.invoke('minimize-running-app', {
+            hwnd: singleWin.hwnd || '',
+            pid: singleWin.pid || appItem.pid
+          });
+          setTimeout(() => refreshRunningApps(true), 250);
+        }
       });
 
       runningDockItemsEl.appendChild(btn);
@@ -4334,19 +5426,63 @@ function renderRunningAppsUI() {
   ['word', 'excel', 'powerpoint', 'chrome', 'vscode', 'explorer'].forEach((key) => {
     const card = document.querySelector(`[data-quick-switch="${key}"]`);
     const statusEl = document.getElementById(`oq-status-${key}`);
-    const running = liveRunningApps.find((a) => a.appKey === key);
+    const { windows } = getRunningWindowsForAppKey(key);
     if (card) {
-      card.classList.toggle('is-open', Boolean(running));
+      card.classList.toggle('is-open', windows.length > 0);
     }
     if (statusEl) {
-      statusEl.textContent = running ? `● Aktif: ${running.title}` : 'Klik untuk Buka';
+      if (windows.length > 1) {
+        statusEl.textContent = `● ${windows.length} Jendela Terbuka (Pilih)`;
+      } else if (windows.length === 1) {
+        statusEl.textContent = `● Aktif: ${windows[0].title}`;
+      } else {
+        statusEl.textContent = 'Klik untuk Buka';
+      }
     }
   });
 
-  // 5. Render Daftar Lengkap Jendela Aplikasi yang Sedang Berjalan di #win-task-switcher
+  // 5. Sinkronkan isi #dock-win-picker bila sedang terbuka
+  if (dockWinPickerEl && !dockWinPickerEl.classList.contains('hidden') && activeWinPickerAppKey) {
+    const { appEntry, windows } = getRunningWindowsForAppKey(activeWinPickerAppKey);
+    if (!appEntry || windows.length === 0) {
+      closeDockWindowPicker();
+    } else {
+      renderDockWindowPickerRows(appEntry, windows);
+    }
+  }
+
+  // 6. Render Daftar Lengkap Jendela Aplikasi yang Sedang Berjalan (per jendela individual) di #win-task-switcher
   if (runningAppsListEl) {
     runningAppsListEl.innerHTML = '';
-    if (liveRunningApps.length === 0) {
+    const flatWindowsAll = [];
+    liveRunningApps.forEach((appItem) => {
+      const wins = getWindowsForAppEntry(appItem);
+      const totalForApp = wins.length;
+      wins.forEach((w, idx) => {
+        flatWindowsAll.push({
+          ...w,
+          totalForApp,
+          windowIndex: idx + 1
+        });
+      });
+    });
+
+    const switcherQuery = (document.getElementById('switcher-search-input')?.value || '').trim().toLowerCase();
+    const flatWindows = switcherQuery
+      ? flatWindowsAll.filter((w) => {
+          const hay = `${w.label || ''} ${w.title || ''} ${w.category || ''} ${w.procName || ''}`.toLowerCase();
+          return hay.includes(switcherQuery);
+        })
+      : flatWindowsAll;
+
+    const filterCountEl = document.getElementById('switcher-filter-count');
+    if (filterCountEl) {
+      filterCountEl.textContent = switcherQuery
+        ? `${flatWindows.length}/${flatWindowsAll.length} Cocok`
+        : `${flatWindowsAll.length} Jendela`;
+    }
+
+    if (flatWindowsAll.length === 0) {
       runningAppsListEl.innerHTML = `
         <div class="running-empty">
           Belum ada jendela aplikasi eksternal (seperti MS Word, Excel, atau Chrome) yang terdeteksi terbuka.<br/>
@@ -4356,61 +5492,88 @@ function renderRunningAppsUI() {
       return;
     }
 
-    liveRunningApps.forEach((appItem) => {
+    if (flatWindows.length === 0) {
+      runningAppsListEl.innerHTML = `
+        <div class="running-empty">
+          Tidak ditemukan jendela yang cocok dengan pencarian "<strong>${escapeHtml(switcherQuery)}</strong>".
+        </div>
+      `;
+      return;
+    }
+
+    flatWindows.forEach((winItem) => {
+      const safeLabel = escapeHtml(winItem.label);
+      const safeTitle = escapeHtml(winItem.title || winItem.label);
+      const safeCategory = escapeHtml(winItem.category);
+      const winPosMeta =
+        winItem.totalForApp > 1 ? ` • Jendela ${winItem.windowIndex}/${winItem.totalForApp}` : '';
+      const minMeta = winItem.isMinimized ? ' • Diminimize' : '';
       const row = document.createElement('div');
       row.className = 'running-app-card';
       row.innerHTML = `
-        <div class="ra-window-preview" title="Klik untuk menampilkan ${appItem.label} ke depan layar">
+        <div class="ra-window-preview" title="Klik untuk menampilkan jendela ini ke depan layar">
           <div class="ra-win-bar">
             <div class="ra-win-dots">
-              <span class="d-r"></span><span class="d-y"></span><span class="d-g"></span>
+              <button type="button" class="ra-win-dot-btn d-r" data-act="close-x" title="Tutup Jendela Ini">×</button><span class="d-y"></span><span class="d-g"></span>
             </div>
-            <span class="ra-win-bar-title">${appItem.label}</span>
-            <button class="ra-win-close-x" data-act="close-x" title="Tutup Jendela">✕</button>
+            <span class="ra-win-bar-title">${safeLabel}</span>
+            <button class="ra-win-close-x" data-act="close-x" title="Tutup Jendela Ini">✕</button>
           </div>
-          <div class="ra-win-canvas" style="background: radial-gradient(circle at 30% 25%, ${appItem.color || '#3b82f6'}44, rgba(15, 23, 42, 0.92))">
+          <div class="ra-win-canvas" style="background: radial-gradient(circle at 30% 25%, ${escapeHtml(winItem.color || '#3b82f6')}44, rgba(15, 23, 42, 0.92))">
             <div class="ra-win-mock-lines">
               <span></span><span class="short"></span><span></span>
             </div>
-            <div class="ra-expose-badge" style="background: ${appItem.iconDataUrl ? 'rgba(15, 23, 42, 0.85)' : appItem.color || '#3b82f6'}">${getOfficialAppIconHtml(appItem)}</div>
+            <div class="ra-expose-badge" style="background: ${winItem.iconDataUrl ? 'rgba(15, 23, 42, 0.85)' : escapeHtml(winItem.color || '#3b82f6')}">${getOfficialAppIconHtml(winItem)}</div>
           </div>
         </div>
-        <div class="ra-left" title="Klik untuk menampilkan ${appItem.label} ke depan layar">
-          <div class="ra-icon" style="background: ${appItem.iconDataUrl ? 'rgba(15, 23, 42, 0.85)' : appItem.color || '#3b82f6'}">${getOfficialAppIconHtml(appItem)}</div>
+        <div class="ra-left" title="Klik untuk menampilkan jendela ini ke depan layar">
+          <div class="ra-icon" style="background: ${winItem.iconDataUrl ? 'rgba(15, 23, 42, 0.85)' : escapeHtml(winItem.color || '#3b82f6')}">${getOfficialAppIconHtml(winItem)}</div>
           <div class="ra-meta">
-            <span class="ra-title">${appItem.title || appItem.label}</span>
-            <span class="ra-sub">${appItem.label} • ${appItem.category} (${appItem.windowCount} jendela)</span>
+            <span class="ra-title">${safeTitle}</span>
+            <span class="ra-sub">${safeLabel} • ${safeCategory}${winPosMeta}${minMeta}</span>
           </div>
         </div>
         <div class="ra-actions">
-          <button class="ra-btn primary" data-act="focus" title="Tampilkan ke Depan">↗ Buka</button>
-          <button class="ra-btn" data-act="min" title="Minimize Jendela">—</button>
-          <button class="ra-btn danger" data-act="close" title="Tutup Aplikasi">✕</button>
+          <button class="ra-btn primary" data-act="focus" title="Tampilkan Jendela Ini ke Depan">↗ Buka</button>
+          <button class="ra-btn" data-act="min" title="Minimize Jendela Ini">—</button>
+          <button class="ra-btn danger" data-act="close" title="Tutup Jendela Ini">✕</button>
         </div>
       `;
 
       row.querySelector('.ra-window-preview')?.addEventListener('click', () => {
-        focusRunningAppItem(appItem);
+        focusRunningAppItem(winItem);
       });
-      row.querySelector('[data-act="close-x"]')?.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        await ipcRenderer.invoke('close-running-app', { pid: appItem.pid });
-        setTimeout(() => refreshRunningApps(true), 600);
+      row.querySelectorAll('[data-act="close-x"]').forEach((closeXBtn) => {
+        closeXBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          await ipcRenderer.invoke('close-running-app', {
+            hwnd: winItem.hwnd || '',
+            pid: winItem.pid
+          });
+          setTimeout(() => refreshRunningApps(true), 600);
+        });
       });
       row.querySelector('.ra-left')?.addEventListener('click', () => {
-        focusRunningAppItem(appItem);
+        focusRunningAppItem(winItem);
       });
       row.querySelector('[data-act="focus"]')?.addEventListener('click', (e) => {
         e.stopPropagation();
-        focusRunningAppItem(appItem);
+        focusRunningAppItem(winItem);
       });
       row.querySelector('[data-act="min"]')?.addEventListener('click', async (e) => {
         e.stopPropagation();
-        await ipcRenderer.invoke('minimize-running-app', { pid: appItem.pid });
+        await ipcRenderer.invoke('minimize-running-app', {
+          hwnd: winItem.hwnd || '',
+          pid: winItem.pid
+        });
+        setTimeout(() => refreshRunningApps(true), 250);
       });
       row.querySelector('[data-act="close"]')?.addEventListener('click', async (e) => {
         e.stopPropagation();
-        await ipcRenderer.invoke('close-running-app', { pid: appItem.pid });
+        await ipcRenderer.invoke('close-running-app', {
+          hwnd: winItem.hwnd || '',
+          pid: winItem.pid
+        });
         setTimeout(() => refreshRunningApps(true), 600);
       });
 
@@ -4425,6 +5588,7 @@ async function refreshRunningApps(force = false) {
     if (Array.isArray(list)) {
       liveRunningApps = list;
       renderRunningAppsUI();
+      evaluateAutoRestoreDesktop(list);
     }
   } catch (_) {}
 }
@@ -4433,29 +5597,49 @@ async function refreshRunningApps(force = false) {
 topRunningAppsBtn?.addEventListener('click', (e) => {
   e.stopPropagation();
   toggleCustomWindow('win-task-switcher');
-  refreshRunningApps(true);
 });
 
 dockTaskSwitcherBtn?.addEventListener('click', (e) => {
   e.stopPropagation();
   toggleCustomWindow('win-task-switcher');
-  refreshRunningApps(true);
 });
 
 topDesktopModeBtn?.addEventListener('click', (e) => {
   e.stopPropagation();
-  setAppPassthroughMode(!isAppPassthroughMode);
+  setAppPassthroughMode(!isAppPassthroughMode, '', { reason: 'manual' });
 });
 
 showDesktopDockBtn?.addEventListener('click', (e) => {
   e.stopPropagation();
-  setAppPassthroughMode(!isAppPassthroughMode);
+  setAppPassthroughMode(!isAppPassthroughMode, '', { reason: 'manual' });
 });
 
 document.getElementById('switcher-show-desktop-btn')?.addEventListener('click', (e) => {
   e.stopPropagation();
   setAppPassthroughMode(false);
   closeCustomWindow('win-task-switcher');
+});
+
+document.getElementById('switcher-search-input')?.addEventListener('input', () => {
+  renderRunningAppsUI();
+});
+
+document.getElementById('switcher-min-all-btn')?.addEventListener('click', async (e) => {
+  e.stopPropagation();
+  const visibleWindows = [];
+  liveRunningApps.forEach((appItem) => {
+    getWindowsForAppEntry(appItem).forEach((w) => {
+      if (!w.isMinimized) visibleWindows.push(w);
+    });
+  });
+  await Promise.all(
+    visibleWindows.map((w) =>
+      ipcRenderer.invoke('minimize-running-app', { hwnd: w.hwnd || '', pid: w.pid }).catch(() => false)
+    )
+  );
+  setAppPassthroughMode(false);
+  closeCustomWindow('win-task-switcher');
+  setTimeout(() => refreshRunningApps(true), 300);
 });
 
 document.getElementById('refresh-running-apps-btn')?.addEventListener('click', (e) => {
@@ -4489,30 +5673,11 @@ document.querySelectorAll('[data-quick-switch]').forEach((btn) => {
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     const appKey = btn.dataset.quickSwitch;
-    focusOrLaunchNativeApp(appKey);
+    focusOrLaunchNativeApp(appKey, btn);
   });
 });
 
 // Event Listeners untuk Tombol di Strip Taskbar Bawah (#taskbar-cover-strip)
-document.getElementById('tb-back-desktop-btn')?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  setAppPassthroughMode(false);
-});
-
-document.getElementById('tb-open-switcher-btn')?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  toggleCustomWindow('win-task-switcher');
-  refreshRunningApps(true);
-});
-
-const tbPinWidgetsBtn = document.getElementById('tb-pin-widgets-btn');
-tbPinWidgetsBtn?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  const pinned = document.body.classList.toggle('pin-widgets-over-app');
-  tbPinWidgetsBtn.classList.toggle('active-pin', pinned);
-  tbPinWidgetsBtn.textContent = pinned ? '📌 Tutup Widget' : '📌 Widget';
-});
-
 document.getElementById('tb-spotlight-btn')?.addEventListener('click', (e) => {
   e.stopPropagation();
   toggleCustomWindow('win-spotlight');
@@ -4590,11 +5755,11 @@ function renderNotifications() {
     card.className = 'notif-card';
     card.innerHTML = `
       <div class="notif-left">
-        <div class="notif-ic">${n.icon || '🔔'}</div>
+        <div class="notif-ic">${escapeHtml(n.icon || '🔔')}</div>
         <div class="notif-body">
-          <span class="notif-title">${n.title}</span>
-          <span class="notif-msg">${n.msg}</span>
-          <span class="notif-time">${n.time || 'Baru saja'}</span>
+          <span class="notif-title">${escapeHtml(n.title)}</span>
+          <span class="notif-msg">${escapeHtml(n.msg)}</span>
+          <span class="notif-time">${escapeHtml(n.time || 'Baru saja')}</span>
         </div>
       </div>
       <button class="rm-ctrl-btn" title="Hapus Notifikasi">✕</button>
@@ -4725,9 +5890,12 @@ rmVisPlayBtn?.addEventListener('click', () => {
   }
 });
 
-rmVisNextBtn?.addEventListener('click', () => {
+rmVisNextBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
   if (appConfig.mediaControlWindows !== false) {
     ipcRenderer.send('media-key-control', 'next');
+  } else {
+    stepSynthTrack(1);
   }
 });
 
@@ -4736,21 +5904,30 @@ rmVisPrevBtn?.addEventListener('click', (e) => {
   if (appConfig.mediaControlWindows !== false) {
     ipcRenderer.send('media-key-control', 'prev');
   } else {
-    currentTrackIdx = (currentTrackIdx - 1 + synthTracks.length) % synthTracks.length;
-    updateTrackDisplay();
+    stepSynthTrack(-1);
   }
 });
 
 mediaPrevBtn?.addEventListener('click', (e) => {
   e.stopPropagation();
-  ipcRenderer.send('media-key-control', 'prev');
-  triggerLaunchHud('⏮', 'Media Sebelumnya', 'Windows Media Key');
+  if (appConfig.mediaControlWindows !== false) {
+    ipcRenderer.send('media-key-control', 'prev');
+    triggerLaunchHud('⏮', 'Media Sebelumnya', 'Windows Media Key');
+  } else {
+    stepSynthTrack(-1);
+    triggerLaunchHud('⏮', synthTracks[currentTrackIdx].title, 'Lofi Synth Track');
+  }
 });
 
 mediaNextBtn?.addEventListener('click', (e) => {
   e.stopPropagation();
-  ipcRenderer.send('media-key-control', 'next');
-  triggerLaunchHud('⏭', 'Media Berikutnya', 'Windows Media Key');
+  if (appConfig.mediaControlWindows !== false) {
+    ipcRenderer.send('media-key-control', 'next');
+    triggerLaunchHud('⏭', 'Media Berikutnya', 'Windows Media Key');
+  } else {
+    stepSynthTrack(1);
+    triggerLaunchHud('⏭', synthTracks[currentTrackIdx].title, 'Lofi Synth Track');
+  }
 });
 
 // Deteksi otomatis judul lagu/video dari aplikasi Spotify / YouTube / VLC yang sedang terbuka
@@ -4787,15 +5964,15 @@ function renderAgendaList() {
     return;
   }
 
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = getLocalDateKey();
   items.forEach((item) => {
     const row = document.createElement('div');
     const isFired = item.firedDate === todayKey;
     row.className = `agenda-item ${isFired ? 'fired' : ''}`;
     row.innerHTML = `
       <div>
-        <span class="agenda-badge">${item.time}</span>
-        <span>${item.text}</span>
+        <span class="agenda-badge">${escapeHtml(item.time)}</span>
+        <span>${escapeHtml(item.text)}</span>
       </div>
       <button class="rm-ctrl-btn" title="Hapus Pengingat">✕</button>
     `;
@@ -4840,7 +6017,7 @@ setInterval(() => {
   if (!items.length) return;
   const now = new Date();
   const hm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  const todayKey = now.toISOString().slice(0, 10);
+  const todayKey = getLocalDateKey(now);
   let changed = false;
 
   items.forEach((item) => {
@@ -4877,7 +6054,10 @@ document.querySelectorAll('[data-stack-app]').forEach((btn) => {
     e.stopPropagation();
     const appKey = btn.dataset.stackApp;
     closeCustomWindow('dock-stack-popover');
-    focusOrLaunchNativeApp(appKey);
+    const dockAnchor =
+      document.querySelector(`#dock [data-native-app="${appKey}"]`) ||
+      document.querySelector(`#dock [data-running-app-key="${appKey}"]`);
+    focusOrLaunchNativeApp(appKey, dockAnchor || null);
   });
 });
 
@@ -5067,7 +6247,6 @@ document.querySelectorAll('.hot-corner-zone').forEach((zone) => {
         markNotificationsRead();
       } else if (corner === 'bl') {
         toggleCustomWindow('win-task-switcher');
-        refreshRunningApps(true);
       } else if (corner === 'br') {
         toggleCustomWindow('win-notes');
       }
@@ -5079,9 +6258,45 @@ document.querySelectorAll('.hot-corner-zone').forEach((zone) => {
 });
 
 // Pastikan jendela baru terdaftar di klik-through handler
-['win-notifications', 'dock-stack-popover', 'win-screenshot', 'win-lockscreen'].forEach((id) => {
+['win-notifications', 'dock-stack-popover', 'dock-win-picker', 'win-screenshot', 'win-shortcuts', 'win-lockscreen'].forEach((id) => {
   const el = document.getElementById(id);
   if (el) bindInteractiveWidgetEvents(el);
+});
+
+[
+  { selector: '#dock [data-native-app="chrome"]', appKey: 'chrome', minSingle: true },
+  { selector: '#dock [data-native-app="vscode"]', appKey: 'vscode', minSingle: true },
+  { selector: '#dock [data-custom-win="win-explorer"]', appKey: 'explorer', minSingle: false }
+].forEach(({ selector, appKey, minSingle }) => {
+  const btn = document.querySelector(selector);
+  btn?.addEventListener('contextmenu', async (e) => {
+    const { appEntry, windows } = getRunningWindowsForAppKey(appKey);
+    if (!windows.length) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (windows.length > 1 || !minSingle) {
+      openDockWindowPicker(appEntry, windows, btn);
+    } else {
+      await ipcRenderer.invoke('minimize-running-app', {
+        hwnd: windows[0].hwnd || '',
+        pid: windows[0].pid
+      });
+      setTimeout(() => refreshRunningApps(true), 250);
+    }
+  });
+});
+
+document.addEventListener('pointerdown', (e) => {
+  if (!dockWinPickerEl || dockWinPickerEl.classList.contains('hidden')) return;
+  const isPickerOrTrigger =
+    e.target.closest('#dock-win-picker') ||
+    e.target.closest('[data-native-app]') ||
+    e.target.closest('.running-dynamic-item') ||
+    e.target.closest('[data-quick-switch]') ||
+    (e.button === 2 && e.target.closest('#dock [data-custom-win="win-explorer"]'));
+  if (!isPickerOrTrigger) {
+    closeDockWindowPicker();
+  }
 });
 
 // =========================================================
@@ -5094,15 +6309,17 @@ function showLockScreen() {
   if (!ls) return;
   isLockScreenActive = true;
   ls.classList.remove('hidden', 'unlocking');
-  ipcRenderer.send('set-ignore-mouse-events', false);
+  setOverlayIgnoreMouse(false);
+  ipcRenderer.send('focus-overlay-window');
 
   const lockUser = document.getElementById('lockscreen-username');
   if (lockUser) {
     lockUser.textContent = (document.getElementById('start-username')?.textContent || 'User');
   }
 
-  // Update jam & tanggal pada lock screen seketika
+  // Update jam, tanggal, & status baterai pada lock screen seketika
   updateClock();
+  evaluateEcoBatteryState();
 }
 
 function hideLockScreen() {
@@ -5113,6 +6330,7 @@ function hideLockScreen() {
     ls.classList.add('hidden');
     ls.classList.remove('unlocking');
     isLockScreenActive = false;
+    syncOverlayMouseAtPoint(lastPointerPos.x, lastPointerPos.y);
   }, 320);
 }
 
@@ -5123,11 +6341,71 @@ document.getElementById('win-lockscreen')?.addEventListener('click', (e) => {
   }
 });
 
+// Pusat Pintasan Keyboard & Panduan Fitur (#win-shortcuts, F1)
+function runQuickShortcutAction(key) {
+  closeCustomWindow('win-shortcuts');
+  if (key === 'start') {
+    toggleCustomWindow('win12-start-menu');
+    setTimeout(() => document.getElementById('start-search-input')?.focus(), 60);
+  } else if (key === 'spotlight') {
+    toggleCustomWindow('win-spotlight');
+    setTimeout(() => document.getElementById('spotlight-input')?.focus(), 60);
+  } else if (key === 'switcher') {
+    toggleCustomWindow('win-task-switcher');
+  } else if (key === 'desktop') {
+    setAppPassthroughMode(!isAppPassthroughMode, '', { reason: 'manual' });
+  } else if (key === 'explorer') {
+    openCustomWindow('win-explorer');
+  } else if (key === 'notifications') {
+    toggleCustomWindow('win-notifications');
+    markNotificationsRead();
+  } else if (key === 'screenshot') {
+    if (typeof captureAndOpenScreenshotStudio === 'function') captureAndOpenScreenshotStudio();
+    else openCustomWindow('win-screenshot');
+  } else if (key === 'lockscreen') {
+    showLockScreen();
+  }
+}
+
+document.getElementById('top-shortcuts-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleCustomWindow('win-shortcuts');
+});
+
+document.getElementById('open-shortcuts-from-settings-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  openCustomWindow('win-shortcuts');
+});
+
+document.querySelectorAll('.shortcut-card[data-run-shortcut]').forEach((card) => {
+  card.addEventListener('click', () => {
+    runQuickShortcutAction(card.dataset.runShortcut);
+  });
+});
+
 window.addEventListener('keydown', (e) => {
   if (isLockScreenActive) {
     if (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape') {
       e.preventDefault();
       hideLockScreen();
+    }
+    return;
+  }
+  if (e.key === 'F1') {
+    e.preventDefault();
+    toggleCustomWindow('win-shortcuts');
+    return;
+  }
+  if (e.key === 'Escape') {
+    const shortcutsWin = document.getElementById('win-shortcuts');
+    if (shortcutsWin && !shortcutsWin.classList.contains('hidden')) {
+      e.preventDefault();
+      closeCustomWindow('win-shortcuts');
+      return;
+    }
+    if (dockWinPickerEl && !dockWinPickerEl.classList.contains('hidden')) {
+      e.preventDefault();
+      closeDockWindowPicker();
     }
   }
 });
@@ -5135,4 +6413,6 @@ window.addEventListener('keydown', (e) => {
 // Jalankan pemindaian awal, animasi masuk widget, & polling ringan tiap 4 detik
 animateRainmeterSkinsCascade();
 refreshRunningApps(true);
-setInterval(() => refreshRunningApps(false), 4000);
+setInterval(() => {
+  if (!isLockScreenActive) refreshRunningApps(false);
+}, 4000);

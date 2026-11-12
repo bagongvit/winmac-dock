@@ -13,10 +13,15 @@ const {
   desktopCapturer
 } = require('electron');
 const { exec, execFile } = require('child_process');
+const net = require('net');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
+
+function psSingleQuote(value) {
+  return `'${String(value ?? '').replace(/'/g, "''")}'`;
+}
 
 let mainWindow;
 let tray = null;
@@ -131,7 +136,8 @@ function getSystemStats() {
     cores: staticCpuCores,
     cpuGhz: staticCpuGhz,
     diskC: cachedDiskC,
-    diskD: cachedDiskD
+    diskD: cachedDiskD,
+    workspacePath: __dirname
   };
 }
 
@@ -139,10 +145,15 @@ function getSystemStats() {
 // 2. WINDOW UTAMA & SYSTEM TRAY ICON
 // =========================================================
 function createTrayIcon() {
-  // Buat ikon 16x16 PNG DataURL secara programatis agar selalu tampil tanpa file eksternal
-  const iconDataUrl =
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABMSURBVDhPY2RgYPgPxFQBjAwMDP8p4dH1MDAwMPzHpgcXAwNQBgaG/9j04NL AwMDwH5seXBoYGBj+U9pN2DSQ4gYGBoZRAwYGAAAzcR4R728v5QAAAABJRU5ErkJggg==';
-  const image = nativeImage.createFromDataURL(iconDataUrl);
+  const icoPath = path.join(__dirname, 'winmac.ico');
+  let image = fs.existsSync(icoPath) ? nativeImage.createFromPath(icoPath) : null;
+
+  if (!image || image.isEmpty()) {
+    // Fallback ikon 16x16 PNG DataURL jika file .ico tidak tersedia
+    const iconDataUrl =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGklEQVR4nGOw2PvjPyWYYdSAUQNGDRguBgAAdQLsH+JiNZYAAAAASUVORK5CYII=';
+    image = nativeImage.createFromDataURL(iconDataUrl);
+  }
 
   tray = new Tray(image);
   tray.setToolTip('WinMac Desktop OS (Alt+Space: Start Menu | Alt+E: Explorer)');
@@ -272,8 +283,9 @@ function createWindow() {
     skipTaskbar: true,
     alwaysOnTop: true,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true
     }
   });
 
@@ -325,22 +337,31 @@ function configureDesktopAppAndStartup(enableStartup = true) {
   const icoPath = path.join(__dirname, 'winmac.ico');
   const targetExe = fs.existsSync(launcherExe) ? launcherExe : process.execPath;
 
+  const psLauncherExe = psSingleQuote(launcherExe);
+  const psWorkDir = psSingleQuote(__dirname);
+  const psIcoPath = psSingleQuote(icoPath);
+  const psTargetExe = psSingleQuote(targetExe);
+
   const psSetup = `
 $wsh = New-Object -ComObject WScript.Shell
 $desktopDir = [Environment]::GetFolderPath('Desktop')
 $startupDir = [Environment]::GetFolderPath('Startup')
+$launcherExe = ${psLauncherExe}
+$workDir = ${psWorkDir}
+$icoPath = ${psIcoPath}
+$targetExe = ${psTargetExe}
 
 # Bersihkan shortcut duplikat lama jika ada
 Remove-Item (Join-Path $desktopDir "WinMac Desktop OS (Admin).lnk") -Force -ErrorAction SilentlyContinue
 Remove-Item (Join-Path $desktopDir "WinMac Desktop OS (Run as Admin).lnk") -Force -ErrorAction SilentlyContinue
 
 # 1. Buat 1 Shortcut Utama di Desktop
-if (Test-Path "${launcherExe}") {
+if (Test-Path $launcherExe) {
   $s1 = $wsh.CreateShortcut((Join-Path $desktopDir "WinMac Desktop OS.lnk"))
-  $s1.TargetPath = "${launcherExe}"
-  $s1.WorkingDirectory = "${__dirname}"
+  $s1.TargetPath = $launcherExe
+  $s1.WorkingDirectory = $workDir
   $s1.Description = "WinMac Desktop OS Suite Pro"
-  if (Test-Path "${icoPath}") { $s1.IconLocation = "${icoPath}" }
+  if (Test-Path $icoPath) { $s1.IconLocation = $icoPath }
   $s1.Save()
 }
 
@@ -349,12 +370,12 @@ $regPath = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
 $startupLnk = Join-Path $startupDir "WinMac Desktop OS.lnk"
 
 if ($${enableStartup ? 'true' : 'false'}) {
-  Set-ItemProperty -Path $regPath -Name "WinMacDesktopOS" -Value '"${targetExe}"' -ErrorAction SilentlyContinue
-  if (Test-Path "${launcherExe}") {
+  Set-ItemProperty -Path $regPath -Name "WinMacDesktopOS" -Value ('"' + $targetExe + '"') -ErrorAction SilentlyContinue
+  if (Test-Path $launcherExe) {
     $s3 = $wsh.CreateShortcut($startupLnk)
-    $s3.TargetPath = "${launcherExe}"
-    $s3.WorkingDirectory = "${__dirname}"
-    if (Test-Path "${icoPath}") { $s3.IconLocation = "${icoPath}" }
+    $s3.TargetPath = $launcherExe
+    $s3.WorkingDirectory = $workDir
+    if (Test-Path $icoPath) { $s3.IconLocation = $icoPath }
     $s3.Save()
   }
 } else {
@@ -375,7 +396,7 @@ function restartAsAdministrator() {
   const launcherExe = path.join(__dirname, 'WinMac Desktop OS.exe');
   const target = fs.existsSync(launcherExe) ? launcherExe : process.execPath;
 
-  const psAdmin = `Start-Process -FilePath "${target}" -WorkingDirectory "${__dirname}" -Verb RunAs`;
+  const psAdmin = `Start-Process -FilePath ${psSingleQuote(target)} -WorkingDirectory ${psSingleQuote(__dirname)} -Verb RunAs`;
   execFile(
     'powershell.exe',
     ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', psAdmin],
@@ -414,6 +435,31 @@ ipcMain.handle('get-sys-stats', () => {
   return getSystemStats();
 });
 
+let cachedPingInfo = { ms: null, ok: false, checkedAt: 0 };
+ipcMain.handle('get-ping-latency', () => {
+  const now = Date.now();
+  if (now - cachedPingInfo.checkedAt < 12000 && cachedPingInfo.checkedAt > 0) {
+    return Promise.resolve({ ms: cachedPingInfo.ms, ok: cachedPingInfo.ok });
+  }
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const socket = net.createConnection({ host: '1.1.1.1', port: 443 });
+    let settled = false;
+    const finish = (ok) => {
+      if (settled) return;
+      settled = true;
+      const ms = ok ? Math.max(1, Date.now() - start) : null;
+      cachedPingInfo = { ms, ok, checkedAt: Date.now() };
+      socket.destroy();
+      resolve({ ms, ok });
+    };
+    socket.setTimeout(1500);
+    socket.on('connect', () => finish(true));
+    socket.on('timeout', () => finish(false));
+    socket.on('error', () => finish(false));
+  });
+});
+
 // Kontrol Volume Sistem Windows Nyata via PowerShell WScript.Shell Audio Keys
 let volumeTimeout = null;
 let lastKnownVolume = 68;
@@ -443,14 +489,16 @@ ipcMain.on('set-system-volume', (event, level) => {
   }, 160);
 });
 
-// Kontrol Kecerahan Layar Laptop (WMI) + Fallback Layar Desktop
+// Kontrol Kecerahan Layar Laptop (CIM/WMI) + Fallback Layar Desktop
 let brightTimeout = null;
 ipcMain.on('set-system-brightness', (event, level) => {
   clearTimeout(brightTimeout);
   brightTimeout = setTimeout(() => {
     const br = Math.max(20, Math.min(100, Number(level)));
-    exec(
-      `powershell -NoProfile -WindowStyle Hidden -Command "(Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods -ErrorAction SilentlyContinue).WmiSetBrightness(1, ${br})"`,
+    const psBright = `Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods -ErrorAction SilentlyContinue | Invoke-CimMethod -MethodName WmiSetBrightness -Arguments @{ Timeout = 1; Brightness = ${br} } -ErrorAction SilentlyContinue | Out-Null`;
+    execFile(
+      'powershell.exe',
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', psBright],
       { windowsHide: true },
       () => {}
     );
@@ -614,10 +662,17 @@ ipcMain.handle('pick-app-shortcut', async () => {
   if (result.canceled || result.filePaths.length === 0) return null;
   const fullPath = result.filePaths[0];
   const baseName = path.basename(fullPath, path.extname(fullPath));
+  const iconDataUrl = await extractNativeAppIcon(fullPath);
   return {
     name: baseName.charAt(0).toUpperCase() + baseName.slice(1),
-    path: fullPath
+    path: fullPath,
+    iconDataUrl
   };
+});
+
+ipcMain.handle('get-app-icon', async (event, targetPath) => {
+  if (!targetPath || typeof targetPath !== 'string') return '';
+  return extractNativeAppIcon(targetPath);
 });
 
 // =========================================================
@@ -895,7 +950,7 @@ ipcMain.handle('pick-wallpaper-image', async () => {
 
   if (result.canceled || result.filePaths.length === 0) return null;
   const fullPath = result.filePaths[0];
-  return `file://${fullPath.replace(/\\/g, '/')}`;
+  return pathToFileURL(fullPath).href;
 });
 
 ipcMain.handle('pick-wallpaper-video', async () => {
@@ -911,7 +966,7 @@ ipcMain.handle('pick-wallpaper-video', async () => {
 
   if (result.canceled || result.filePaths.length === 0) return null;
   const fullPath = result.filePaths[0];
-  return `file://${fullPath.replace(/\\/g, '/')}`;
+  return pathToFileURL(fullPath).href;
 });
 
 ipcMain.on('open-external-url', (event, url) => {
@@ -1056,16 +1111,19 @@ ipcMain.handle('get-installed-apps', async () => {
 
     const appItems = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
 
-    // Ambil ikon asli .lnk via app.getFileIcon
+    // Ambil ikon asli .lnk via resolver target/IconLocation Win32 (fallback ke app.getFileIcon)
+    const dllPath = await ensureWin32ToolsDll();
+    const pathsJson = JSON.stringify(appItems.map((it) => it.path));
+    const batchIconMap = await extractBatchLnkIconsViaWin32(pathsJson, dllPath);
+
     const withIcons = await Promise.all(
       appItems.map(async (appItem) => {
-        let iconDataUrl = '';
-        try {
-          const nativeIcon = await app.getFileIcon(appItem.path, { size: 'normal' });
-          if (nativeIcon && !nativeIcon.isEmpty()) {
-            iconDataUrl = nativeIcon.toDataURL();
-          }
-        } catch (_) {}
+        let iconDataUrl = batchIconMap.get(appItem.path) || '';
+        if (!iconDataUrl) {
+          iconDataUrl = await extractNativeAppIcon(appItem.path);
+        } else {
+          exeIconCache.set(appItem.path.toLowerCase(), iconDataUrl);
+        }
         return {
           ...appItem,
           iconDataUrl
@@ -1154,6 +1212,7 @@ const exeIconCache = new Map();
 
 const IGNORED_PROCESSES = new Set([
   'electron',
+  'winmac desktop os',
   'systemsettings',
   'textinputhost',
   'applicationframehost',
@@ -1163,8 +1222,12 @@ const IGNORED_PROCESSES = new Set([
   'searchapp',
   'startmenuexperiencehost',
   'widgets',
+  'widgetboard',
   'widgetservice',
   'webviewhost',
+  'msedgewebview2',
+  'phoneexperiencehost',
+  'crossdeviceservice',
   'lockapp',
   'conhost',
   'svchost',
@@ -1179,6 +1242,7 @@ const IGNORED_PROCESSES = new Set([
   'gamebarftserver',
   'nvidia share',
   'nvidia overlay',
+  'nvcontainer',
   'steamwebhelper',
   'idle'
 ]);
@@ -1194,9 +1258,10 @@ const KNOWN_APP_MAP = {
   firefox: { appKey: 'firefox', label: 'Mozilla Firefox', badge: '🦊', color: '#f97316', category: 'Browser' },
   brave: { appKey: 'brave', label: 'Brave Browser', badge: '🦁', color: '#fb923c', category: 'Browser' },
   code: { appKey: 'vscode', label: 'VS Code', badge: '💻', color: '#0284c7', category: 'Developer', pinnedDock: true },
-  antigravity: { appKey: 'vscode', label: 'Antigravity IDE', badge: '💻', color: '#0284c7', category: 'Developer', pinnedDock: true },
-  cursor: { appKey: 'vscode', label: 'Cursor IDE', badge: '💻', color: '#0284c7', category: 'Developer', pinnedDock: true },
-  windsurf: { appKey: 'vscode', label: 'Windsurf IDE', badge: '💻', color: '#0284c7', category: 'Developer', pinnedDock: true },
+  antigravity: { appKey: 'antigravity', label: 'Antigravity', badge: 'AG', color: '#38bdf8', category: 'Developer' },
+  cursor: { appKey: 'cursor', label: 'Cursor IDE', badge: 'CU', color: '#6366f1', category: 'Developer' },
+  windsurf: { appKey: 'windsurf', label: 'Windsurf IDE', badge: 'WS', color: '#14b8a6', category: 'Developer' },
+  laragon: { appKey: 'laragon', label: 'Laragon', badge: 'LG', color: '#0ea5e9', category: 'Developer' },
   explorer: { appKey: 'explorer', label: 'File Explorer', badge: '📁', color: '#f59e0b', category: 'System' },
   windowsterminal: { appKey: 'terminal', label: 'Windows Terminal', badge: '🐚', color: '#334155', category: 'Developer' },
   powershell: { appKey: 'powershell', label: 'PowerShell', badge: '🐚', color: '#2563eb', category: 'Developer' },
@@ -1218,6 +1283,439 @@ const KNOWN_APP_MAP = {
   taskmgr: { appKey: 'taskmgr', label: 'Task Manager', badge: '📊', color: '#14b8a6', category: 'System' }
 };
 
+const WIN32_TOOLS_CS = `using System;
+using System.IO;
+using System.Text;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+
+[StructLayout(LayoutKind.Sequential)]
+public struct WinMacRect {
+  public int Left;
+  public int Top;
+  public int Right;
+  public int Bottom;
+}
+
+public class WinMacWinItem {
+  public long Hwnd;
+  public int Pid;
+  public string Title;
+  public string ClassName;
+  public bool IsMinimized;
+}
+
+public class WinMacWinEnum {
+  public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+  [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out WinMacRect lpRect);
+  [DllImport("user32.dll")] public static extern int GetWindowTextLength(IntPtr hWnd);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out int lpdwProcessId);
+  [DllImport("user32.dll")] public static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
+  [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+  [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out int pvAttribute, int cbAttribute);
+  [DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr OpenProcess(uint dwDesiredAccess, bool bInheritHandle, int dwProcessId);
+  [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)] public static extern bool QueryFullProcessImageName(IntPtr hProcess, int dwFlags, StringBuilder lpExeName, ref int lpdwSize);
+  [DllImport("kernel32.dll", SetLastError = true)] public static extern bool CloseHandle(IntPtr hObject);
+
+  public static string TryGetProcessPath(int pid) {
+    if (pid <= 0) return "";
+    IntPtr hProc = IntPtr.Zero;
+    try {
+      hProc = OpenProcess(0x1000, false, pid);
+      if (hProc == IntPtr.Zero) return "";
+      var sb = new StringBuilder(1024);
+      int sz = sb.Capacity;
+      if (QueryFullProcessImageName(hProc, 0, sb, ref sz) && sz > 0) {
+        return sb.ToString(0, sz);
+      }
+    } catch {}
+    finally {
+      if (hProc != IntPtr.Zero) CloseHandle(hProc);
+    }
+    return "";
+  }
+
+  public static List<WinMacWinItem> ListWindows() {
+    var list = new List<WinMacWinItem>();
+    EnumWindows(delegate(IntPtr hWnd, IntPtr lParam) {
+      if (!IsWindowVisible(hWnd)) return true;
+      int len = GetWindowTextLength(hWnd);
+      if (len <= 0) return true;
+
+      int cloaked = 0;
+      try { DwmGetWindowAttribute(hWnd, 14, out cloaked, sizeof(int)); } catch {}
+      if (cloaked != 0) return true;
+
+      int exStyle = GetWindowLong(hWnd, -20);
+      bool isTool = (exStyle & 0x00000080) != 0;
+      bool isAppWin = (exStyle & 0x00040000) != 0;
+      bool noActivate = (exStyle & 0x08000000) != 0;
+      if (noActivate && !isAppWin) return true;
+      if (isTool && !isAppWin) return true;
+
+      IntPtr owner = GetWindow(hWnd, 4);
+      if (owner != IntPtr.Zero && !isAppWin) return true;
+
+      bool isMin = IsIconic(hWnd);
+      if (!isMin) {
+        WinMacRect rect;
+        if (GetWindowRect(hWnd, out rect)) {
+          if ((rect.Right - rect.Left) <= 1 || (rect.Bottom - rect.Top) <= 1) return true;
+          if (rect.Left <= -20000 || rect.Top <= -20000) return true;
+        }
+      }
+
+      var sbTitle = new StringBuilder(len + 1);
+      GetWindowText(hWnd, sbTitle, sbTitle.Capacity);
+      string title = sbTitle.ToString().Trim();
+      if (string.IsNullOrEmpty(title)) return true;
+      if (title == "Default IME" || title == "MSCTFIME UI" || title == "Microsoft Text Input Application" || title == "NVIDIA GeForce Overlay") return true;
+
+      var sbCls = new StringBuilder(256);
+      GetClassName(hWnd, sbCls, sbCls.Capacity);
+      string cls = sbCls.ToString();
+
+      int pid = 0;
+      GetWindowThreadProcessId(hWnd, out pid);
+      if (pid <= 0) return true;
+
+      list.Add(new WinMacWinItem {
+        Hwnd = hWnd.ToInt64(),
+        Pid = pid,
+        Title = title,
+        ClassName = cls,
+        IsMinimized = isMin
+      });
+      return true;
+    }, IntPtr.Zero);
+    return list;
+  }
+}
+
+public class WinMacIcon {
+  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+  public struct SHFILEINFO {
+    public IntPtr hIcon;
+    public int iIcon;
+    public uint dwAttributes;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+    public string szDisplayName;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)]
+    public string szTypeName;
+  }
+
+  [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+  public static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, ref SHFILEINFO psfi, uint cbFileInfo, uint uFlags);
+  [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+  public static extern uint ExtractIconEx(string lpszFile, int nIconIndex, IntPtr[] phiconLarge, IntPtr[] phiconSmall, uint nIcons);
+  [DllImport("user32.dll")] public static extern bool DestroyIcon(IntPtr hIcon);
+  [DllImport("user32.dll")] public static extern bool IsWindow(IntPtr hWnd);
+  [DllImport("user32.dll", CharSet = CharSet.Auto)]
+  public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam, uint fuFlags, uint uTimeout, out IntPtr lpdwResult);
+  [DllImport("user32.dll", EntryPoint = "GetClassLong")]
+  public static extern uint GetClassLong32(IntPtr hWnd, int nIndex);
+  [DllImport("user32.dll", EntryPoint = "GetClassLongPtr")]
+  public static extern IntPtr GetClassLong64(IntPtr hWnd, int nIndex);
+
+  private static IntPtr GetClassLongSafe(IntPtr hWnd, int nIndex) {
+    try {
+      return IntPtr.Size > 4 ? GetClassLong64(hWnd, nIndex) : new IntPtr((long)GetClassLong32(hWnd, nIndex));
+    } catch { return IntPtr.Zero; }
+  }
+
+  private static string HIconToPngDataUrl(IntPtr hIcon) {
+    if (hIcon == IntPtr.Zero) return "";
+    try {
+      using (Icon ic = Icon.FromHandle(hIcon))
+      using (Bitmap bmp = ic.ToBitmap())
+      using (MemoryStream ms = new MemoryStream()) {
+        bmp.Save(ms, ImageFormat.Png);
+        return "data:image/png;base64," + Convert.ToBase64String(ms.ToArray());
+      }
+    } catch { return ""; }
+  }
+
+  public static string ExtractFromFile(string filePath, int iconIndex) {
+    if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return "";
+    IntPtr hIcon = IntPtr.Zero;
+    bool needDestroy = false;
+    try {
+      if (iconIndex != 0) {
+        IntPtr[] large = new IntPtr[1];
+        uint cnt = ExtractIconEx(filePath, iconIndex, large, null, 1);
+        if (cnt > 0 && large[0] != IntPtr.Zero) {
+          hIcon = large[0];
+          needDestroy = true;
+        }
+      }
+      if (hIcon == IntPtr.Zero) {
+        SHFILEINFO shinfo = new SHFILEINFO();
+        SHGetFileInfo(filePath, 0, ref shinfo, (uint)Marshal.SizeOf(shinfo), 0x000000100 | 0x000000000);
+        if (shinfo.hIcon != IntPtr.Zero) {
+          hIcon = shinfo.hIcon;
+          needDestroy = true;
+        }
+      }
+      if (hIcon != IntPtr.Zero) {
+        return HIconToPngDataUrl(hIcon);
+      }
+      using (Icon assoc = Icon.ExtractAssociatedIcon(filePath)) {
+        if (assoc == null) return "";
+        using (Bitmap bmp = assoc.ToBitmap())
+        using (MemoryStream ms = new MemoryStream()) {
+          bmp.Save(ms, ImageFormat.Png);
+          return "data:image/png;base64," + Convert.ToBase64String(ms.ToArray());
+        }
+      }
+    } catch { return ""; }
+    finally {
+      if (needDestroy && hIcon != IntPtr.Zero) DestroyIcon(hIcon);
+    }
+  }
+
+  public static string ExtractFromWindow(long hwndVal) {
+    if (hwndVal == 0) return "";
+    IntPtr hWnd = new IntPtr(hwndVal);
+    if (!IsWindow(hWnd)) return "";
+    try {
+      IntPtr hIcon = IntPtr.Zero;
+      SendMessageTimeout(hWnd, 0x007F, new IntPtr(1), IntPtr.Zero, 2, 80, out hIcon);
+      if (hIcon == IntPtr.Zero) hIcon = GetClassLongSafe(hWnd, -14);
+      if (hIcon == IntPtr.Zero) SendMessageTimeout(hWnd, 0x007F, new IntPtr(2), IntPtr.Zero, 2, 80, out hIcon);
+      if (hIcon == IntPtr.Zero) hIcon = GetClassLongSafe(hWnd, -34);
+      return HIconToPngDataUrl(hIcon);
+    } catch { return ""; }
+  }
+
+  public static string ExtractBestBase64(long hwndVal, string filePath, int iconIndex) {
+    string res = ExtractFromFile(filePath, iconIndex);
+    if (!string.IsNullOrEmpty(res)) return res;
+    return ExtractFromWindow(hwndVal);
+  }
+}
+
+public class WinMacFocus {
+  [DllImport("user32.dll")] public static extern bool IsWindow(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern void SwitchToThisWindow(IntPtr hWnd, bool fAltTab);
+}
+
+public class WinMacMin {
+  [DllImport("user32.dll")] public static extern bool IsWindow(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+}
+
+public class WinMacClose {
+  [DllImport("user32.dll")] public static extern bool IsWindow(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+}`;
+
+let win32DllReadyPath = '';
+let win32DllPromise = null;
+
+function getWin32DllTargetPath() {
+  try {
+    return path.join(app.getPath('userData'), 'winmac-win32-tools-v3.dll');
+  } catch (_) {
+    return path.join(os.tmpdir(), 'winmac-win32-tools-v3.dll');
+  }
+}
+
+function ensureWin32ToolsDll() {
+  const dllPath = getWin32DllTargetPath();
+  if (win32DllReadyPath && fs.existsSync(win32DllReadyPath)) {
+    return Promise.resolve(win32DllReadyPath);
+  }
+  if (fs.existsSync(dllPath)) {
+    win32DllReadyPath = dllPath;
+    return Promise.resolve(dllPath);
+  }
+  if (win32DllPromise) return win32DllPromise;
+
+  win32DllPromise = new Promise((resolve) => {
+    try {
+      fs.mkdirSync(path.dirname(dllPath), { recursive: true });
+    } catch (_) {}
+    const tmpDll = `${dllPath}.${process.pid}.tmp.dll`;
+    const compilePs = [
+      '$cs = @"',
+      WIN32_TOOLS_CS,
+      '"@',
+      `Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition $cs -OutputAssembly ${psSingleQuote(tmpDll)}`,
+      `Move-Item -Force -Path ${psSingleQuote(tmpDll)} -Destination ${psSingleQuote(dllPath)} -ErrorAction SilentlyContinue`
+    ].join('\n');
+    const encoded = Buffer.from(compilePs, 'utf16le').toString('base64');
+    execFile(
+      'powershell.exe',
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', encoded],
+      { windowsHide: true, timeout: 10000 },
+      (err) => {
+        win32DllPromise = null;
+        if (!err && fs.existsSync(dllPath)) {
+          win32DllReadyPath = dllPath;
+          resolve(dllPath);
+        } else {
+          try {
+            if (fs.existsSync(tmpDll)) fs.unlinkSync(tmpDll);
+          } catch (_) {}
+          resolve('');
+        }
+      }
+    );
+  });
+  return win32DllPromise;
+}
+
+function getWin32PreamblePs(dllPath) {
+  if (dllPath) {
+    return `Add-Type -Path ${psSingleQuote(dllPath)}\n`;
+  }
+  return `if (-not ("WinMacWinEnum" -as [type])) {\n  Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition @"\n${WIN32_TOOLS_CS}\n"@\n}\n`;
+}
+
+async function extractBatchLnkIconsViaWin32(pathsJson, dllPath) {
+  const iconMap = new Map();
+  if (!pathsJson || pathsJson === '[]') return iconMap;
+  const psBatch = `
+    $OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    ${getWin32PreamblePs(dllPath)}
+    $paths = ConvertFrom-Json ${psSingleQuote(pathsJson)}
+    $wsh = New-Object -ComObject WScript.Shell
+    $out = @{}
+    foreach ($lnkPath in $paths) {
+      try {
+        $icPath = ''; $icIdx = 0
+        if ($lnkPath -match '\\.lnk$') {
+          $sc = $wsh.CreateShortcut($lnkPath)
+          $loc = [string]$sc.IconLocation
+          if ($loc) {
+            $parts = $loc -split ','
+            $cand = $parts[0].Trim()
+            if ($parts.Length -gt 1) { [int]::TryParse($parts[1].Trim(), [ref]$icIdx) | Out-Null }
+            if ($cand -and (Test-Path $cand)) { $icPath = $cand }
+          }
+          if (-not $icPath -and $sc.TargetPath -and (Test-Path $sc.TargetPath)) {
+            $icPath = [string]$sc.TargetPath
+          }
+        } elseif (Test-Path $lnkPath) {
+          $icPath = $lnkPath
+        }
+        if ($icPath) {
+          $b64 = [WinMacIcon]::ExtractFromFile($icPath, $icIdx)
+          if ($b64) { $out[$lnkPath] = $b64 }
+        }
+      } catch {}
+    }
+    $out | ConvertTo-Json -Compress
+  `;
+  const encoded = Buffer.from(psBatch, 'utf16le').toString('base64');
+  return new Promise((resolve) => {
+    execFile(
+      'powershell.exe',
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', encoded],
+      { windowsHide: true, timeout: 10000, maxBuffer: 16 * 1024 * 1024 },
+      (err, stdout) => {
+        if (!err && stdout) {
+          try {
+            const obj = JSON.parse(stdout.trim());
+            if (obj && typeof obj === 'object') {
+              Object.entries(obj).forEach(([k, v]) => {
+                if (v) iconMap.set(k, String(v));
+              });
+            }
+          } catch (_) {}
+        }
+        resolve(iconMap);
+      }
+    );
+  });
+}
+
+async function resolveIconViaWin32(targetPath, hwndStr = '') {
+  const dllPath = await ensureWin32ToolsDll();
+  const safeHwnd = sanitizeNumericHwnd(hwndStr);
+  const psOne = `
+    $OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    ${getWin32PreamblePs(dllPath)}
+    $p = ${psSingleQuote(targetPath || '')}
+    $icPath = $p; $icIdx = 0
+    if ($p -and $p -match '\\.lnk$' -and (Test-Path $p)) {
+      try {
+        $wsh = New-Object -ComObject WScript.Shell
+        $sc = $wsh.CreateShortcut($p)
+        $loc = [string]$sc.IconLocation
+        $icPath = ''
+        if ($loc) {
+          $parts = $loc -split ','
+          $cand = $parts[0].Trim()
+          if ($parts.Length -gt 1) { [int]::TryParse($parts[1].Trim(), [ref]$icIdx) | Out-Null }
+          if ($cand -and (Test-Path $cand)) { $icPath = $cand }
+        }
+        if (-not $icPath -and $sc.TargetPath -and (Test-Path $sc.TargetPath)) {
+          $icPath = [string]$sc.TargetPath
+        }
+      } catch {}
+    }
+    [long]$hNum = 0
+    [long]::TryParse("${safeHwnd}", [ref]$hNum) | Out-Null
+    [WinMacIcon]::ExtractBestBase64($hNum, $icPath, $icIdx)
+  `;
+  const encoded = Buffer.from(psOne, 'utf16le').toString('base64');
+  return new Promise((resolve) => {
+    execFile(
+      'powershell.exe',
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', encoded],
+      { windowsHide: true, timeout: 4500 },
+      (err, stdout) => {
+        resolve(!err && stdout ? stdout.trim() : '');
+      }
+    );
+  });
+}
+
+async function extractNativeAppIcon(filePath = '', hwndStr = '') {
+  const cleanPath = String(filePath || '').trim();
+  const cacheKey = cleanPath ? cleanPath.toLowerCase() : (hwndStr ? `hwnd:${hwndStr}` : '');
+  if (!cacheKey) return '';
+  if (exeIconCache.has(cacheKey)) {
+    return exeIconCache.get(cacheKey);
+  }
+
+  let electronIconUrl = '';
+  const isLnk = cleanPath.toLowerCase().endsWith('.lnk');
+  if (cleanPath && !isLnk) {
+    try {
+      const nativeIcon = await app.getFileIcon(cleanPath, { size: 'large' });
+      if (nativeIcon && !nativeIcon.isEmpty()) {
+        const sz = nativeIcon.getSize();
+        const url = nativeIcon.toDataURL();
+        electronIconUrl = url;
+        if (sz.width >= 48 || url.length >= 1350) {
+          exeIconCache.set(cacheKey, url);
+          return url;
+        }
+      }
+    } catch (_) {}
+  }
+
+  const win32Url = await resolveIconViaWin32(cleanPath, hwndStr);
+  const bestUrl = win32Url || electronIconUrl;
+  if (bestUrl) {
+    exeIconCache.set(cacheKey, bestUrl);
+  }
+  return bestUrl;
+}
+
 ipcMain.handle('get-running-apps', async (event, forceRefresh = false) => {
   const now = Date.now();
   if (!forceRefresh && cachedRunningApps.length > 0 && now - lastRunningAppsCheck < 3000) {
@@ -1233,35 +1731,59 @@ ipcMain.handle('get-running-apps', async (event, forceRefresh = false) => {
     mainWindow.setAlwaysOnTop(true, 'screen-saver');
   }
 
+  let dllPath = '';
+  try {
+    dllPath = await ensureWin32ToolsDll();
+  } catch (_) {}
+
   const psScript = `
-    $expWins = @()
-    try {
-      $sh = New-Object -ComObject Shell.Application
-      $expWins = @($sh.Windows() | Where-Object { $_.Visible -eq $true -and $_.LocationName })
-    } catch {}
-    $procs = @(Get-Process | Where-Object {
-      $_.MainWindowHandle -ne 0 -and $_.MainWindowTitle -and $_.MainWindowTitle.Trim() -ne '' -and $_.ProcessName -ne 'explorer'
-    } | Select-Object Id, ProcessName, MainWindowTitle, Path)
-    if ($expWins.Count -gt 0) {
-      $firstTitle = [string]$expWins[0].LocationName
-      $expProc = Get-Process -Name explorer -ErrorAction SilentlyContinue | Select-Object -First 1
-      $expId = if ($expProc) { $expProc.Id } else { 0 }
-      $procs += [PSCustomObject]@{
-        Id = $expId
-        ProcessName = 'explorer'
-        MainWindowTitle = $firstTitle
-        Path = "$env:WINDIR\\explorer.exe"
-        WindowCountOverride = $expWins.Count
-      }
+    $OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    ${getWin32PreamblePs(dllPath)}
+    $procMap = @{}
+    $allProcs = @(Get-Process -ErrorAction SilentlyContinue)
+    foreach ($p in $allProcs) {
+      $procMap[$p.Id] = $p
     }
-    if ($procs.Count -gt 0) { $procs | ConvertTo-Json -Compress } else { '[]' }
+
+    $results = New-Object System.Collections.Generic.List[object]
+    $skipClasses = @('Progman', 'WorkerW', 'Shell_TrayWnd', 'Shell_SecondaryTrayWnd', 'Windows.UI.Core.CoreWindow')
+
+    foreach ($w in [WinMacWinEnum]::ListWindows()) {
+      $p = $procMap[$w.Pid]
+      if (-not $p) { continue }
+      $pname = [string]$p.ProcessName
+      if ($skipClasses -contains $w.ClassName) { continue }
+      if ($pname -ieq 'explorer' -and $w.ClassName -ne 'CabinetWClass' -and $w.ClassName -ne 'ExploreWClass') {
+        continue
+      }
+
+      $exePath = [WinMacWinEnum]::TryGetProcessPath($w.Pid)
+      if (-not $exePath) {
+        try { if ($p.Path) { $exePath = [string]$p.Path } } catch {}
+      }
+      if (-not $exePath -and $pname -ieq 'explorer') {
+        $exePath = "$env:WINDIR\\explorer.exe"
+      }
+
+      $results.Add([PSCustomObject]@{
+        Id = $w.Pid
+        Hwnd = [string]$w.Hwnd
+        ProcessName = $pname
+        MainWindowTitle = $w.Title
+        Path = $exePath
+        IsMinimized = [bool]$w.IsMinimized
+      })
+    }
+
+    if ($results.Count -gt 0) { $results | ConvertTo-Json -Compress } else { '[]' }
   `;
 
+  const encoded = Buffer.from(psScript, 'utf16le').toString('base64');
   return new Promise((resolve) => {
     execFile(
       'powershell.exe',
-      ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', psScript],
-      { windowsHide: true, timeout: 4500 },
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', encoded],
+      { windowsHide: true, timeout: 8000 },
       async (err, stdout) => {
         isScanningRunningApps = false;
         lastRunningAppsCheck = Date.now();
@@ -1279,6 +1801,7 @@ ipcMain.handle('get-running-apps', async (event, forceRefresh = false) => {
           const groupedMap = new Map();
           for (const item of list) {
             if (!item || !item.ProcessName) continue;
+            if (Number(item.Id) === process.pid) continue;
             const rawName = String(item.ProcessName);
             const lowerName = rawName.toLowerCase();
             if (IGNORED_PROCESSES.has(lowerName)) continue;
@@ -1287,20 +1810,8 @@ ipcMain.handle('get-running-apps', async (event, forceRefresh = false) => {
             if (!title || title === 'Program Manager' || title === 'Windows Input Experience') continue;
 
             const exePath = item.Path ? String(item.Path) : '';
-            let iconDataUrl = '';
-            if (exePath) {
-              if (exeIconCache.has(exePath)) {
-                iconDataUrl = exeIconCache.get(exePath);
-              } else {
-                try {
-                  const nativeIcon = await app.getFileIcon(exePath, { size: 'large' });
-                  if (nativeIcon && !nativeIcon.isEmpty()) {
-                    iconDataUrl = nativeIcon.toDataURL();
-                    exeIconCache.set(exePath, iconDataUrl);
-                  }
-                } catch (_) {}
-              }
-            }
+            const hwndStr = item.Hwnd ? String(item.Hwnd).trim() : '';
+            const iconDataUrl = await extractNativeAppIcon(exePath, hwndStr);
 
             const meta = KNOWN_APP_MAP[lowerName] || {
               appKey: lowerName,
@@ -1311,26 +1822,47 @@ ipcMain.handle('get-running-apps', async (event, forceRefresh = false) => {
               pinnedDock: false
             };
 
+            const winEntry = {
+              hwnd: hwndStr,
+              pid: Number(item.Id) || 0,
+              processName: rawName,
+              title: title || meta.label,
+              isMinimized: Boolean(item.IsMinimized)
+            };
+
             const existing = groupedMap.get(lowerName);
             if (!existing) {
               groupedMap.set(lowerName, {
-                pid: item.Id,
+                hwnd: hwndStr,
+                pid: winEntry.pid,
                 processName: rawName,
                 appKey: meta.appKey,
                 label: meta.label,
-                title: title || meta.label,
+                title: winEntry.title,
                 badge: meta.badge,
                 color: meta.color,
                 category: meta.category,
                 pinnedDock: Boolean(meta.pinnedDock),
                 iconDataUrl,
-                windowCount: Number(item.WindowCountOverride) || 1
+                windows: [winEntry],
+                windowCount: 1,
+                visibleWindowCount: winEntry.isMinimized ? 0 : 1,
+                allMinimized: winEntry.isMinimized
               });
             } else {
-              existing.windowCount += 1;
-              if (!existing.title && title) {
-                existing.title = title;
-                existing.pid = item.Id;
+              const dup = existing.windows.some((w) =>
+                hwndStr ? w.hwnd === hwndStr : w.pid === winEntry.pid && w.title === winEntry.title
+              );
+              if (!dup) {
+                existing.windows.push(winEntry);
+                existing.windowCount = existing.windows.length;
+                existing.visibleWindowCount = existing.windows.filter((w) => !w.isMinimized).length;
+                existing.allMinimized = existing.visibleWindowCount === 0;
+              }
+              if (!existing.title && winEntry.title) {
+                existing.title = winEntry.title;
+                existing.pid = winEntry.pid;
+                existing.hwnd = hwndStr;
               }
               if (!existing.iconDataUrl && iconDataUrl) {
                 existing.iconDataUrl = iconDataUrl;
@@ -1348,53 +1880,66 @@ ipcMain.handle('get-running-apps', async (event, forceRefresh = false) => {
   });
 });
 
+function sanitizeNumericHwnd(val) {
+  const s = String(val || '').trim();
+  return /^-?\d+$/.test(s) ? s : '0';
+}
+
 // Fokuskan & kembalikan (Un-minimize / Restore) jendela aplikasi yang sedang terbuka ke paling depan
 ipcMain.handle('focus-running-app', async (event, payload = {}) => {
-  const { pid, processName } = payload;
+  const { hwnd, pid, processName } = payload;
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.setIgnoreMouseEvents(true, { forward: true });
     mainWindow.blur();
   }
 
+  const safeHwnd = sanitizeNumericHwnd(hwnd);
   const safeProc = String(processName || '').replace(/[^a-zA-Z0-9_.-]/g, '');
   const safePid = Number(pid) || 0;
+  const dllPath = await ensureWin32ToolsDll();
 
   const psFocus = `
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-public class WinMacFocus {
-  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
-  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
-  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+${getWin32PreamblePs(dllPath)}
+$h = [IntPtr]::Zero
+[long]$hwndNum = 0
+if ([long]::TryParse("${safeHwnd}", [ref]$hwndNum) -and $hwndNum -ne 0) {
+  $cand = [IntPtr]$hwndNum
+  if ([WinMacFocus]::IsWindow($cand)) {
+    $h = $cand
+  }
 }
-"@
-$wsh = New-Object -ComObject WScript.Shell
 $target = $null
-if (${safePid} -gt 0) {
-  $target = Get-Process -Id ${safePid} -ErrorAction SilentlyContinue
+if ($h -eq [IntPtr]::Zero) {
+  if (${safePid} -gt 0) {
+    $target = Get-Process -Id ${safePid} -ErrorAction SilentlyContinue
+  }
+  if ((-not $target -or $target.MainWindowHandle -eq 0) -and "${safeProc}" -ne "") {
+    $target = Get-Process -Name "${safeProc}" -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+  }
+  if ($target -and $target.MainWindowHandle -ne 0) {
+    $h = $target.MainWindowHandle
+  }
 }
-if ((-not $target -or $target.MainWindowHandle -eq 0) -and "${safeProc}" -ne "") {
-  $target = Get-Process -Name "${safeProc}" -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
-}
-if ($target -and $target.MainWindowHandle -ne 0) {
-  $h = $target.MainWindowHandle
+if ($h -ne [IntPtr]::Zero) {
   if ([WinMacFocus]::IsIconic($h)) {
     [WinMacFocus]::ShowWindowAsync($h, 9) | Out-Null
   } else {
     [WinMacFocus]::ShowWindowAsync($h, 5) | Out-Null
   }
+  [WinMacFocus]::BringWindowToTop($h) | Out-Null
+  [WinMacFocus]::SwitchToThisWindow($h, $true)
   [WinMacFocus]::SetForegroundWindow($h) | Out-Null
-  $wsh.AppActivate($target.Id) | Out-Null
 }
 `;
 
+  const encoded = Buffer.from(psFocus, 'utf16le').toString('base64');
   return new Promise((resolve) => {
     execFile(
       'powershell.exe',
-      ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', psFocus],
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', encoded],
       { windowsHide: true, timeout: 4000 },
       () => {
+        lastRunningAppsCheck = 0;
         if (isAlwaysOnTop && mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.setAlwaysOnTop(true, 'screen-saver');
         }
@@ -1405,42 +1950,66 @@ if ($target -and $target.MainWindowHandle -ne 0) {
 });
 
 ipcMain.handle('minimize-running-app', async (event, payload = {}) => {
+  const safeHwnd = sanitizeNumericHwnd(payload.hwnd);
   const safePid = Number(payload.pid) || 0;
-  if (!safePid) return false;
+  if (safeHwnd === '0' && !safePid) return false;
+  const dllPath = await ensureWin32ToolsDll();
   const psMin = `
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-public class WinMacMin {
-  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+${getWin32PreamblePs(dllPath)}
+$h = [IntPtr]::Zero
+[long]$hwndNum = 0
+if ([long]::TryParse("${safeHwnd}", [ref]$hwndNum) -and $hwndNum -ne 0) {
+  $cand = [IntPtr]$hwndNum
+  if ([WinMacMin]::IsWindow($cand)) { $h = $cand }
 }
-"@
-$p = Get-Process -Id ${safePid} -ErrorAction SilentlyContinue
-if ($p -and $p.MainWindowHandle -ne 0) {
-  [WinMacMin]::ShowWindowAsync($p.MainWindowHandle, 6) | Out-Null
+if ($h -eq [IntPtr]::Zero -and ${safePid} -gt 0) {
+  $p = Get-Process -Id ${safePid} -ErrorAction SilentlyContinue
+  if ($p -and $p.MainWindowHandle -ne 0) { $h = $p.MainWindowHandle }
+}
+if ($h -ne [IntPtr]::Zero) {
+  [WinMacMin]::ShowWindowAsync($h, 6) | Out-Null
 }
 `;
+  const encoded = Buffer.from(psMin, 'utf16le').toString('base64');
   return new Promise((resolve) => {
     execFile(
       'powershell.exe',
-      ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', psMin],
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', encoded],
       { windowsHide: true, timeout: 3500 },
-      () => resolve(true)
+      () => {
+        lastRunningAppsCheck = 0;
+        resolve(true);
+      }
     );
   });
 });
 
 ipcMain.handle('close-running-app', async (event, payload = {}) => {
+  const safeHwnd = sanitizeNumericHwnd(payload.hwnd);
   const safePid = Number(payload.pid) || 0;
-  if (!safePid) return false;
+  if (safeHwnd === '0' && !safePid) return false;
+  const dllPath = await ensureWin32ToolsDll();
   const psClose = `
-$p = Get-Process -Id ${safePid} -ErrorAction SilentlyContinue
-if ($p) { $p.CloseMainWindow() | Out-Null }
+${getWin32PreamblePs(dllPath)}
+$handled = $false
+[long]$hwndNum = 0
+if ([long]::TryParse("${safeHwnd}", [ref]$hwndNum) -and $hwndNum -ne 0) {
+  $cand = [IntPtr]$hwndNum
+  if ([WinMacClose]::IsWindow($cand)) {
+    [WinMacClose]::PostMessage($cand, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+    $handled = $true
+  }
+}
+if (-not $handled -and ${safePid} -gt 0) {
+  $p = Get-Process -Id ${safePid} -ErrorAction SilentlyContinue
+  if ($p) { $p.CloseMainWindow() | Out-Null }
+}
 `;
+  const encoded = Buffer.from(psClose, 'utf16le').toString('base64');
   return new Promise((resolve) => {
     execFile(
       'powershell.exe',
-      ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', psClose],
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', encoded],
       { windowsHide: true, timeout: 3500 },
       () => {
         lastRunningAppsCheck = 0;
@@ -1456,7 +2025,7 @@ if ($p) { $p.CloseMainWindow() | Out-Null }
 app.whenReady().then(() => {
   createWindow();
   createTrayIcon();
-  configureDesktopAppAndStartup(true);
+  // Auto-start disinkronkan dari konfigurasi permanen renderer saat startup (set-autostart)
 
   // Global Shortcut: Alt+Space untuk Start Menu, Alt+E untuk Custom Explorer
   globalShortcut.register('Alt+Space', () => {
